@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Define log files path -->
+    <property name="LOGS_DIR" value="logs" />
+    <property name="LOG_FILE_NAME" value="vibecart-api" />
+
+    <!-- 1. Color Console Appender -->
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %magenta([%thread]) %highlight(%-5level) %cyan(%logger{36}) - %msg%n</Pattern>
+        </encoder>
+    </appender>
+
+    <!-- 2. Rolling File Appender (Production logs) -->
+    <appender name="RollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGS_DIR}/${LOG_FILE_NAME}.log</file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</Pattern>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Rollover logs daily or when size exceeds 10MB -->
+            <fileNamePattern>${LOGS_DIR}/archived/${LOG_FILE_NAME}-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- 3. Profile Specific Log Levels -->
+
+    <!-- Local Development Profile -->
+    <springProfile name="local">
+        <logger name="com.vibecart.api" level="DEBUG" />
+        <logger name="org.hibernate.SQL" level="INFO" />
+        <logger name="org.springframework.web" level="INFO" />
+        <root level="INFO">
+            <appender-ref ref="Console" />
+            <appender-ref ref="RollingFile" />
+        </root>
+    </springProfile>
+
+    <!-- Production Profile -->
+    <springProfile name="prod">
+        <logger name="com.vibecart.api" level="INFO" />
+        <logger name="org.hibernate.SQL" level="WARN" />
+        <logger name="org.springframework.web" level="WARN" />
+        <root level="INFO">
+            <appender-ref ref="Console" />
+            <appender-ref ref="RollingFile" />
+        </root>
+    </springProfile>
+
+</configuration>

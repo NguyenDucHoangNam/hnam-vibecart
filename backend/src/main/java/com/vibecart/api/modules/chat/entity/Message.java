@@ -1,0 +1,82 @@
+package com.vibecart.api.modules.chat.entity;
+
+import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+import java.time.Instant;
+import java.util.List;
+
+@Document(collection = "messages")
+@CompoundIndex(name = "conv_created_idx", def = "{'conversationId': 1, 'createdAt': -1}")
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Message {
+
+    @Id
+    private String id;
+
+    @Indexed
+    @Field("conversation_id")
+    private String conversationId;
+
+    @Field("sender_id")
+    private String senderId;
+
+    @Field("content")
+    private String content;
+
+    @Field("type")
+    private String type; // TEXT, IMAGE, VIDEO, DOCUMENT, PRODUCT, ORDER
+
+    @Field("attachment_metadata")
+    private AttachmentMetadata attachmentMetadata;
+
+    @Field("read_by")
+    private List<ReadReceipt> readBy;
+
+    @Builder.Default
+    @Field("created_at")
+    private Instant createdAt = Instant.now();
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttachmentMetadata {
+        @Field("file_url")
+        private String fileUrl;
+
+        @Field("file_name")
+        private String fileName;
+
+        @Field("file_size")
+        private Long fileSize;
+
+        @Field("mime_type")
+        private String mimeType;
+
+        @Field("card_id")
+        private String cardId; // Product ID or Order ID
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReadReceipt {
+        @Field("user_id")
+        private String userId;
+
+        @Field("read_at")
+        private Instant readAt;
+    }
+}

@@ -1,0 +1,100 @@
+# ===================================================================
+# Production Profile - 'prod'
+# ===================================================================
+
+spring:
+  # 1. Database Configuration (PostgreSQL)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    
+    # Hikari Connection Pool Tuning
+    hikari:
+      pool-name: VibeCart-HikariPool
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAX_POOL_SIZE:20}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MIN_IDLE:5}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:300000}
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:20000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:1800000}
+
+  # 2. JPA & Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate # Strict database schema validation on startup
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  # 3. Database Migration (Flyway)
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    url: ${SPRING_DATASOURCE_URL}
+    user: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    locations: classpath:db/migration
+    baseline-on-migrate: false # Do not auto-baseline on prod
+
+  # 4. NoSQL Configuration (MongoDB)
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+    
+    # 5. Cache Configuration (Redis)
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+
+  # 6. Search Configuration (Elasticsearch)
+  elasticsearch:
+    uris: ${SPRING_ELASTICSEARCH_URIS}
+
+  # 7. Message Queue Configuration (Kafka)
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+    consumer:
+      group-id: ${SPRING_KAFKA_CONSUMER_GROUP_ID:vibecart-prod-group}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+
+
+# ===================================================================
+# Application JWT Configurations
+# ===================================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS}
+  storage:
+    endpoint: ${AWS_S3_ENDPOINT:https://s3.amazonaws.com}
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    access-key: ${AWS_ACCESS_KEY_ID}
+    secret-key: ${AWS_SECRET_ACCESS_KEY}
+    region: ${AWS_REGION:us-east-1}
+    public-url-prefix: ${STORAGE_PUBLIC_URL_PREFIX:}
+  rate-limiter:
+    enabled: ${RATE_LIMITER_ENABLED:true}
+    global:
+      capacity: ${RATE_LIMITER_GLOBAL_CAPACITY:100}
+      refill-tokens: ${RATE_LIMITER_GLOBAL_REFILL_TOKENS:100}
+      refill-duration-seconds: ${RATE_LIMITER_GLOBAL_REFILL_DURATION:60}
+    sensitive:
+      capacity: ${RATE_LIMITER_SENSITIVE_CAPACITY:10}
+      refill-tokens: ${RATE_LIMITER_SENSITIVE_REFILL_TOKENS:10}
+      refill-duration-seconds: ${RATE_LIMITER_SENSITIVE_REFILL_DURATION:60}
+      paths:
+        - /api/v1/auth/login
+        - /api/v1/auth/register
+        - /api/v1/auth/verify-otp
+        - /api/v1/auth/forgot-password
+        - /api/v1/auth/reset-password

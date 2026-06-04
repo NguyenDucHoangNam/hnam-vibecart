@@ -1,0 +1,129 @@
+# ===================================================================
+# Local Development Profile - 'local'
+# ===================================================================
+
+spring:
+  # 1. Database Configuration (PostgreSQL)
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  # 2. JPA & Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: none # Flyway manages local schema
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  # 3. Database Migration (Flyway)
+  flyway:
+    enabled: true
+    url: ${DB_URL}
+    user: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # 4. NoSQL Configuration (MongoDB)
+  data:
+    mongodb:
+      uri: ${MONGODB_URI}
+    
+    # 5. Cache Configuration (Redis)
+    redis:
+      host: localhost
+      port: 6379
+
+  # 6. Search Configuration (Elasticsearch)
+  elasticsearch:
+    uris: http://localhost:9200
+
+  # 7. Message Queue Configuration (Kafka)
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: vibecart-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  # 8. Email Configuration (SMTP - Gmail)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # 9. Thymeleaf (for email templates)
+  thymeleaf:
+    check-template-location: false
+
+
+# ===================================================================
+# Application JWT Configurations
+# ===================================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+  storage:
+    endpoint: ${STORAGE_ENDPOINT}
+    bucket-name: ${STORAGE_BUCKET_NAME}
+    access-key: ${STORAGE_ACCESS_KEY}
+    secret-key: ${STORAGE_SECRET_KEY}
+    region: ${STORAGE_REGION:us-east-1}
+    public-url-prefix: ${STORAGE_PUBLIC_URL_PREFIX:}
+  payos:
+    client-id: ${PAYOS_CLIENT_ID}
+    api-key: ${PAYOS_API_KEY}
+    checksum-key: ${PAYOS_CHECKSUM_KEY}
+    return-url: ${PAYOS_RETURN_URL:http://localhost:3000/payment/success}
+    cancel-url: ${PAYOS_CANCEL_URL:http://localhost:3000/payment/cancel}
+  seeding:
+    enabled: ${SEEDING_ENABLED:true}
+    user:
+      username: ${SEED_USER_USERNAME}
+      password: ${SEED_USER_PASSWORD}
+      email: ${SEED_USER_EMAIL}
+      full-name: ${SEED_USER_FULLNAME}
+    creator:
+      username: ${SEED_CREATOR_USERNAME}
+      password: ${SEED_CREATOR_PASSWORD}
+      email: ${SEED_CREATOR_EMAIL}
+      full-name: ${SEED_CREATOR_FULLNAME}
+    admin:
+      username: ${SEED_ADMIN_USERNAME}
+      password: ${SEED_ADMIN_PASSWORD}
+      email: ${SEED_ADMIN_EMAIL}
+      full-name: ${SEED_ADMIN_FULLNAME}
+  rate-limiter:
+    enabled: true
+    global:
+      capacity: 100
+      refill-tokens: 100
+      refill-duration-seconds: 60
+    sensitive:
+      capacity: 10
+      refill-tokens: 10
+      refill-duration-seconds: 60
+      paths:
+        - /api/v1/auth/login
+        - /api/v1/auth/register
+        - /api/v1/auth/verify-otp
+        - /api/v1/auth/forgot-password
+        - /api/v1/auth/reset-password

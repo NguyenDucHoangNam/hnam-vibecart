@@ -1,0 +1,101 @@
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws-chat";
+
+export const ENDPOINTS = {
+  // Auth & Identity
+  AUTH: {
+    REGISTER: "/auth/register",
+    VERIFY_OTP: "/auth/verify-otp",
+    RESEND_OTP: "/auth/resend-otp",
+    LOGIN: "/auth/login",
+    REFRESH: "/auth/refresh",
+    LOGOUT: "/auth/logout",
+    ME: "/auth/me",
+    GOOGLE: "/auth/oauth2/google",
+    FACEBOOK: "/auth/oauth2/facebook",
+    CHANGE_PASSWORD: "/auth/change-password",
+    UPDATE_PROFILE: "/auth/profile",
+    FORGOT_PASSWORD: "/auth/forgot-password",
+    RESET_PASSWORD: "/auth/reset-password",
+    DELETE_ACCOUNT: "/auth/account",
+    ADMIN_UPDATE_STATUS: (id: string) => `/admin/users/${id}/status`,
+    ADMIN_LIST_USERS: "/admin/users",
+    ADMIN_UPDATE_ROLES: (id: string) => `/admin/users/${id}/roles`,
+  },
+  
+  // E-commerce Core
+  PRODUCTS: {
+    LIST: "/products",
+    DETAILS: (id: string) => `/products/${id}`,
+    CREATE: "/products",
+    UPDATE: (id: string) => `/products/${id}`,
+    DELETE: (id: string) => `/products/${id}`,
+    CREATOR: (creatorId: string) => `/products/creator/${creatorId}`,
+  },
+  CART: {
+    GET: "/cart",
+    ADD: "/cart/items",
+    UPDATE_QTY: (productId: string) => `/cart/items/${productId}`,
+    REMOVE: (productId: string) => `/cart/items/${productId}`,
+    CLEAR: "/cart/clear",
+  },
+  ORDERS: {
+    CREATE: "/orders",
+    LIST: "/orders",
+    DETAILS: (id: string) => `/orders/${id}`,
+    CANCEL: (id: string) => `/orders/${id}/cancel`,
+    PAYMENT_URL: (id: string) => `/orders/${id}/payment-url`,
+  },
+  
+  // Social Network
+  POSTS: {
+    LIST: "/posts",
+    CREATE: "/posts",
+    DETAILS: (id: string) => `/posts/${id}`,
+    TOGGLE_LIKE: (id: string) => `/posts/${id}/likes`,
+    CHECK_LIKED: (id: string) => `/posts/${id}/likes/check`,
+    LIKE_COUNT: (id: string) => `/posts/${id}/likes/count`,
+    COMMENTS: (id: string) => `/posts/${id}/comments`,
+    ADD_COMMENT: (id: string) => `/posts/${id}/comments`,
+    DELETE_COMMENT: (postId: string, commentId: string) => `/posts/${postId}/comments/${commentId}`,
+    FEED: "/posts/feed",
+  },
+  USERS: {
+    PROFILE: (id: string) => `/users/${id}/profile`,
+    TOGGLE_FOLLOW: (id: string) => `/users/${id}/follow`,
+    CHECK_FOLLOW: (id: string) => `/users/${id}/follow/check`,
+    FOLLOWERS: (id: string) => `/users/${id}/followers`,
+    FOLLOWING: (id: string) => `/users/${id}/following`,
+    FOLLOWERS_COUNT: (id: string) => `/users/${id}/followers/count`,
+    FOLLOWING_COUNT: (id: string) => `/users/${id}/following/count`,
+  },
+  
+  // Affiliate & Link Shortener
+  AFFILIATE: {
+    GENERATE_SHORT: "/affiliate/short-links",
+    ANALYTICS: "/affiliate/analytics",
+    SUMMARY: "/affiliate/summary",
+  },
+  
+  // Chat Rooms
+  CHAT: {
+    CONVERSATIONS: "/chat/conversations",
+    MESSAGES: (id: string) => `/chat/conversations/${id}/messages`,
+    ATTACHMENT_URL: "/chat/attachments/presigned-url",
+    PRESENCE: (userId: string) => `/chat/presence/${userId}`,
+    ACTIVE_PRESENCE: "/chat/presence/active",
+  },
+  
+  // Search Engine
+  SEARCH: {
+    RESULTS: "/search",
+    AUTOCOMPLETE: "/search/autocomplete",
+    USERS_RESULTS: "/search/users",
+    USERS_AUTOCOMPLETE: "/search/users/autocomplete",
+    TRENDING: "/search/trending",
+    HISTORY: "/search/history",
+    CLEAR_HISTORY: "/search/history/clear",
+    MERGE_HISTORY: "/search/history/merge",
+    SYNC: "/search/sync",
+  },
+};

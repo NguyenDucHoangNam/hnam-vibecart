@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: vibecart-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local} # Default active profile is local
+
+  # Common Jackson configurations
+  jackson:
+    default-property-inclusion: non_null
+
+  # Disable Open Session in View pattern to optimize connection pool performance
+  jpa:
+    open-in-view: false
+
+  # Multipart file upload limits
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: always
