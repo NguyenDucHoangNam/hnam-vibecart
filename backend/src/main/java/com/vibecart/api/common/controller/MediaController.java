@@ -27,10 +27,14 @@ import java.util.UUID;
 
 /**
  * Controller chung cho upload/quản lý media files lên S3/MinIO.
- * Hỗ trợ 2 chiến lược:
- * 1. Server-side upload: Frontend gửi file → Backend upload lên S3 → trả URL
- * 2. Pre-signed URL: Backend trả pre-signed URL → Frontend upload trực tiếp lên
- * S3
+ *
+ * <p>
+ * Hỗ trợ 2 chiến lược upload:
+ * </p>
+ * Server-side upload: Frontend gửi file → Backend upload lên S3 → trả URL.</li>
+ * Pre-signed URL: Backend trả pre-signed URL → Frontend upload trực tiếp lên
+ * S3,
+ * sau đó gọi {@code /confirm} để xác thực.</li>
  */
 @RestController
 @RequestMapping("/api/v1/media")
@@ -65,7 +69,8 @@ public class MediaController {
         // Validate file
         validateFile(file);
 
-        // Generate unique key: {folder}/{year}/{month}/{uuid}.{ext} based on content type
+        // Generate unique key: {folder}/{year}/{month}/{uuid}.{ext} based on content
+        // type
         String key = generateKey(folder, file.getContentType());
 
         try {
@@ -128,7 +133,7 @@ public class MediaController {
                 String url = storageService.uploadFile(
                         key, file.getInputStream(), file.getSize(), file.getContentType());
                 uploadedKeys.add(key);
-                
+
                 metadataList.add(MediaMetadata.builder()
                         .s3Key(key)
                         .uploadedBy(username)
@@ -142,14 +147,18 @@ public class MediaController {
             // Save all metadata only after all uploads in batch are successful
             mediaMetadataRepository.saveAll(metadataList);
         } catch (Exception e) {
-            log.error("Batch upload failed. Initiating fault-tolerant rollback to delete successfully uploaded files. Error: {}", e.getMessage());
-            // Rollback successfully uploaded S3 files with individual try-catch blocks (Fault Tolerance)
+            log.error(
+                    "Batch upload failed. Initiating fault-tolerant rollback to delete successfully uploaded files. Error: {}",
+                    e.getMessage());
+            // Rollback successfully uploaded S3 files with individual try-catch blocks
+            // (Fault Tolerance)
             for (String key : uploadedKeys) {
                 try {
                     storageService.deleteFile(key);
                     log.info("Rolled back: Deleted file '{}' from S3.", key);
                 } catch (Exception rollbackEx) {
-                    log.error("CRITICAL: Failed to rollback/delete zombie file '{}' on S3: {}", key, rollbackEx.getMessage());
+                    log.error("CRITICAL: Failed to rollback/delete zombie file '{}' on S3: {}", key,
+                            rollbackEx.getMessage());
                 }
             }
             throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
@@ -165,7 +174,8 @@ public class MediaController {
                         .build());
     }
 
-    // ==================== 3. PRE-SIGNED URL (CLIENT-SIDE UPLOAD) ====================
+    // ==================== 3. PRE-SIGNED URL (CLIENT-SIDE UPLOAD)
+    // ====================
     @PostMapping("/presigned-url")
     public ResponseEntity<ApiResponse<PresignedUrlResponse>> getPresignedUrl(
             @RequestParam("fileName") String fileName,
@@ -193,7 +203,7 @@ public class MediaController {
 
         // Generate unique key based on Content-Type (No extension spoofing)
         String key = generateKey(folder, contentType);
-        
+
         // Generate pre-signed PUT upload URL with contentLength enforced on S3
         String uploadUrl = storageService.generatePresignedUploadUrl(key, contentType, fileSize,
                 PRESIGNED_URL_EXPIRATION_MINUTES);
@@ -231,19 +241,19 @@ public class MediaController {
         Optional<MediaMetadata> metadataOpt = mediaMetadataRepository.findByS3Key(key);
         if (metadataOpt.isPresent()) {
             MediaMetadata metadata = metadataOpt.get();
-            
+
             // Check if user is the owner or has ROLE_ADMIN role
             boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
                     .stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
-            
+
             if (!metadata.getUploadedBy().equals(username) && !isAdmin) {
                 log.warn("Access denied: User {} tried to delete file owned by {}", username, metadata.getUploadedBy());
                 throw new AppException(ErrorCode.UNAUTHORIZED);
             }
-            
+
             // Delete from S3
             storageService.deleteFile(key);
-            
+
             // Delete metadata from DB
             mediaMetadataRepository.delete(metadata);
             log.info("Deleted S3 file and metadata key: {} by user: {}", key, username);
@@ -260,7 +270,8 @@ public class MediaController {
                         .build());
     }
 
-    // ==================== 5. XÁC NHẬN FILE UPLOAD XONG ====================
+    // ==================== 5. XÁC NHẬN FILE UPLOAD XONG (ACTIVE CLEANUP)
+    // ====================
     @PostMapping("/confirm")
     public ResponseEntity<ApiResponse<Void>> confirmUpload(@RequestParam("key") String key) {
         String username = getCurrentUsername();
@@ -269,16 +280,31 @@ public class MediaController {
         MediaMetadata metadata = mediaMetadataRepository.findByS3Key(key)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
-        // Check ownership
+        // Check ownership (IDOR Protection)
         if (!metadata.getUploadedBy().equals(username)) {
-            log.warn("Unauthorized confirmation: User {} tried to confirm key owned by {}", username, metadata.getUploadedBy());
+            log.warn("Unauthorized confirmation: User {} tried to confirm key owned by {}", username,
+                    metadata.getUploadedBy());
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
         // Verify tệp tin thực tế trên S3 bằng StorageService
         boolean isValid = storageService.verifyFile(key, metadata.getFileSize());
         if (!isValid) {
-            log.warn("File verification failed for key: {} (declared size: {} bytes)", key, metadata.getFileSize());
+            log.warn("File verification failed for key: {} (declared size: {} bytes). Cleaning up zombie resources...",
+                    key, metadata.getFileSize());
+
+            // Active Cleanup: Xóa file rác trên S3
+            try {
+                storageService.deleteFile(key);
+                log.info("Successfully cleaned up invalid S3 file for key: {}", key);
+            } catch (Exception e) {
+                log.error("Failed to delete invalid file on S3 for key: {}. Manual cleanup may be required.", key, e);
+            }
+
+            // Active Cleanup: Xóa bản ghi PENDING mồ côi trong DB
+            mediaMetadataRepository.delete(metadata);
+            log.info("Deleted orphan PENDING metadata record for key: {}", key);
+
             throw new AppException(ErrorCode.INVALID_INPUT);
         }
 
