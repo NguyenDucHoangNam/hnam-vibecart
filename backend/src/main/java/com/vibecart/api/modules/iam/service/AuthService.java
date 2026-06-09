@@ -9,7 +9,7 @@ import com.vibecart.api.modules.iam.dto.response.*;
  */
 public interface AuthService {
 
-    // ==================== ĐĂNG KÝ & XÁC THỰC OTP ====================
+
 
     /** Đăng ký tài khoản mới → trạng thái PENDING_VERIFICATION → sinh OTP gửi email */
     UserResponse register(RegisterRequest request);
@@ -20,7 +20,7 @@ public interface AuthService {
     /** Yêu cầu gửi lại mã OTP mới cho email đang chờ xác thực */
     void resendOtp(ResendOtpRequest request);
 
-    // ==================== ĐĂNG NHẬP ====================
+
 
     /** Đăng nhập bằng Username/Email + Password (có login lockout & session control) */
     AuthResponse login(LoginRequest request);
@@ -31,7 +31,7 @@ public interface AuthService {
     /** Đăng nhập bằng Facebook OAuth2 Access Token */
     AuthResponse loginFacebook(OAuth2Request request);
 
-    // ==================== TOKEN & SESSION ====================
+
 
     /** Gia hạn Access Token bằng Refresh Token (Token Rotation) */
     AuthResponse refresh(RefreshRequest request);
@@ -39,7 +39,7 @@ public interface AuthService {
     /** Đăng xuất: Blacklist Access Token + Xóa Refresh Token */
     void logout(RefreshRequest request, String accessToken);
 
-    // ==================== PROFILE ====================
+
 
     /** Lấy thông tin cá nhân theo username (từ JWT) */
     UserResponse getProfile(String username);
@@ -47,7 +47,7 @@ public interface AuthService {
     /** Cập nhật hồ sơ cá nhân (username, fullName, avatarUrl) */
     AuthResponse updateProfile(String username, UpdateProfileRequest request);
 
-    // ==================== MẬT KHẨU ====================
+
 
     /** Đổi mật khẩu (yêu cầu oldPassword) → kick all other sessions */
     void changePassword(String username, ChangePasswordRequest request);
@@ -58,12 +58,12 @@ public interface AuthService {
     /** Đặt lại mật khẩu bằng Reset Token → kick all sessions */
     void resetPassword(ResetPasswordRequest request);
 
-    // ==================== TÀI KHOẢN ====================
+
 
     /** Yêu cầu xóa tài khoản → PENDING_DELETION → purge sessions */
     void deleteAccount(String username);
 
-    // ==================== ADMIN ====================
+
 
     /** Admin: Cập nhật trạng thái tài khoản (ACTIVE, BANNED, v.v.) */
     UserResponse updateUserStatus(String userId, UpdateUserStatusRequest request, String adminUsername);

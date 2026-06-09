@@ -8,6 +8,9 @@ import java.sql.SQLException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
+/**
+ * RowMapper chuyển đổi kết quả JDBC thành entity Commission.
+ */
 public class CommissionRowMapper implements RowMapper<Commission> {
     @Override
     public Commission mapRow(ResultSet rs, int rowNum) throws SQLException {

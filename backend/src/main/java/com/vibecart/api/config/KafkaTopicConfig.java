@@ -5,6 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
 
+/**
+ * Cấu hình khởi tạo các Topic Kafka cho hệ thống.
+ */
 @Configuration(proxyBeanMethods = false)
 public class KafkaTopicConfig {
 
@@ -15,6 +18,9 @@ public class KafkaTopicConfig {
     public static final String ORDER_CANCELLED_TOPIC = "order-cancelled-topic";
     public static final String NOTIFICATION_EVENTS_TOPIC = "notification-events";
 
+    /**
+     * Topic đồng bộ thông tin sản phẩm.
+     */
     @Bean
     public NewTopic productSyncTopic() {
         return TopicBuilder.name(PRODUCT_SYNC_TOPIC)
@@ -23,6 +29,9 @@ public class KafkaTopicConfig {
                 .build();
     }
 
+    /**
+     * Topic xử lý sự kiện đơn hàng đã thanh toán.
+     */
     @Bean
     public NewTopic orderPaidTopic() {
         return TopicBuilder.name(ORDER_PAID_TOPIC)
@@ -31,6 +40,9 @@ public class KafkaTopicConfig {
                 .build();
     }
 
+    /**
+     * Topic ghi nhận lượt click affiliate.
+     */
     @Bean
     public NewTopic affiliateClicksTopic() {
         return TopicBuilder.name(AFFILIATE_CLICKS_TOPIC)
@@ -39,6 +51,9 @@ public class KafkaTopicConfig {
                 .build();
     }
 
+    /**
+     * Topic xử lý sự kiện đơn hàng đã giao thành công.
+     */
     @Bean
     public NewTopic orderDeliveredTopic() {
         return TopicBuilder.name(ORDER_DELIVERED_TOPIC)
@@ -47,6 +62,9 @@ public class KafkaTopicConfig {
                 .build();
     }
 
+    /**
+     * Topic xử lý sự kiện hủy đơn hàng.
+     */
     @Bean
     public NewTopic orderCancelledTopic() {
         return TopicBuilder.name(ORDER_CANCELLED_TOPIC)
@@ -55,6 +73,9 @@ public class KafkaTopicConfig {
                 .build();
     }
 
+    /**
+     * Topic phát tán sự kiện thông báo (notification).
+     */
     @Bean
     public NewTopic notificationEventsTopic() {
         return TopicBuilder.name(NOTIFICATION_EVENTS_TOPIC)

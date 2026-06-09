@@ -4,6 +4,9 @@ import com.vibecart.api.modules.ecommerce.dto.request.CartMergeRequest;
 import com.vibecart.api.modules.ecommerce.dto.response.CartResponse;
 import java.util.List;
 
+/**
+ * Service quản lý giỏ hàng của người dùng.
+ */
 public interface CartService {
     CartResponse getCart(String userId);
     void addItem(String userId, String variantId, int quantity);

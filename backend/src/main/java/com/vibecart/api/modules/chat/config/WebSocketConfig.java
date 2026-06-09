@@ -23,6 +23,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Cấu hình hệ thống nhắn tin WebSocket Message Broker thông qua giao thức STOMP.
+ */
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -31,6 +34,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtTokenProvider tokenProvider;
 
+    /**
+     * Cấu hình Message Broker để quản lý các luồng gửi nhận tin nhắn (prefix cho tin nhắn chung và tin nhắn cá nhân).
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
@@ -38,6 +44,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.setUserDestinationPrefix("/user");
     }
 
+    /**
+     * Đăng ký endpoint kết nối WebSocket cho phía Client (hỗ trợ SockJS fallback).
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
@@ -48,6 +57,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns("*");
     }
 
+    /**
+     * Cấu hình đánh chặn kênh Inbound (Client gửi lên) để trích xuất và xác thực JWT token của STOMP CONNECT.
+     */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {

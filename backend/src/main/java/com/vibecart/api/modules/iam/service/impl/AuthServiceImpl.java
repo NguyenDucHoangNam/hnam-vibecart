@@ -32,6 +32,9 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link AuthService} xử lý đăng ký, đăng nhập, OAuth2, OTP, token, quản lý tài khoản.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -54,7 +57,6 @@ public class AuthServiceImpl implements AuthService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final SecureRandom secureRandom = new SecureRandom();
 
-    // Redis key prefixes (matching technical design doc)
     private static final String KEY_REGISTRATION_OTP = "registration_otp:";
     private static final String KEY_OTP_COOLDOWN = "otp_cooldown:";
     private static final String KEY_OTP_ATTEMPTS = "otp_attempts:";
@@ -66,7 +68,6 @@ public class AuthServiceImpl implements AuthService {
     private static final String KEY_PASSWORD_RESET_TOKEN = "password_reset_token:";
     private static final String KEY_GRACE_REFRESH = "grace_refresh:";
 
-    // Constants
     private static final long OTP_TTL_MINUTES = 5;
     private static final long OTP_COOLDOWN_SECONDS = 60;
     private static final int MAX_OTP_ATTEMPTS = 5;
@@ -77,30 +78,22 @@ public class AuthServiceImpl implements AuthService {
     private static final long PASSWORD_RESET_TTL_MINUTES = 10;
     private static final long GRACE_PERIOD_SECONDS = 10;
 
-    // Disposable email domains blocklist
     private static final Set<String> DISPOSABLE_DOMAINS = Set.of(
             "tempmail.com", "10minutemail.com", "yopmail.com",
             "mailinator.com", "guerrillamail.com", "throwaway.email"
     );
 
-    // Valid user statuses for admin operations
     private static final Set<String> VALID_STATUSES = Set.of(
             "ACTIVE", "BANNED", "PENDING_VERIFICATION", "PENDING_DELETION"
     );
 
-    // ====================================================================
-    // 1. ĐĂNG KÝ TÀI KHOẢN (Register)
-    // ====================================================================
     @Override
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        // 1. Normalize email
         String email = request.getEmail().trim().toLowerCase();
 
-        // 2. Check disposable email
         validateNotDisposableEmail(email);
 
-        // 2.b Clean up clashing unverified accounts (PENDING_VERIFICATION) to prevent registration deadlock
         userRepository.findByUsername(request.getUsername())
                 .filter(u -> "PENDING_VERIFICATION".equals(u.getStatus()))
                 .ifPresent(u -> {
@@ -117,7 +110,6 @@ public class AuthServiceImpl implements AuthService {
                     userRepository.hardDeleteUserByUserId(u.getId());
                 });
 
-        // 3. Check uniqueness (including soft-deleted accounts in PENDING_DELETION grace period)
         if (userRepository.existsByUsernameAnywhere(request.getUsername())) {
             throw new AppException(ErrorCode.USERNAME_EXISTED);
         }
@@ -125,13 +117,11 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.EMAIL_EXISTED);
         }
 
-        // 4. Determine role (SHOPPER → ROLE_USER, CREATOR → ROLE_CREATOR)
         String roleName = (request.getRole() != null && request.getRole().equalsIgnoreCase("CREATOR"))
                 ? "ROLE_CREATOR" : "ROLE_USER";
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
 
-        // 5. Build & save User entity
         User user = User.builder()
                 .username(request.getUsername())
                 .email(email)
@@ -145,43 +135,33 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(user);
         log.info("User registered: {} with status PENDING_VERIFICATION", savedUser.getUsername());
 
-        // 6. Generate OTP and store in Redis (with cooldown)
         String otp = generateAndStoreOtp(email);
 
-        // Publish registration OTP event to Kafka for asynchronous email dispatch
         publishOtpEvent(email, otp);
 
         return userMapper.toUserResponse(savedUser);
     }
 
-    // ====================================================================
-    // 2. XÁC THỰC MÃ OTP (Verify OTP)
-    // ====================================================================
     @Override
     @Transactional
     public AuthResponse verifyOtp(VerifyOtpRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        // 1. Check brute-force attempt counter
         String attemptsKey = KEY_OTP_ATTEMPTS + email;
         String attemptsStr = redisTemplate.opsForValue().get(attemptsKey);
         int attempts = attemptsStr != null ? Integer.parseInt(attemptsStr) : 0;
 
         if (attempts >= MAX_OTP_ATTEMPTS) {
-            // Invalidate OTP immediately
             redisTemplate.delete(KEY_REGISTRATION_OTP + email);
             throw new AppException(ErrorCode.OTP_ATTEMPTS_EXCEEDED);
         }
 
-        // 2. Read OTP from Redis
         String storedOtp = redisTemplate.opsForValue().get(KEY_REGISTRATION_OTP + email);
         if (storedOtp == null) {
             throw new AppException(ErrorCode.OTP_EXPIRED);
         }
 
-        // 3. Verify OTP
         if (!storedOtp.equals(request.getOtpCode())) {
-            // Increment attempt counter
             redisTemplate.opsForValue().increment(attemptsKey);
             if (attempts == 0) {
                 redisTemplate.expire(attemptsKey, Duration.ofMinutes(OTP_TTL_MINUTES));
@@ -189,7 +169,6 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.INVALID_OTP);
         }
 
-        // 4. OTP correct → Activate account
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
@@ -197,58 +176,44 @@ public class AuthServiceImpl implements AuthService {
         User activatedUser = userRepository.save(user);
         searchService.indexUser(activatedUser);
 
-        // 5. Cleanup Redis keys
         redisTemplate.delete(KEY_REGISTRATION_OTP + email);
         redisTemplate.delete(attemptsKey);
         redisTemplate.delete(KEY_OTP_COOLDOWN + email);
 
         log.info("User {} activated via OTP verification", user.getUsername());
 
-        // 6. Auto-login: return tokens
         return generateAuthResponse(user);
     }
 
-    // ====================================================================
-    // 1.b GỬI LẠI MÃ OTP (Resend OTP)
-    // ====================================================================
     @Override
     @Transactional
     public void resendOtp(ResendOtpRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        // 1. Check user exists
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 2. Must be PENDING_VERIFICATION to resend OTP
         if (!"PENDING_VERIFICATION".equals(user.getStatus())) {
             throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
         }
 
-        // 3. Generate and store OTP (with automatic cooldown checks)
         String otp = generateAndStoreOtp(email);
 
-        // Publish resent OTP event to Kafka for asynchronous email dispatch
         publishOtpEvent(email, otp);
 
         log.info("OTP resent for user: {} with email {}", user.getUsername(), email);
     }
 
-    // ====================================================================
-    // 3. ĐĂNG NHẬP CỤC BỘ (Login)
-    // ====================================================================
     @Override
     @Transactional
     public AuthResponse login(LoginRequest request) {
         String identifier = request.getUsernameOrEmail().trim().toLowerCase();
 
-        // 1. Check temporary account lockout
         String lockoutKey = KEY_LOGIN_LOCKOUT + identifier;
         if (Boolean.TRUE.equals(redisTemplate.hasKey(lockoutKey))) {
             throw new AppException(ErrorCode.ACCOUNT_TEMPORARILY_LOCKED);
         }
 
-        // 2. Find user by username or email
         User user = userRepository.findByUsername(identifier)
                 .or(() -> userRepository.findByEmail(identifier))
                 .orElseThrow(() -> {
@@ -256,13 +221,11 @@ public class AuthServiceImpl implements AuthService {
                     return new AppException(ErrorCode.UNAUTHENTICATED);
                 });
 
-        // 3. Verify password
         if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             incrementLoginAttempts(identifier);
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        // 4. Check account status
         switch (user.getStatus()) {
             case "PENDING_VERIFICATION" -> throw new AppException(ErrorCode.ACCOUNT_PENDING_VERIFICATION);
             case "BANNED" -> throw new AppException(ErrorCode.ACCOUNT_BANNED);
@@ -270,18 +233,13 @@ public class AuthServiceImpl implements AuthService {
             default -> throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
         }
 
-        // 5. Clear login attempts on success
         redisTemplate.delete(KEY_LOGIN_ATTEMPTS + identifier);
 
         log.info("User logged in: {}", user.getUsername());
 
-        // 6. Generate tokens with session control
         return generateAuthResponse(user);
     }
 
-    // ====================================================================
-    // 4. ĐĂNG NHẬP GOOGLE (OAuth2)
-    // ====================================================================
     @Override
     @Transactional
     public AuthResponse loginGoogle(OAuth2Request request) {
@@ -309,9 +267,6 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    // ====================================================================
-    // 5. ĐĂNG NHẬP FACEBOOK (OAuth2)
-    // ====================================================================
     @Override
     @Transactional
     public AuthResponse loginFacebook(OAuth2Request request) {
@@ -354,23 +309,17 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    // ====================================================================
-    // 6. GIA HẠN TOKEN (Refresh Token Rotation)
-    // ====================================================================
     @Override
     @Transactional
     public AuthResponse refresh(RefreshRequest request) {
         String oldRefreshToken = request.getRefreshToken();
         String redisKey = KEY_REFRESH_TOKEN + oldRefreshToken;
 
-        // 1. Validate refresh token in Redis
         String username = redisTemplate.opsForValue().get(redisKey);
         if (username == null) {
-            // Step 2a: Check Grace Period — tolerate duplicate requests from flaky networks
             String graceKey = KEY_GRACE_REFRESH + oldRefreshToken;
             String gracedTokensJson = redisTemplate.opsForValue().get(graceKey);
             if (gracedTokensJson != null) {
-                // Race condition detected (not theft) — return the tokens already generated
                 log.info("Grace Period hit: returning cached tokens for rotated refresh token (race condition, not theft)");
                 try {
                     @SuppressWarnings("unchecked")
@@ -390,7 +339,6 @@ public class AuthServiceImpl implements AuthService {
                 }
             }
 
-            // Step 2b: Token Theft Detection — token is not in grace period
             String rotatedTokenKey = "rotated_token:" + oldRefreshToken;
             String rotatedUser = redisTemplate.opsForValue().get(rotatedTokenKey);
             if (rotatedUser != null) {
@@ -403,14 +351,11 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        // 2. Revoke old refresh token immediately (Token Rotation)
         redisTemplate.delete(redisKey);
         redisTemplate.opsForSet().remove(KEY_USER_SESSIONS + username, oldRefreshToken);
 
-        // Save to rotated token history (TTL 1 hour) to detect potential theft reuse later
         redisTemplate.opsForValue().set("rotated_token:" + oldRefreshToken, username, Duration.ofHours(1));
 
-        // 3. Load user and verify status
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
@@ -420,11 +365,8 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Token refreshed for user: {}", username);
 
-        // 4. Generate new token pair
         AuthResponse authResponse = generateAuthResponse(user);
 
-        // 5. Store Grace Period Shadow Key (TTL 10s) — cache the new tokens
-        //    so duplicate requests within 10s get the same response instead of triggering theft detection
         try {
             Map<String, String> graceData = Map.of(
                     "accessToken", authResponse.getAccessToken(),
@@ -443,14 +385,10 @@ public class AuthServiceImpl implements AuthService {
         return authResponse;
     }
 
-    // ====================================================================
-    // 7. ĐĂNG XUẤT (Logout)
-    // ====================================================================
     @Override
     public void logout(RefreshRequest request, String accessToken) {
         log.info("Processing logout request");
 
-        // 1. Delete Refresh Token from Redis
         String refreshToken = request.getRefreshToken();
         String username = redisTemplate.opsForValue().get(KEY_REFRESH_TOKEN + refreshToken);
         redisTemplate.delete(KEY_REFRESH_TOKEN + refreshToken);
@@ -458,7 +396,6 @@ public class AuthServiceImpl implements AuthService {
             redisTemplate.opsForSet().remove(KEY_USER_SESSIONS + username, refreshToken);
         }
 
-        // 2. Blacklist Access Token in Redis (TTL = remaining JWT lifetime)
         if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
             try {
                 Date expiration = jwtTokenProvider.getExpirationFromToken(accessToken);
@@ -478,9 +415,6 @@ public class AuthServiceImpl implements AuthService {
         log.info("User logged out successfully");
     }
 
-    // ====================================================================
-    // 8. LẤY THÔNG TIN CÁ NHÂN (Get Profile)
-    // ====================================================================
     @Override
     @Transactional(readOnly = true)
     public UserResponse getProfile(String username) {
@@ -489,9 +423,6 @@ public class AuthServiceImpl implements AuthService {
         return userMapper.toUserResponse(user);
     }
 
-    // ====================================================================
-    // 9. CẬP NHẬT HỒ SƠ CÁ NHÂN (Update Profile)
-    // ====================================================================
     @Override
     @Transactional
     public AuthResponse updateProfile(String oldUsername, UpdateProfileRequest request) {
@@ -502,7 +433,6 @@ public class AuthServiceImpl implements AuthService {
         String newUsername = request.getUsername();
         if (newUsername != null && !newUsername.trim().isEmpty() && !newUsername.equals(oldUsername)) {
             newUsername = newUsername.trim();
-            // Validate username constraint (min=5, max=30, pattern matching)
             if (newUsername.length() < 5 || newUsername.length() > 30) {
                 throw new AppException(ErrorCode.USERNAME_INVALID);
             }
@@ -539,52 +469,39 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    // ====================================================================
-    // 10. ĐỔI MẬT KHẨU (Change Password)
-    // ====================================================================
     @Override
     @Transactional
     public void changePassword(String username, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 1. Verify old password
         if (user.getPassword() == null || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
             throw new AppException(ErrorCode.OLD_PASSWORD_INCORRECT);
         }
 
-        // 2. Confirm new password matches
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new AppException(ErrorCode.PASSWORD_MISMATCH);
         }
 
-        // 3. New password must differ from old
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
             throw new AppException(ErrorCode.SAME_PASSWORD);
         }
 
-        // 4. Update password
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // 5. Kick out all other sessions (keep only current session implicit via client)
         purgeAllSessions(username);
 
         log.info("Password changed for user: {}. All other sessions purged.", username);
     }
 
-    // ====================================================================
-    // 11. QUÊN MẬT KHẨU (Forgot Password)
-    // ====================================================================
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
         String email = request.getEmail().trim().toLowerCase();
 
-        // Anti-enumeration: always respond the same regardless of email existence
         User user = userRepository.findByEmail(email).orElse(null);
 
         if (user != null && "ACTIVE".equals(user.getStatus())) {
-            // Generate UUID reset token
             String resetToken = UUID.randomUUID().toString();
             redisTemplate.opsForValue().set(
                     KEY_PASSWORD_RESET_TOKEN + resetToken,
@@ -593,7 +510,6 @@ public class AuthServiceImpl implements AuthService {
             );
             log.info("Password reset token generated for email: {}", email);
 
-            // Send email via Kafka (Outbox Pattern) with reset link
             String resetLink = "http://localhost:3000/reset-password?token=" + resetToken;
             String subject = "[VibeCart] Yêu cầu đặt lại mật khẩu tài khoản";
             
@@ -639,17 +555,12 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-        // Always log, never reveal whether email exists
         log.info("Forgot password request processed for email: {}", email);
     }
 
-    // ====================================================================
-    // 12. ĐẶT LẠI MẬT KHẨU (Reset Password)
-    // ====================================================================
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        // 1. Validate reset token from Redis
         String redisKey = KEY_PASSWORD_RESET_TOKEN + request.getToken();
         String email = redisTemplate.opsForValue().get(redisKey);
 
@@ -657,71 +568,54 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.INVALID_RESET_TOKEN);
         }
 
-        // 2. Find user
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 3. Update password
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // 4. Delete reset token
         redisTemplate.delete(redisKey);
 
-        // 5. Kick out ALL sessions for security
         purgeAllSessions(user.getUsername());
 
         log.info("Password reset completed for user: {}. All sessions purged.", user.getUsername());
     }
 
-    // ====================================================================
-    // 13. XÓA TÀI KHOẢN (Delete Account → PENDING_DELETION)
-    // ====================================================================
     @Override
     @Transactional
     public void deleteAccount(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Set status to PENDING_DELETION (30-day grace period handled by scheduler)
         user.setStatus("PENDING_DELETION");
         user.setDeleted(true);
         userRepository.save(user);
         searchService.deleteUser(user.getId());
 
-        // Purge all sessions immediately
         purgeAllSessions(username);
 
         log.info("Account deletion requested for user: {}. Status set to PENDING_DELETION.", username);
     }
 
-    // ====================================================================
-    // 14. ADMIN: CẬP NHẬT TRẠNG THÁI (Update User Status)
-    // ====================================================================
     @Override
     @Transactional
     public UserResponse updateUserStatus(String userId, UpdateUserStatusRequest request, String adminUsername) {
-        // 1. Find target user
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 2. Cannot change own status
         if (targetUser.getUsername().equals(adminUsername)) {
             throw new AppException(ErrorCode.CANNOT_CHANGE_OWN_STATUS);
         }
 
-        // 3. Validate status
         String newStatus = request.getStatus().toUpperCase();
         if (!VALID_STATUSES.contains(newStatus)) {
             throw new AppException(ErrorCode.INVALID_STATUS);
         }
 
-        // 4. Update status
         targetUser.setStatus(newStatus);
         User updatedUser = userRepository.save(targetUser);
         searchService.indexUser(updatedUser);
 
-        // 5. If BANNED → purge all sessions immediately
         if ("BANNED".equals(newStatus)) {
             purgeAllSessions(targetUser.getUsername());
             log.info("User {} BANNED by admin {}. All sessions purged.", targetUser.getUsername(), adminUsername);
@@ -745,16 +639,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse updateUserRoles(String userId, com.vibecart.api.modules.iam.dto.request.UpdateUserRolesRequest request, String adminUsername) {
-        // 1. Find target user
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 2. Prevent self-demotion / editing own roles
         if (targetUser.getUsername().equals(adminUsername)) {
             throw new AppException(ErrorCode.CANNOT_CHANGE_OWN_ROLE);
         }
 
-        // 3. Fetch roles from request
         Set<Role> newRoles = new HashSet<>();
         for (String roleName : request.getRoles()) {
             Role role = roleRepository.findByName(roleName)
@@ -762,22 +653,17 @@ public class AuthServiceImpl implements AuthService {
             newRoles.add(role);
         }
 
-        // 4. Update user roles
         targetUser.setRoles(newRoles);
         User updatedUser = userRepository.save(targetUser);
         searchService.indexUser(updatedUser);
 
         log.info("User {} roles updated to {} by admin {}", targetUser.getUsername(), request.getRoles(), adminUsername);
 
-        // Purge sessions to force token updates
         purgeAllSessions(targetUser.getUsername());
 
         return userMapper.toUserResponse(updatedUser);
     }
 
-    // ====================================================================
-    // PRIVATE HELPER METHODS
-    // ====================================================================
 
     /**
      * Generate 6-digit OTP, store in Redis, and set cooldown.
@@ -887,7 +773,6 @@ public class AuthServiceImpl implements AuthService {
      * Process Google/Facebook OAuth2 user authentication.
      */
     private AuthResponse processOAuthUser(String provider, String oauthId, String email, String name, String picture) {
-        // Normalize email to lowercase before DB lookup (OAuth Email Normalization)
         email = email.trim().toLowerCase();
 
         final String normalizedEmail = email;

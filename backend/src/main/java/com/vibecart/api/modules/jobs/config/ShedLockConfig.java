@@ -8,14 +8,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+/**
+ * Cấu hình ShedLock đảm bảo chỉ một instance chạy scheduled task trong cluster.
+ */
 @Configuration
 @EnableScheduling
-@EnableSchedulerLock(defaultLockAtMostFor = "PT30M") // Auto-release lock after 30 minutes if node dies
+@EnableSchedulerLock(defaultLockAtMostFor = "PT30M")
 public class ShedLockConfig {
 
     @Bean
     public LockProvider lockProvider(RedisConnectionFactory connectionFactory) {
-        // Redis Lock Provider with specific namespace
+
         return new RedisLockProvider(connectionFactory, "vibecart:lock");
     }
 }

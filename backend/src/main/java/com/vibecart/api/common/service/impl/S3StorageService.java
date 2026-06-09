@@ -15,6 +15,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import java.io.InputStream;
 import java.time.Duration;
 
+/**
+ * Dịch vụ lưu trữ tệp tin tương tác trực tiếp với AWS S3 hoặc MinIO.
+ */
 @Service
 @Slf4j
 public class S3StorageService implements StorageService {
@@ -29,6 +32,9 @@ public class S3StorageService implements StorageService {
         this.storageProperties = storageProperties;
     }
 
+    /**
+     * Kiểm tra tính khả dụng của S3 Bucket khi ứng dụng khởi động.
+     */
     @PostConstruct
     public void init() {
         String bucketName = storageProperties.getBucketName();
@@ -46,6 +52,9 @@ public class S3StorageService implements StorageService {
         }
     }
 
+    /**
+     * Tải tệp tin lên S3.
+     */
     @Override
     public String uploadFile(String key, InputStream content, long contentLength, String contentType) {
         try {
@@ -64,6 +73,9 @@ public class S3StorageService implements StorageService {
         }
     }
 
+    /**
+     * Xóa tệp tin khỏi S3.
+     */
     @Override
     public void deleteFile(String key) {
         try {
@@ -80,6 +92,9 @@ public class S3StorageService implements StorageService {
         }
     }
 
+    /**
+     * Tạo Pre-signed URL phục vụ Client tự upload lên S3.
+     */
     @Override
     public String generatePresignedUploadUrl(String key, String contentType, long contentLength, int expirationMinutes) {
         try {
@@ -105,6 +120,9 @@ public class S3StorageService implements StorageService {
         }
     }
 
+    /**
+     * Lấy URL tĩnh công khai của tệp tin trên S3.
+     */
     @Override
     public String getFileUrl(String key) {
         String publicUrlPrefix = storageProperties.getPublicUrlPrefix();
@@ -116,15 +134,16 @@ public class S3StorageService implements StorageService {
         String endpoint = storageProperties.getEndpoint();
         String bucket = storageProperties.getBucketName();
         
-        // If an endpoint override is specified (like MinIO local), build URL accordingly
         if (endpoint != null && !endpoint.isEmpty()) {
             return String.format("%s/%s/%s", endpoint, bucket, key);
         }
         
-        // Default standard AWS S3 URL format
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, storageProperties.getRegion(), key);
     }
 
+    /**
+     * Kiểm tra tệp tin có tồn tại và khớp kích thước trên S3 không.
+     */
     @Override
     public boolean verifyFile(String key, long expectedSize) {
         try {

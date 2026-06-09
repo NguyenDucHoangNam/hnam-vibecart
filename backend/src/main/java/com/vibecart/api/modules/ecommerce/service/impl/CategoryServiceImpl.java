@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link CategoryService} quản lý danh mục phân cấp.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -102,12 +105,12 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // Check no children reference this category
+
         if (categoryRepository.existsByParentId(id)) {
             throw new AppException(ErrorCode.CATEGORY_HAS_CHILDREN);
         }
 
-        // Check no products reference this category
+
         if (productRepository.countByCategoryId(id) > 0) {
             throw new AppException(ErrorCode.CATEGORY_HAS_PRODUCTS);
         }
@@ -121,12 +124,12 @@ public class CategoryServiceImpl implements CategoryService {
             return "";
         }
         
-        // Normalize and remove combining diacritical marks
+
         String temp = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD);
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
         String normalized = pattern.matcher(temp).replaceAll("");
         
-        // Explicitly handle Vietnamese special letter d/D with bar
+
         normalized = normalized.replace("đ", "d")
                                .replace("Đ", "d")
                                .replace("đ", "d");

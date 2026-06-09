@@ -4,6 +4,9 @@ import com.vibecart.api.common.dto.PageResponse;
 import com.vibecart.api.modules.social.dto.request.PostRequest;
 import com.vibecart.api.modules.social.dto.response.PostResponse;
 
+/**
+ * Service quản lý bài viết trong mạng xã hội.
+ */
 public interface PostService {
 
     /** Tạo bài viết mới (ROLE_CREATOR only) */

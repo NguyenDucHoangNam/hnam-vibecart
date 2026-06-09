@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 
+/**
+ * Controller quản lý sản phẩm: CRUD, tìm kiếm, tồn kho.
+ */
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
@@ -62,12 +65,12 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
 
-        // Handle param aliases: FE products page uses 'query'/'category'/'sortBy', search page uses 'q'/'categoryId'/'sort'
+
         String activeQuery = (q != null && !q.isBlank()) ? q : query;
         String activeCategoryId = (categoryId != null && !categoryId.isBlank()) ? categoryId : category;
         String activeSort = (sort != null && !sort.isBlank()) ? sort : sortBy;
         
-        // Map legacy sortBy values to Elasticsearch sort values
+
         if (activeSort != null) {
             activeSort = switch (activeSort) {
                 case "priceAsc" -> "price_asc";
@@ -78,7 +81,7 @@ public class ProductController {
             };
         }
 
-        // Get userId for search history tracking
+
         String userId = null;
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {

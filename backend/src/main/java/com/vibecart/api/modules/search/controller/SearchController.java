@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Controller xử lý các yêu cầu tìm kiếm sản phẩm, thành viên và quản lý lịch sử tìm kiếm.
+ */
 @RestController
 @RequestMapping("/api/v1/search")
 public class SearchController {
@@ -25,10 +28,27 @@ public class SearchController {
 
     private final SearchService searchService;
 
+    /**
+     * Khởi tạo SearchController với service tìm kiếm được cung cấp.
+     *
+     * @param searchService Service thực hiện các logic tìm kiếm
+     */
     public SearchController(SearchService searchService) {
         this.searchService = searchService;
     }
 
+    /**
+     * Tìm kiếm sản phẩm theo các tiêu chí lọc và phân trang.
+     *
+     * @param q Từ khóa tìm kiếm
+     * @param categoryId ID của danh mục sản phẩm cần lọc
+     * @param minPrice Giá tối thiểu
+     * @param maxPrice Giá tối đa
+     * @param sort Tiêu chí sắp xếp (relevance, price_asc, price_desc, newest)
+     * @param page Số trang hiện tại (mặc định 0)
+     * @param size Số lượng phần tử mỗi trang (mặc định 20)
+     * @return Kết quả tìm kiếm sản phẩm và các gợi ý sửa lỗi chính tả nếu không tìm thấy
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<SearchResultResponse>> search(
             @RequestParam(required = false) String q,
@@ -58,6 +78,12 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Tự động gợi ý hoàn thành từ khóa sản phẩm dựa trên tiền tố.
+     *
+     * @param prefix Tiền tố từ khóa người dùng nhập vào
+     * @return Danh sách các từ khóa gợi ý phù hợp
+     */
     @GetMapping("/autocomplete")
     public ResponseEntity<ApiResponse<List<String>>> autocomplete(@RequestParam String prefix) {
         log.info("REST request for autocomplete prefix: '{}'", prefix);
@@ -72,6 +98,14 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Tìm kiếm thành viên (creator) hoạt động trong hệ thống.
+     *
+     * @param q Từ khóa tên hoặc username của thành viên
+     * @param page Số trang hiện tại
+     * @param size Số lượng phần tử mỗi trang
+     * @return Kết quả tìm kiếm thành viên và trạng thái theo dõi hiện tại
+     */
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<UserSearchResultResponse>> searchUsers(
             @RequestParam(required = false) String q,
@@ -97,6 +131,12 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Tự động gợi ý hoàn thành từ khóa tên/username của thành viên.
+     *
+     * @param prefix Tiền tố từ khóa nhập vào
+     * @return Danh sách các gợi ý tên/username thành viên
+     */
     @GetMapping("/users/autocomplete")
     public ResponseEntity<ApiResponse<List<String>>> autocompleteUsers(@RequestParam String prefix) {
         log.info("REST request for user autocomplete prefix: '{}'", prefix);
@@ -111,6 +151,11 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Lấy danh sách các từ khóa tìm kiếm thịnh hành hàng tuần.
+     *
+     * @return Danh sách các từ khóa hot nhất trong tuần
+     */
     @GetMapping("/trending")
     public ResponseEntity<ApiResponse<List<String>>> getTrendingKeywords() {
         log.info("REST request to fetch weekly trending searches");
@@ -125,6 +170,11 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Lấy lịch sử tìm kiếm cá nhân của người dùng hiện tại.
+     *
+     * @return Danh sách các từ khóa cùng thời gian tìm kiếm tương ứng
+     */
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<SearchHistoryResponse>>> getPersonalHistory() {
@@ -142,6 +192,12 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Xóa một từ khóa cụ thể khỏi lịch sử tìm kiếm cá nhân.
+     *
+     * @param keyword Từ khóa cần xóa
+     * @return Phản hồi trống thể hiện xóa thành công
+     */
     @DeleteMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteHistoryKeyword(@RequestParam String keyword) {
@@ -158,6 +214,11 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Xóa sạch toàn bộ lịch sử tìm kiếm cá nhân của người dùng.
+     *
+     * @return Phản hồi trống thể hiện xóa thành công
+     */
     @DeleteMapping("/history/clear")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> clearHistory() {
@@ -174,6 +235,12 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Đồng bộ lịch sử tìm kiếm lưu tạm ở localStorage trên client khi chưa đăng nhập.
+     *
+     * @param request Yêu cầu đồng bộ chứa danh sách từ khóa
+     * @return Phản hồi trống thể hiện đồng bộ thành công
+     */
     @PostMapping("/history/merge")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> mergeHistory(@RequestBody SearchMergeRequest request) {
@@ -190,6 +257,11 @@ public class SearchController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Thực hiện lập chỉ mục lại toàn bộ dữ liệu sản phẩm và người dùng vào Elasticsearch.
+     *
+     * @return Phản hồi trống thể hiện lập chỉ mục lại thành công
+     */
     @PostMapping("/sync")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> reindexAll() {

@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Controller cho Admin kích hoạt chạy thủ công các Batch Job.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/jobs")
 public class AdminJobController {

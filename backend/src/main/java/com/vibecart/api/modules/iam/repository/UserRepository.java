@@ -24,11 +24,11 @@ public interface UserRepository extends JpaRepository<User, String> {
     
     boolean existsByEmail(String email);
 
-    // Bypasses soft-delete filters to check if a username is taken anywhere
+
     @Query(value = "SELECT COUNT(*) > 0 FROM users WHERE username = :username", nativeQuery = true)
     boolean existsByUsernameAnywhere(@Param("username") String username);
 
-    // Bypasses soft-delete filters to check if an email is taken anywhere
+
     @Query(value = "SELECT COUNT(*) > 0 FROM users WHERE email = :email", nativeQuery = true)
     boolean existsByEmailAnywhere(@Param("email") String email);
 

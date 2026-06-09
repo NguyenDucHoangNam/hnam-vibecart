@@ -19,6 +19,9 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * Lớp triển khai dịch vụ kiểm soát trạng thái trực tuyến (Presence) sử dụng Redis.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -33,6 +36,9 @@ public class PresenceServiceImpl implements PresenceService {
     private static final String ACTIVE_USERS_SET = "presence:active_users";
     private static final long ONLINE_TTL_SECONDS = 40;
 
+    /**
+     * Cập nhật trạng thái trực tuyến của người dùng lên Redis với thời gian hết hạn (TTL).
+     */
     @Override
     public void setOnline(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
@@ -43,13 +49,15 @@ public class PresenceServiceImpl implements PresenceService {
             redisTemplate.opsForValue().set(key, "ONLINE", ONLINE_TTL_SECONDS, TimeUnit.SECONDS);
             redisTemplate.opsForValue().set(lastActiveKey, String.valueOf(Instant.now().toEpochMilli()));
 
-            // Maintain active users SET for efficient lookup (avoids KEYS pattern scan)
             redisTemplate.opsForSet().add(ACTIVE_USERS_SET, userId);
 
             log.debug("Set user presence to ONLINE: username={}, userId={}", username, userId);
         });
     }
 
+    /**
+     * Cập nhật trạng thái ngoại tuyến của người dùng bằng cách xóa key trạng thái trong Redis.
+     */
     @Override
     public void setOffline(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
@@ -60,13 +68,15 @@ public class PresenceServiceImpl implements PresenceService {
             redisTemplate.delete(key);
             redisTemplate.opsForValue().set(lastActiveKey, String.valueOf(Instant.now().toEpochMilli()));
 
-            // Remove from active users SET
             redisTemplate.opsForSet().remove(ACTIVE_USERS_SET, userId);
 
             log.debug("Set user presence to OFFLINE: username={}, userId={}", username, userId);
         });
     }
 
+    /**
+     * Lấy thông tin trạng thái và thời gian hoạt động cuối cùng của người dùng.
+     */
     @Override
     public PresenceResponse getUserPresence(String userId) {
         String key = PRESENCE_KEY_PREFIX + userId;
@@ -98,23 +108,22 @@ public class PresenceServiceImpl implements PresenceService {
                 .build();
     }
 
+    /**
+     * Lấy danh sách tối đa 10 người dùng đang online mà người dùng hiện tại đang theo dõi.
+     */
     @Override
     public List<FollowResponse> getActiveUsers(String currentUsername) {
         log.info("Fetching all active/online users from Redis SET...");
         try {
-            // Use Redis SET instead of KEYS pattern scan for O(N) → O(1) per member
             Set<String> userIds = redisTemplate.opsForSet().members(ACTIVE_USERS_SET);
             if (userIds == null || userIds.isEmpty()) {
                 return Collections.emptyList();
             }
 
-            // Verify each userId is still actually online (TTL key might have expired)
-            // Clean up stale entries from the SET
             List<String> verifiedOnlineIds = userIds.stream()
                     .filter(uid -> {
                         Boolean exists = redisTemplate.hasKey(PRESENCE_KEY_PREFIX + uid);
                         if (!Boolean.TRUE.equals(exists)) {
-                            // Cleanup: remove stale entry from SET
                             redisTemplate.opsForSet().remove(ACTIVE_USERS_SET, uid);
                             return false;
                         }

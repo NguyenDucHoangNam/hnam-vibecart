@@ -27,6 +27,9 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 
+/**
+ * Controller xử lý các yêu cầu REST API và tin nhắn WebSocket liên quan đến chat/trò chuyện.
+ */
 @RestController
 @RequiredArgsConstructor
 @Slf4j
@@ -35,10 +38,9 @@ public class ChatController {
     private final ChatService chatService;
     private final PresenceService presenceService;
 
-    // ==========================================
-    // ============ 1. REST ENDPOINTS ===========
-    // ==========================================
-
+    /**
+     * Tạo mới hoặc lấy phòng chat hiện tại giữa các người dùng.
+     */
     @PostMapping("/api/v1/chat/conversations")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<ConversationResponse>> createOrGetConversation(
@@ -58,6 +60,9 @@ public class ChatController {
         );
     }
 
+    /**
+     * Lấy danh sách các cuộc trò chuyện của người dùng hiện tại.
+     */
     @GetMapping("/api/v1/chat/conversations")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations() {
@@ -76,6 +81,9 @@ public class ChatController {
         );
     }
 
+    /**
+     * Lấy danh sách tin nhắn phân trang của một cuộc trò chuyện.
+     */
     @GetMapping("/api/v1/chat/conversations/{conversationId}/messages")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<PageResponse<MessageResponse>>> getMessages(
@@ -97,6 +105,9 @@ public class ChatController {
         );
     }
 
+    /**
+     * Tạo Pre-signed URL để Client trực tiếp tải tệp đính kèm lên lưu trữ.
+     */
     @PostMapping("/api/v1/chat/attachments/presigned-url")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<PresignedUrlResponse>> getPresignedUrl(
@@ -116,6 +127,9 @@ public class ChatController {
         );
     }
 
+    /**
+     * Lấy trạng thái hoạt động (online/offline) của người dùng cụ thể.
+     */
     @GetMapping("/api/v1/chat/presence/{userId}")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<PresenceResponse>> getUserPresence(@PathVariable String userId) {
@@ -132,6 +146,9 @@ public class ChatController {
         );
     }
 
+    /**
+     * Lấy danh sách các tài khoản đang theo dõi/theo dõi lại đang trực tuyến.
+     */
     @GetMapping("/api/v1/chat/presence/active")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<com.vibecart.api.modules.social.dto.response.FollowResponse>>> getActiveUsers() {
@@ -149,10 +166,9 @@ public class ChatController {
         );
     }
 
-    // ==========================================
-    // =========== 2. WEBSOCKET ENDPOINTS =======
-    // ==========================================
-
+    /**
+     * Nhận và phát tán tin nhắn chat mới của người dùng qua STOMP.
+     */
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Valid MessageRequest request, Principal principal) {
         if (principal != null) {
@@ -162,6 +178,9 @@ public class ChatController {
         }
     }
 
+    /**
+     * Nhận và phát tán trạng thái đang gõ phím (typing) của người dùng.
+     */
     @MessageMapping("/chat.typing")
     public void typing(@Valid TypingRequest request, Principal principal) {
         if (principal != null) {
@@ -171,6 +190,9 @@ public class ChatController {
         }
     }
 
+    /**
+     * Cập nhật trạng thái trực tuyến của người dùng bằng gói tin ping định kỳ.
+     */
     @MessageMapping("/chat.ping")
     public void ping(Principal principal) {
         if (principal != null) {
@@ -180,6 +202,9 @@ public class ChatController {
         }
     }
 
+    /**
+     * Nhận và xử lý sự kiện đã xem tin nhắn từ phía người dùng.
+     */
     @MessageMapping("/chat.seen")
     public void seen(@Valid SeenRequest request, Principal principal) {
         if (principal != null) {
@@ -189,7 +214,6 @@ public class ChatController {
         }
     }
 
-    // ==================== HELPER ====================
     private String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null) ? auth.getName() : null;

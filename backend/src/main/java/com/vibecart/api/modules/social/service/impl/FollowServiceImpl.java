@@ -23,6 +23,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Implementation của {@link FollowService} xử lý follow/unfollow và thống kê.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,18 +35,18 @@ public class FollowServiceImpl implements FollowService {
     private final UserRepository userRepository;
     private final FollowMapper followMapper;
 
-    // ==================== TOGGLE FOLLOW/UNFOLLOW ====================
+
     @Override
     @Transactional
     public boolean toggleFollow(String targetUserId, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
 
-        // Cannot follow yourself
+
         if (currentUser.getId().equals(targetUserId)) {
             throw new AppException(ErrorCode.CANNOT_FOLLOW_SELF);
         }
 
-        // Verify target user exists
+
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
@@ -53,12 +56,10 @@ public class FollowServiceImpl implements FollowService {
                 .build();
 
         if (followRepository.existsById(followId)) {
-            // Unfollow
             followRepository.deleteById(followId);
             log.info("User {} unfollowed {}", currentUsername, targetUser.getUsername());
             return false;
         } else {
-            // Follow
             Follow follow = Follow.builder()
                     .id(followId)
                     .follower(currentUser)
@@ -70,14 +71,14 @@ public class FollowServiceImpl implements FollowService {
         }
     }
 
-    // ==================== DANH SÁCH FOLLOWERS ====================
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<FollowResponse> getFollowers(String userId, int page, int size, String currentUsername) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Follow> followPage = followRepository.findByIdFollowingId(userId, pageable);
 
-        // [BE-2] Batch query: kiểm tra followedByMe cho tất cả users trong 1 query
+
         String currentUserId = getCurrentUserId(currentUsername);
         List<String> followerIds = followPage.getContent().stream()
                 .map(f -> f.getFollower().getId())
@@ -103,14 +104,14 @@ public class FollowServiceImpl implements FollowService {
                 .build();
     }
 
-    // ==================== DANH SÁCH FOLLOWING ====================
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<FollowResponse> getFollowing(String userId, int page, int size, String currentUsername) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Follow> followPage = followRepository.findByIdFollowerId(userId, pageable);
 
-        // [BE-2] Batch query: kiểm tra followedByMe cho tất cả users trong 1 query
+
         String currentUserId = getCurrentUserId(currentUsername);
         List<String> followingIds = followPage.getContent().stream()
                 .map(f -> f.getFollowing().getId())
@@ -136,7 +137,7 @@ public class FollowServiceImpl implements FollowService {
                 .build();
     }
 
-    // ==================== CHECK FOLLOW ====================
+
     @Override
     @Transactional(readOnly = true)
     public boolean isFollowing(String targetUserId, String currentUsername) {
@@ -144,21 +145,21 @@ public class FollowServiceImpl implements FollowService {
         return followRepository.existsByIdFollowerIdAndIdFollowingId(currentUser.getId(), targetUserId);
     }
 
-    // ==================== FOLLOWER COUNT ====================
+
     @Override
     @Transactional(readOnly = true)
     public long getFollowerCount(String userId) {
         return followRepository.countByIdFollowingId(userId);
     }
 
-    // ==================== FOLLOWING COUNT ====================
+
     @Override
     @Transactional(readOnly = true)
     public long getFollowingCount(String userId) {
         return followRepository.countByIdFollowerId(userId);
     }
 
-    // ==================== HELPER METHODS ====================
+
 
     private User findUserByUsername(String username) {
         return userRepository.findByUsername(username)

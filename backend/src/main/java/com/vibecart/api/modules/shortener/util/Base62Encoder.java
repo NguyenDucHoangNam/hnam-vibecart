@@ -3,6 +3,9 @@ package com.vibecart.api.modules.shortener.util;
 import java.util.UUID;
 import java.util.Random;
 
+/**
+ * Utility mã hóa Base62 để tạo short code cho link rút gọn.
+ */
 public class Base62Encoder {
 
     private static final String BASE62_CHARACTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -29,7 +32,7 @@ public class Base62Encoder {
             }
             return code;
         } catch (Exception e) {
-            // Fallback for custom or invalid UUIDs
+
             long randomVal = Math.abs(new Random().nextLong());
             String code = encode(randomVal);
             return code.length() > 8 ? code.substring(0, 8) : code;

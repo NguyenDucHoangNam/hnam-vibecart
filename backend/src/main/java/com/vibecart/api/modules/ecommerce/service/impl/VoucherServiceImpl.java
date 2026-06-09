@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.ZonedDateTime;
 
+/**
+ * Implementation của {@link VoucherService} xử lý mã giảm giá.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -57,16 +60,15 @@ public class VoucherServiceImpl implements VoucherService {
             discount = orderTotal.multiply(voucher.getDiscountValue())
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-            // Cap at max discount amount if specified
+
             if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
                 discount = voucher.getMaxDiscountAmount();
             }
         } else {
-            // FIXED_AMOUNT
             discount = voucher.getDiscountValue();
         }
 
-        // Discount cannot exceed order total
+
         if (discount.compareTo(orderTotal) > 0) {
             discount = orderTotal;
         }

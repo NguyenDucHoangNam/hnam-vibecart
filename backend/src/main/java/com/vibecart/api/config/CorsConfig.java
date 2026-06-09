@@ -10,6 +10,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Cấu hình chia sẻ tài nguyên nguồn gốc chéo (CORS).
+ */
 @Configuration(proxyBeanMethods = false)
 public class CorsConfig {
 
@@ -17,9 +20,7 @@ public class CorsConfig {
     private String[] allowedOrigins;
 
     /**
-     * CorsConfigurationSource bean — được cả Spring Security (.cors(Customizer.withDefaults()))
-     * lẫn Spring MVC sử dụng. Thay thế WebMvcConfigurer.addCorsMappings() để đảm bảo
-     * preflight OPTIONS requests được xử lý TRƯỚC authentication filter.
+     * Cấu hình các thiết lập CORS cho toàn bộ ứng dụng.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -28,7 +29,7 @@ public class CorsConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // Cache pre-flight response for 1 hour
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

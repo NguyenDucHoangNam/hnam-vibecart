@@ -25,10 +25,16 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.IOException;
 
+/**
+ * Cấu hình Redis Pub/Sub phục vụ nhắn tin chat thời gian thực.
+ */
 @Configuration
 @Slf4j
 public class RedisChatConfig {
 
+    /**
+     * Khởi tạo bộ chuyển đổi JSON ObjectMapper hỗ trợ định dạng Java Time.
+     */
     @Bean
     @ConditionalOnMissingBean
     public ObjectMapper objectMapper() {
@@ -38,6 +44,9 @@ public class RedisChatConfig {
         return mapper;
     }
 
+    /**
+     * Cấu hình RedisTemplate cho các sự kiện ChatEvent.
+     */
     @Bean
     public RedisTemplate<String, ChatEvent> chatRedisTemplate(RedisConnectionFactory connectionFactory, ObjectMapper objectMapper) {
         RedisTemplate<String, ChatEvent> template = new RedisTemplate<>();
@@ -52,24 +61,27 @@ public class RedisChatConfig {
     }
 
     /**
-     * RedisMessageListenerContainer khởi tạo rỗng (không có listener mặc định).
-     * DynamicRedisSubscriptionManager sẽ thêm/xoá listener tại runtime
-     * dựa trên sự kiện WebSocket connect/disconnect của từng user.
+     * Bộ lắng nghe tin nhắn Redis Container hỗ trợ đăng ký động.
      */
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory) {
-
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         return container;
     }
 
+    /**
+     * Đăng ký Adapter cho bộ lắng nghe tin nhắn Redis.
+     */
     @Bean
     public MessageListenerAdapter listenerAdapter(RedisMessageSubscriber subscriber) {
         return new MessageListenerAdapter(subscriber);
     }
 
+    /**
+     * Bộ xử lý và phân phối tin nhắn nhận được từ Redis Pub/Sub tới Client thông qua WebSocket.
+     */
     @Component
     @RequiredArgsConstructor
     public static class RedisMessageSubscriber implements MessageListener {
@@ -83,7 +95,6 @@ public class RedisChatConfig {
         @Override
         public void onMessage(Message message, byte[] pattern) {
             try {
-                // Extract target username from the dynamic channel name: "chat:user:{username}"
                 String channel = new String(message.getChannel());
                 String targetUsername = channel.startsWith(CHANNEL_PREFIX)
                         ? channel.substring(CHANNEL_PREFIX.length())
@@ -96,32 +107,26 @@ public class RedisChatConfig {
                 if ("MESSAGE".equals(event.getType())) {
                     MessageResponse messageResponse = objectMapper.readValue(event.getPayloadJson(), MessageResponse.class);
 
-                    // Route to the specific user's personal queue
                     if (targetUsername != null) {
                         messagingTemplate.convertAndSendToUser(targetUsername, "/queue/messages", messageResponse);
                     }
 
-                    // Also route to group topic for group chat subscribers
                     messagingTemplate.convertAndSend("/topic/chat." + event.getConversationId(), messageResponse);
 
                 } else if ("TYPING".equals(event.getType())) {
                     TypingResponse typingResponse = objectMapper.readValue(event.getPayloadJson(), TypingResponse.class);
 
-                    // Route to the specific user's personal queue
                     if (targetUsername != null) {
                         messagingTemplate.convertAndSendToUser(targetUsername, "/queue/typing", typingResponse);
                     }
 
-                    // Also route to group topic
                     messagingTemplate.convertAndSend("/topic/chat." + event.getConversationId() + "/typing", typingResponse);
 
                 } else if ("READ_RECEIPT".equals(event.getType())) {
-                    // Route to the specific user's personal queue
                     if (targetUsername != null) {
                         messagingTemplate.convertAndSendToUser(targetUsername, "/queue/seen", event.getPayloadJson());
                     }
 
-                    // Also route to group topic for all subscribers
                     messagingTemplate.convertAndSend("/topic/chat." + event.getConversationId() + "/seen", event.getPayloadJson());
                 }
             } catch (IOException e) {

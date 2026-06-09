@@ -22,6 +22,9 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link CartService} quản lý giỏ hàng qua Redis.
+ */
 @Service
 public class CartServiceImpl implements CartService {
 
@@ -40,7 +43,7 @@ public class CartServiceImpl implements CartService {
     }
 
     private static final String CART_KEY_PREFIX = "cart:";
-    private static final long CART_TTL_SECONDS = 2592000L; // 30 days
+    private static final long CART_TTL_SECONDS = 2592000L;
     private static final int MAX_CART_QUANTITY = 100;
 
     @Override
@@ -52,7 +55,7 @@ public class CartServiceImpl implements CartService {
             return new CartResponse(List.of(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
 
-        // Parse entries: variantId -> quantity
+
         Map<String, Integer> variantQuantityMap = new LinkedHashMap<>();
         for (Map.Entry<Object, Object> entry : cartEntries.entrySet()) {
             String variantId = entry.getKey().toString();
@@ -62,13 +65,13 @@ public class CartServiceImpl implements CartService {
 
         List<String> variantIds = new ArrayList<>(variantQuantityMap.keySet());
 
-        // Batch query variants with full details (product, images, inventory)
+
         List<ProductVariant> variants = productVariantRepository
                 .findAllByIdWithFullDetails(variantIds);
         Map<String, ProductVariant> variantMap = variants.stream()
                 .collect(Collectors.toMap(ProductVariant::getId, v -> v));
 
-        // Collect unique creator IDs for batch user lookup
+
         Set<String> creatorIds = variants.stream()
                 .map(v -> v.getProduct().getCreatorId())
                 .collect(Collectors.toSet());
@@ -89,7 +92,7 @@ public class CartServiceImpl implements CartService {
             int quantity = entry.getValue();
             ProductVariant variant = variantMap.get(variantId);
 
-            // Auto-remove deleted/inactive variants
+
             if (variant == null
                     || variant.getStatus() != ProductStatus.ACTIVE
                     || variant.getProduct().isDeleted()) {
@@ -104,7 +107,7 @@ public class CartServiceImpl implements CartService {
             String creatorId = variant.getProduct().getCreatorId();
             String creatorName = creatorNameMap.getOrDefault(creatorId, creatorId);
 
-            // Find thumbnail URL
+
             String thumbnailUrl = null;
             if (variant.getProduct().getImages() != null) {
                 thumbnailUrl = variant.getProduct().getImages().stream()
@@ -125,7 +128,7 @@ public class CartServiceImpl implements CartService {
                     ? variant.getInventory().getQuantity() - variant.getInventory().getReservedQuantity()
                     : 0;
 
-            // Determine status
+
             String status;
             if (availableStock <= 0) {
                 status = "OUT_OF_STOCK";
@@ -151,7 +154,7 @@ public class CartServiceImpl implements CartService {
             ));
         }
 
-        // Clean up removed variants from Redis
+
         if (!variantIdsToRemove.isEmpty()) {
             redisTemplate.opsForHash().delete(cartKey, variantIdsToRemove.toArray());
         }
@@ -165,12 +168,12 @@ public class CartServiceImpl implements CartService {
     public void addItem(String userId, String variantId, int quantity) {
         log.info("Adding variant {} to cart of user {}, quantity: {}", variantId, userId, quantity);
 
-        // Validate variant exists and is ACTIVE
+
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .filter(v -> v.getStatus() == ProductStatus.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Check available stock
+
         if (variant.getInventory() != null) {
             int availableStock = variant.getInventory().getQuantity()
                     - variant.getInventory().getReservedQuantity();
@@ -181,7 +184,7 @@ public class CartServiceImpl implements CartService {
 
         String cartKey = CART_KEY_PREFIX + userId;
 
-        // Get current quantity from Redis
+
         Object existingValue = redisTemplate.opsForHash().get(cartKey, variantId);
         int currentQty = existingValue != null ? Integer.parseInt(existingValue.toString()) : 0;
         int newQty = currentQty + quantity;
@@ -231,7 +234,7 @@ public class CartServiceImpl implements CartService {
             int existingQty = existingValue != null ? Integer.parseInt(existingValue.toString()) : 0;
             int newQty = existingQty + item.quantity();
 
-            // Silently cap at MAX_CART_QUANTITY
+
             newQty = Math.min(newQty, MAX_CART_QUANTITY);
 
             redisTemplate.opsForHash().put(cartKey, item.variantId(), String.valueOf(newQty));

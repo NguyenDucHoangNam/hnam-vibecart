@@ -16,6 +16,9 @@ import com.vibecart.api.modules.iam.repository.UserRepository;
 
 import java.util.Map;
 
+/**
+ * Controller quản lý giỏ hàng của người dùng.
+ */
 @RestController
 @RequestMapping("/api/v1/cart")
 @RequiredArgsConstructor

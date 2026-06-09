@@ -3,6 +3,9 @@ package com.vibecart.api.modules.ecommerce.service;
 import com.vibecart.api.modules.ecommerce.entity.Voucher;
 import java.math.BigDecimal;
 
+/**
+ * Service quản lý mã giảm giá (voucher).
+ */
 public interface VoucherService {
     /**
      * Validates a voucher code and returns the voucher entity if valid.

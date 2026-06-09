@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link PostService} xử lý bài viết, like và news feed.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -48,33 +51,27 @@ public class PostServiceImpl implements PostService {
     private static final int MAX_MEDIA_URLS = 10;
     private static final int MAX_TAGGED_PRODUCTS = 5;
 
-    // ==================== TẠO BÀI VIẾT ====================
     @Override
     @Transactional
     public PostResponse createPost(PostRequest request, String username) {
         User creator = findUserByUsername(username);
 
-        // Validate media limit
         if (request.mediaUrls() != null && request.mediaUrls().size() > MAX_MEDIA_URLS) {
             throw new AppException(ErrorCode.MAX_MEDIA_EXCEEDED);
         }
 
-        // Validate tagged products limit
         if (request.taggedProductIds() != null && request.taggedProductIds().size() > MAX_TAGGED_PRODUCTS) {
             throw new AppException(ErrorCode.MAX_PRODUCTS_EXCEEDED);
         }
 
-        // [SEC-4] Validate media URLs against MediaMetadata (chống chèn link ngoài & bypass S3)
         validateMediaUrls(request.mediaUrls(), username);
 
-        // Build post entity
         Post post = Post.builder()
                 .creator(creator)
                 .content(request.content())
                 .mediaUrls(joinMediaUrls(request.mediaUrls()))
                 .build();
 
-        // Handle tagged products via ManyToMany
         if (request.taggedProductIds() != null && !request.taggedProductIds().isEmpty()) {
             Set<Product> products = new HashSet<>();
             for (String id : request.taggedProductIds()) {
@@ -97,7 +94,6 @@ public class PostServiceImpl implements PostService {
         return toSinglePostResponse(savedPost, username);
     }
 
-    // ==================== LẤY DANH SÁCH BÀI VIẾT ====================
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PostResponse> getPosts(int page, int size, String creatorId, String currentUsername) {
@@ -122,7 +118,6 @@ public class PostServiceImpl implements PostService {
                 .build();
     }
 
-    // ==================== LẤY CHI TIẾT BÀI VIẾT ====================
     @Override
     @Transactional(readOnly = true)
     public PostResponse getPost(String postId, String currentUsername) {
@@ -131,36 +126,29 @@ public class PostServiceImpl implements PostService {
         return toSinglePostResponse(post, currentUsername);
     }
 
-    // ==================== CẬP NHẬT BÀI VIẾT ====================
     @Override
     @Transactional
     public PostResponse updatePost(String postId, PostRequest request, String username) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
 
-        // Verify ownership
         if (!post.getCreator().getUsername().equals(username)) {
             throw new AppException(ErrorCode.POST_ACCESS_DENIED);
         }
 
-        // Validate media limit
         if (request.mediaUrls() != null && request.mediaUrls().size() > MAX_MEDIA_URLS) {
             throw new AppException(ErrorCode.MAX_MEDIA_EXCEEDED);
         }
 
-        // Validate tagged products limit
         if (request.taggedProductIds() != null && request.taggedProductIds().size() > MAX_TAGGED_PRODUCTS) {
             throw new AppException(ErrorCode.MAX_PRODUCTS_EXCEEDED);
         }
 
-        // Update fields
         post.setContent(request.content());
 
-        // [SEC-4] Validate media URLs against MediaMetadata (chống chèn link ngoài & bypass S3)
         validateMediaUrls(request.mediaUrls(), username);
         post.setMediaUrls(joinMediaUrls(request.mediaUrls()));
 
-        // Update tagged products
         if (request.taggedProductIds() != null) {
             Set<Product> products = new HashSet<>();
             for (String id : request.taggedProductIds()) {
@@ -185,30 +173,29 @@ public class PostServiceImpl implements PostService {
         return toSinglePostResponse(updatedPost, username);
     }
 
-    // ==================== XÓA BÀI VIẾT ====================
     @Override
     @Transactional
     public void deletePost(String postId, String username, boolean isAdmin) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
 
-        // Check permission: owner or admin
+
         if (!isAdmin && !post.getCreator().getUsername().equals(username)) {
             throw new AppException(ErrorCode.POST_ACCESS_DENIED);
         }
 
-        postRepository.delete(post); // Soft delete via @SQLDelete
+        postRepository.delete(post);
         log.info("Post deleted by {}: {}", username, postId);
     }
 
-    // ==================== NEWS FEED ====================
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<PostResponse> getFeed(int page, int size, String username) {
         User user = findUserByUsername(username);
         Pageable pageable = PageRequest.of(page, size);
 
-        // [PERF-1] Dùng Slice thay Page để triệt tiêu COUNT(*) chí mạng
+
         Slice<Post> feedSlice = postRepository.findFeedByUserId(user.getId(), pageable);
 
         List<PostResponse> content = toBatchPostResponses(feedSlice.getContent(), username);
@@ -217,17 +204,16 @@ public class PostServiceImpl implements PostService {
                 .content(content)
                 .page(feedSlice.getNumber())
                 .size(feedSlice.getSize())
-                .totalElements(-1) // Slice không tính tổng — Client dùng hasNext để cuộn vô hạn
-                .totalPages(-1)    // Slice không tính tổng trang
+                .totalElements(-1)
+                .totalPages(-1)
                 .last(!feedSlice.hasNext())
                 .build();
     }
 
-    // ==================== TOGGLE LIKE ====================
+
     @Override
     @Transactional
     public boolean toggleLike(String postId, String username) {
-        // Verify post exists
         if (!postRepository.existsById(postId)) {
             throw new AppException(ErrorCode.POST_NOT_FOUND);
         }
@@ -239,12 +225,10 @@ public class PostServiceImpl implements PostService {
                 .build();
 
         if (postLikeRepository.existsById(likeId)) {
-            // Unlike
             postLikeRepository.deleteById(likeId);
             log.info("User {} unliked post {}", username, postId);
             return false;
         } else {
-            // Like
             Post post = postRepository.getReferenceById(postId);
             PostLike like = PostLike.builder()
                     .id(likeId)
@@ -257,7 +241,7 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    // ==================== CHECK LIKED ====================
+
     @Override
     @Transactional(readOnly = true)
     public boolean isLiked(String postId, String username) {
@@ -265,14 +249,14 @@ public class PostServiceImpl implements PostService {
         return postLikeRepository.existsByIdPostIdAndIdUserId(postId, user.getId());
     }
 
-    // ==================== LIKE COUNT ====================
+
     @Override
     @Transactional(readOnly = true)
     public long getLikeCount(String postId) {
         return postLikeRepository.countByIdPostId(postId);
     }
 
-    // ==================== HELPER METHODS ====================
+
 
     private User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -288,21 +272,21 @@ public class PostServiceImpl implements PostService {
 
         List<String> postIds = posts.stream().map(Post::getId).toList();
 
-        // 1. Batch query like counts
+
         Map<String, Long> likeCountMap = postLikeRepository.countByPostIds(postIds).stream()
                 .collect(Collectors.toMap(
                         row -> (String) row[0],
                         row -> (Long) row[1]
                 ));
 
-        // 2. Batch query comment counts
+
         Map<String, Long> commentCountMap = postCommentRepository.countByPostIds(postIds).stream()
                 .collect(Collectors.toMap(
                         row -> (String) row[0],
                         row -> (Long) row[1]
                 ));
 
-        // 3. Batch query likedByMe
+
         Set<String> likedPostIds = Set.of();
         if (currentUsername != null) {
             User currentUser = userRepository.findByUsername(currentUsername).orElse(null);
@@ -311,7 +295,7 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        // 4. Map all posts using pre-fetched data
+
         Set<String> finalLikedPostIds = likedPostIds;
         return posts.stream()
                 .map(post -> postMapper.toPostResponse(
@@ -377,7 +361,7 @@ public class PostServiceImpl implements PostService {
      */
     private String extractS3Key(String url) {
         if (url == null) return "";
-        // Tìm phần sau domain (sau dấu "/" thứ 3)
+
         int schemeEnd = url.indexOf("://");
         if (schemeEnd != -1) {
             int pathStart = url.indexOf('/', schemeEnd + 3);

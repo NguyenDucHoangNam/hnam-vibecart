@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    // 1. Xử lý dự phòng cho tất cả các ngoại lệ hệ thống chưa được bắt
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleRuntimeException(Exception exception) {
         log.error("Uncaught exception: ", exception);
@@ -28,7 +27,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
-    // 2. Xử lý các ngoại lệ nghiệp vụ tùy chỉnh (AppException)
     @ExceptionHandler(value = AppException.class)
     public ResponseEntity<ApiResponse<Object>> handleAppException(AppException exception) {
         log.warn("Business logic exception: {}", exception.getMessage());
@@ -42,7 +40,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
-    // 3. Xử lý ngoại lệ AccessDeniedException của Spring Security (Lỗi phân quyền)
     @ExceptionHandler(value = AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(AccessDeniedException exception) {
         log.warn("Authorization failed: {}", exception.getMessage());
@@ -56,7 +53,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
-    // 4. Xử lý các lỗi xác thực dữ liệu đầu vào DTO (@Valid / @Validated)
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleValidationException(MethodArgumentNotValidException exception) {
         FieldError fieldError = exception.getFieldError();

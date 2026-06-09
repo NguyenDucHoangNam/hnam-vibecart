@@ -3,6 +3,9 @@ package com.vibecart.api.modules.social.service;
 import com.vibecart.api.common.dto.PageResponse;
 import com.vibecart.api.modules.social.dto.response.FollowResponse;
 
+/**
+ * Service quản lý tính năng theo dõi giữa các người dùng.
+ */
 public interface FollowService {
 
     /** Toggle follow/unfollow */

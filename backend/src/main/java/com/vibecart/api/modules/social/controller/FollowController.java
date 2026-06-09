@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
+/**
+ * Controller quản lý tính năng theo dõi (follow/unfollow) và hồ sơ người dùng.
+ */
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -28,7 +31,9 @@ public class FollowController {
     private final FollowService followService;
     private final UserRepository userRepository;
 
-    // ==================== 1. TOGGLE FOLLOW/UNFOLLOW (AUTHENTICATED) ====================
+    /**
+     * Bật/tắt theo dõi một người dùng.
+     */
     @PostMapping("/{userId}/follow")
     public ResponseEntity<ApiResponse<Boolean>> toggleFollow(@PathVariable String userId) {
         String username = getCurrentUsername();
@@ -44,7 +49,9 @@ public class FollowController {
         );
     }
 
-    // ==================== 2. DANH SÁCH FOLLOWERS (PUBLIC) ====================
+    /**
+     * Lấy danh sách người theo dõi của một người dùng.
+     */
     @GetMapping("/{userId}/followers")
     public ResponseEntity<ApiResponse<PageResponse<FollowResponse>>> getFollowers(
             @PathVariable String userId,
@@ -63,7 +70,9 @@ public class FollowController {
         );
     }
 
-    // ==================== 3. DANH SÁCH FOLLOWING (PUBLIC) ====================
+    /**
+     * Lấy danh sách những người mà người dùng đang theo dõi.
+     */
     @GetMapping("/{userId}/following")
     public ResponseEntity<ApiResponse<PageResponse<FollowResponse>>> getFollowing(
             @PathVariable String userId,
@@ -82,7 +91,9 @@ public class FollowController {
         );
     }
 
-    // ==================== 4. CHECK FOLLOW (AUTHENTICATED) ====================
+    /**
+     * Kiểm tra trạng thái theo dõi giữa người dùng hiện tại và người dùng chỉ định.
+     */
     @GetMapping("/{userId}/follow/check")
     public ResponseEntity<ApiResponse<Boolean>> checkFollow(@PathVariable String userId) {
         String username = getCurrentUsername();
@@ -96,7 +107,9 @@ public class FollowController {
         );
     }
 
-    // ==================== 5. FOLLOWERS COUNT (PUBLIC) ====================
+    /**
+     * Lấy số lượng người theo dõi của một người dùng.
+     */
     @GetMapping("/{userId}/followers/count")
     public ResponseEntity<ApiResponse<Long>> getFollowerCount(@PathVariable String userId) {
         long count = followService.getFollowerCount(userId);
@@ -109,7 +122,9 @@ public class FollowController {
         );
     }
 
-    // ==================== 6. FOLLOWING COUNT (PUBLIC) ====================
+    /**
+     * Lấy số lượng người mà người dùng đang theo dõi.
+     */
     @GetMapping("/{userId}/following/count")
     public ResponseEntity<ApiResponse<Long>> getFollowingCount(@PathVariable String userId) {
         long count = followService.getFollowingCount(userId);
@@ -122,7 +137,9 @@ public class FollowController {
         );
     }
 
-    // ==================== 7. GET USER PROFILE (PUBLIC) ====================
+    /**
+     * Lấy thông tin hồ sơ công khai của người dùng.
+     */
     @GetMapping("/{userId}/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getUserProfile(@PathVariable String userId) {
         log.info("API: Get profile of user ID {}", userId);
@@ -152,7 +169,6 @@ public class FollowController {
         );
     }
 
-    // ==================== HELPER ====================
 
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();

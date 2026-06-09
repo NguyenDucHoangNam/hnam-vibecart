@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
+/**
+ * Consumer Kafka đồng bộ sản phẩm vào Elasticsearch.
+ */
 @Component
 @RequiredArgsConstructor
 public class SearchSyncConsumer {
@@ -51,7 +54,7 @@ public class SearchSyncConsumer {
             if (productOpt.isPresent()) {
                 var product = productOpt.get();
                 if (product.getVariants() != null && !product.getVariants().isEmpty()) {
-                    // Filter active, non-deleted variants to calculate min/max prices
+
                     var activeVariants = product.getVariants().stream()
                             .filter(v -> !v.isDeleted() && "ACTIVE".equals(v.getStatus().name()))
                             .toList();

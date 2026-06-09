@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Scheduler xử lý các sự kiện Outbox IAM chờ gửi thông báo qua Kafka.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -39,7 +42,7 @@ public class IamOutboxScheduler {
             try {
                 NotificationEvent notificationEvent = objectMapper.readValue(event.getPayload(), NotificationEvent.class);
 
-                // Publish to Kafka and wait for ACK synchronously to ensure at-least-once delivery
+
                 kafkaTemplate.send(KafkaTopicConfig.NOTIFICATION_EVENTS_TOPIC, event.getAggregateId(), notificationEvent).get();
 
                 event.setStatus("PROCESSED");
@@ -54,11 +57,11 @@ public class IamOutboxScheduler {
             } catch (InterruptedException e) {
                 log.error("IAM Outbox scheduler interrupted while sending event: {}", event.getId(), e);
                 Thread.currentThread().interrupt();
-                break; // Stop loop and retry next time
+                break;
             } catch (Exception e) {
                 log.error("Transient error publishing IAM outbox event {} to Kafka. Will retry in next run.", 
                         event.getId(), e);
-                break; // Preserve ordering; event remains PENDING
+                break;
             }
         }
     }

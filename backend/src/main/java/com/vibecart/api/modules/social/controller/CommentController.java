@@ -14,6 +14,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller quản lý bình luận trên bài viết.
+ */
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/comments")
 @RequiredArgsConstructor
@@ -22,7 +25,9 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    // ==================== 1. THÊM COMMENT (AUTHENTICATED) ====================
+    /**
+     * Thêm bình luận mới vào bài viết.
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(
             @PathVariable String postId,
@@ -41,7 +46,9 @@ public class CommentController {
         );
     }
 
-    // ==================== 2. DANH SÁCH COMMENT (PUBLIC) ====================
+    /**
+     * Lấy danh sách bình luận của bài viết theo phân trang.
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<CommentResponse>>> getComments(
             @PathVariable String postId,
@@ -59,7 +66,9 @@ public class CommentController {
         );
     }
 
-    // ==================== 3. XÓA COMMENT (AUTHENTICATED) ====================
+    /**
+     * Xóa bình luận theo ID (chủ bình luận hoặc Admin).
+     */
     @DeleteMapping("/{commentId}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(
             @PathVariable String postId,
@@ -77,7 +86,6 @@ public class CommentController {
         );
     }
 
-    // ==================== HELPER ====================
 
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();

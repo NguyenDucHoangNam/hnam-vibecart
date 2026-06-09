@@ -8,15 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
- * Cấu hình Rate Limiter cho VibeCart API.
- * <p>
- * Hỗ trợ 2 tầng giới hạn:
- * <ul>
- *   <li><b>Global:</b> Giới hạn tổng số request từ một IP trên tất cả API.</li>
- *   <li><b>Sensitive:</b> Giới hạn chặt hơn cho các endpoint nhạy cảm (login, register, OTP...).</li>
- * </ul>
- * <p>
- * Cấu hình tại {@code application.yaml} dưới prefix {@code app.rate-limiter}.
+ * Cấu hình giới hạn tần suất yêu cầu (Rate Limiter) cho hệ thống API.
  */
 @Configuration
 @ConfigurationProperties(prefix = "app.rate-limiter")
@@ -25,36 +17,28 @@ import java.util.List;
 public class RateLimiterProperties {
 
     /**
-     * Bật/tắt Rate Limiter. Mặc định: true.
+     * Bật hoặc tắt chức năng Rate Limiter.
      */
     private boolean enabled = true;
 
     /**
-     * Cấu hình giới hạn toàn cục (Global Rate Limit).
+     * Cấu hình giới hạn tần suất chung cho toàn bộ hệ thống (Global).
      */
     private BucketConfig global = new BucketConfig(100, 100, 60);
 
     /**
-     * Cấu hình giới hạn cho các endpoint nhạy cảm (Sensitive Rate Limit).
+     * Cấu hình giới hạn tần suất riêng cho các endpoint nhạy cảm (Sensitive).
      */
     private SensitiveBucketConfig sensitive = new SensitiveBucketConfig();
 
+    /**
+     * Cấu hình chi tiết của Token Bucket.
+     */
     @Getter
     @Setter
     public static class BucketConfig {
-        /**
-         * Dung lượng tối đa của bucket (số token tối đa).
-         */
         private int capacity;
-
-        /**
-         * Số token được nạp lại sau mỗi chu kỳ.
-         */
         private int refillTokens;
-
-        /**
-         * Chu kỳ nạp lại token (đơn vị: giây).
-         */
         private int refillDurationSeconds;
 
         public BucketConfig() {
@@ -67,12 +51,12 @@ public class RateLimiterProperties {
         }
     }
 
+    /**
+     * Cấu hình danh sách endpoint nhạy cảm cần áp dụng tần suất riêng.
+     */
     @Getter
     @Setter
     public static class SensitiveBucketConfig extends BucketConfig {
-        /**
-         * Danh sách các URI path được coi là nhạy cảm, áp dụng rate limit chặt hơn.
-         */
         private List<String> paths = List.of(
                 "/api/v1/auth/login",
                 "/api/v1/auth/register",

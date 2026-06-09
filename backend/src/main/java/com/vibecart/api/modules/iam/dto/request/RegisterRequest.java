@@ -32,6 +32,6 @@ public class RegisterRequest {
     @Pattern(regexp = "^[\\p{L} ]+$", message = "INVALID_INPUT")
     private String fullName;
 
-    // SHOPPER hoặc CREATOR (mặc định SHOPPER nếu bỏ trống)
+
     private String role;
 }

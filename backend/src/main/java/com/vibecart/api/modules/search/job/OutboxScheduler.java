@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * Scheduler xử lý các sự kiện Outbox chờ gửi sang Kafka để đồng bộ dữ liệu sản phẩm.
+ */
 @Component
 public class OutboxScheduler {
 
@@ -22,6 +25,9 @@ public class OutboxScheduler {
     private final KafkaTemplate<String, ProductSyncEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Khởi tạo OutboxScheduler với các dependency cần thiết.
+     */
     public OutboxScheduler(OutboxEventRepository outboxEventRepository,
                            KafkaTemplate<String, ProductSyncEvent> kafkaTemplate,
                            ObjectMapper objectMapper) {
@@ -30,6 +36,9 @@ public class OutboxScheduler {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Xử lý các sự kiện Outbox đang chờ (PENDING), gửi đồng bộ sang Kafka để đảm bảo at-least-once delivery.
+     */
     @Scheduled(fixedDelay = 500)
     public void processPendingEvents() {
         List<OutboxEvent> pendingEvents = outboxEventRepository.findByAggregateTypeAndStatusOrderByCreatedAtAsc("PRODUCT", "PENDING");
@@ -43,7 +52,6 @@ public class OutboxScheduler {
             try {
                 ProductSyncEvent syncEvent = objectMapper.readValue(event.getPayload(), ProductSyncEvent.class);
 
-                // Publish to Kafka and wait for ACK synchronously to guarantee at-least-once delivery
                 kafkaTemplate.send(KafkaTopicConfig.PRODUCT_SYNC_TOPIC, syncEvent.getProductId(), syncEvent).get();
 
                 event.setStatus("PROCESSED");
@@ -56,10 +64,10 @@ public class OutboxScheduler {
             } catch (InterruptedException e) {
                 log.error("Outbox scheduler interrupted while sending event: {}", event.getId(), e);
                 Thread.currentThread().interrupt();
-                break; // Stop loop and retry next time
+                break;
             } catch (Exception e) {
                 log.error("Transient error publishing outbox event {} to Kafka. Will retry in next run.", event.getId(), e);
-                break; // Stop loop to preserve strict ordering; event remains PENDING
+                break;
             }
         }
     }

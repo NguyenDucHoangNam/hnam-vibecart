@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 
+/**
+ * Lớp cung cấp các công cụ tạo, giải mã và xác thực JWT token.
+ */
 @Component
 @Slf4j
 public class JwtTokenProvider {
@@ -23,28 +26,34 @@ public class JwtTokenProvider {
 
     private SecretKey key;
 
+    /**
+     * Khởi tạo khóa ký bí mật từ chuỗi Secret đã được mã hóa Base64.
+     */
     @PostConstruct
     public void init() {
-        // Build the signing key from Base64 decoded secret
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // 1. Generate JWT Token
+    /**
+     * Tạo JWT token từ thông tin người dùng và quyền hạn tương ứng.
+     */
     public String generateToken(String username, String roles) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
                 .subject(username)
-                .claim("roles", roles) // e.g. "ROLE_USER,ROLE_ADMIN"
+                .claim("roles", roles)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
     }
 
-    // 2. Extract Username from JWT
+    /**
+     * Lấy thông tin người dùng (Subject) từ JWT token.
+     */
     public String getUsernameFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)
@@ -55,7 +64,9 @@ public class JwtTokenProvider {
         return claims.getSubject();
     }
 
-    // 3. Extract Roles from JWT
+    /**
+     * Lấy chuỗi danh sách các vai trò (Roles) từ JWT token.
+     */
     public String getRolesFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)
@@ -66,7 +77,9 @@ public class JwtTokenProvider {
         return claims.get("roles", String.class);
     }
 
-    // 3b. Extract Expiration Date from JWT
+    /**
+     * Lấy thời gian hết hạn (Expiration Date) của JWT token.
+     */
     public Date getExpirationFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)
@@ -77,8 +90,9 @@ public class JwtTokenProvider {
         return claims.getExpiration();
     }
 
-
-    // 4. Validate JWT Token
+    /**
+     * Kiểm tra tính hợp lệ của JWT token.
+     */
     public boolean validateToken(String authToken) {
         try {
             Jwts.parser()

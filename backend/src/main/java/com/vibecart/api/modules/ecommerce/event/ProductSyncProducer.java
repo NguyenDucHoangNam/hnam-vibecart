@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 
+/**
+ * Producer gửi sự kiện đồng bộ sản phẩm lên Kafka topic.
+ */
 @Component
 @RequiredArgsConstructor
 public class ProductSyncProducer {
@@ -39,7 +42,7 @@ public class ProductSyncProducer {
     }
 
     private void sendEvent(String eventType, Product product) {
-        // Find thumbnail URL
+
         String thumbnailUrl = null;
         if (product.getImages() != null) {
             thumbnailUrl = product.getImages().stream()
@@ -49,7 +52,7 @@ public class ProductSyncProducer {
                     .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
         }
 
-        // Calculate min/max price from variants
+
         BigDecimal minPrice = BigDecimal.ZERO;
         BigDecimal maxPrice = BigDecimal.ZERO;
         if (product.getVariants() != null && !product.getVariants().isEmpty()) {

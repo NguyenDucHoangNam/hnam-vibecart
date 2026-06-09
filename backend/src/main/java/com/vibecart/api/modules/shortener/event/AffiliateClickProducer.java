@@ -6,6 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+/**
+ * Producer gửi sự kiện click tiếp thị liên kết sang Kafka.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j

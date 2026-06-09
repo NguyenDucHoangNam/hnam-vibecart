@@ -13,19 +13,15 @@ import java.util.regex.Pattern;
 @Component
 public class ProfanityFilter {
 
-    // Danh sách từ cấm cơ bản (lowercase, có thể mở rộng thêm)
     private static final List<String> BANNED_WORDS = List.of(
-            // Tiếng Việt
             "đụ", "địt", "lồn", "cặc", "buồi", "đéo", "đĩ", "cave",
             "chó má", "thằng chó", "con chó", "đồ chó", "ngu", "đần",
             "khốn nạn", "mặt lồn", "đồ điếm", "thằng ngu", "con điếm",
             "vãi", "vl", "vcl", "clgt", "dmm", "đmm", "vkl",
-            // English
             "fuck", "shit", "bitch", "asshole", "dick", "pussy",
             "motherfucker", "cunt", "bastard", "whore", "slut"
     );
 
-    // Pre-compile regex patterns cho hiệu suất cao
     private static final List<Pattern> BANNED_PATTERNS;
 
     static {

@@ -5,6 +5,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Scheduler tự động hủy các đơn hàng quá hạn thanh toán.
+ */
 @Component
 public class OrderTimeoutScheduler {
 

@@ -10,6 +10,9 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Scheduled tasks chạy định kỳ: quyết toán hoa hồng hàng ngày.
+ */
 @Component
 public class ScheduledTasks {
 
@@ -23,12 +26,11 @@ public class ScheduledTasks {
         this.commissionSettlementJob = commissionSettlementJob;
     }
 
-    // Runs every day at 02:00 AM
     @Scheduled(cron = "0 0 2 * * *")
     @SchedulerLock(
             name = "commissionJobLock",
-            lockAtMostFor = "PT25M", // Release lock after 25 minutes max
-            lockAtLeastFor = "PT5M"   // Keep lock for at least 5 minutes to prevent multiple runs
+            lockAtMostFor = "PT25M",
+            lockAtLeastFor = "PT5M"
     )
     public void runCommissionSettlementJob() {
         log.info("Distributed lock acquired. Initiating Spring Batch Commission Settlement Job...");

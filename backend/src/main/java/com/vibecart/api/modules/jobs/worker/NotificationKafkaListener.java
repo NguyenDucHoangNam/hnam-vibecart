@@ -15,6 +15,9 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
+/**
+ * Kafka listener xử lý sự kiện gửi thông báo email với cơ chế retry và DLT.
+ */
 @Component
 public class NotificationKafkaListener {
 
@@ -27,22 +30,22 @@ public class NotificationKafkaListener {
     }
 
     @RetryableTopic(
-            attempts = "4", // 1 main attempt + 3 retries
-            backOff = @BackOff(delay = 5000, multiplier = 2.0), // Exponential backoff: 5s, 10s, 20s
-            dltStrategy = DltStrategy.FAIL_ON_ERROR, // Sends message to DLT on failure
+            attempts = "4",
+            backOff = @BackOff(delay = 5000, multiplier = 2.0),
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE
     )
     @KafkaListener(topics = "notification-events", groupId = "vibecart-notification-group")
     public void consumeNotificationEvent(@Payload NotificationEvent event) {
         log.info("Received Kafka notification event: ID={}, Recipient={}", event.getEventId(), event.getRecipientEmail());
 
-        // Validate basic parameters to raise standard exception and trigger retry
+
         if (event.getRecipientEmail() == null || !event.getRecipientEmail().contains("@")) {
             log.warn("Invalid email format for event {}: {}. Triggering Kafka retry...", event.getEventId(), event.getRecipientEmail());
             throw new IllegalArgumentException("Địa chỉ email người nhận không hợp lệ");
         }
 
-        // Deliver email synchronously to wait for success
+
         emailService.sendEmail(event.getRecipientEmail(), event.getSubject(), event.getBody());
     }
 
@@ -53,7 +56,6 @@ public class NotificationKafkaListener {
         log.error("CRITICAL - KAFKA MESSAGE FAILED ALL RETRIES. Directed to DLT topic '{}'. Event ID='{}', Error: {}",
                 topic, event.getEventId(), exceptionMessage);
 
-        // Here we log the error to the database or an administrative log system
-        // System alerts can trigger manual intervention or direct Slack alerts
+
     }
 }

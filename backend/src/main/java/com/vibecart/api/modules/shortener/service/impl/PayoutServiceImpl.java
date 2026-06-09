@@ -21,6 +21,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Implementation của {@link PayoutService} xử lý yêu cầu rút tiền hoa hồng.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -40,7 +43,6 @@ public class PayoutServiceImpl implements PayoutService {
 
         String creatorId = creator.getId();
 
-        // 1. Calculate available balance (Sum of APPROVED commissions minus sum of PENDING or APPROVED payout requests)
         BigDecimal totalApprovedCommission = commissionRepository.findByCreatorIdAndStatus(creatorId, "APPROVED")
                 .stream()
                 .map(Commission::getCommissionAmount)
@@ -61,7 +63,7 @@ public class PayoutServiceImpl implements PayoutService {
             throw new AppException(ErrorCode.INVALID_INPUT); // Insufficient balance
         }
 
-        // 2. Build and save PayoutRequest
+
         PayoutRequest payoutRequest = PayoutRequest.builder()
                 .creatorId(creatorId)
                 .amount(requestDto.getAmount())
@@ -70,7 +72,7 @@ public class PayoutServiceImpl implements PayoutService {
                 .bankAccountName(requestDto.getBankAccountName())
                 .status("PENDING")
                 .build();
-        payoutRequest.setId(UUID.randomUUID().toString()); // Explicitly set string UUID
+        payoutRequest.setId(UUID.randomUUID().toString());
 
         payoutRequest = payoutRequestRepository.save(payoutRequest);
 

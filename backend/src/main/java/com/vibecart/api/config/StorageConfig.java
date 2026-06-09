@@ -12,6 +12,9 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
 
+/**
+ * Cấu hình kết nối AWS S3 và S3 Presigner Client.
+ */
 @Configuration
 public class StorageConfig {
 
@@ -21,10 +24,13 @@ public class StorageConfig {
         this.storageProperties = storageProperties;
     }
 
+    /**
+     * Khởi tạo S3Client để tương tác trực tiếp với bộ lưu trữ AWS S3 hoặc MinIO.
+     */
     @Bean
     public S3Client s3Client() {
         S3Configuration s3Configuration = S3Configuration.builder()
-                .pathStyleAccessEnabled(true) // Required for MinIO local path style
+                .pathStyleAccessEnabled(true)
                 .build();
 
         AwsBasicCredentials credentials = AwsBasicCredentials.create(
@@ -44,6 +50,9 @@ public class StorageConfig {
         return builder.build();
     }
 
+    /**
+     * Khởi tạo S3Presigner để ký số các đường dẫn tải lên/tải xuống trực tiếp.
+     */
     @Bean
     public S3Presigner s3Presigner() {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(

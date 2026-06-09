@@ -14,6 +14,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
 
+/**
+ * Lớp khởi tạo dữ liệu mẫu (Seeder) cho Cơ sở dữ liệu khi khởi chạy ứng dụng.
+ */
 @Component
 @RequiredArgsConstructor
 public class DatabaseSeeder implements CommandLineRunner {
@@ -26,6 +29,9 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final CategoryRepository categoryRepository;
 
+    /**
+     * Kích hoạt tiến trình khởi tạo dữ liệu mẫu nếu được bật trong cấu hình.
+     */
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -36,7 +42,6 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         log.info("Initializing database seeding for development environment...");
 
-        // Clean up any corrupted placeholder users from previous failed runs (e.g. ${SEED_USER_USERNAME})
         try {
             log.info("Cleaning up any corrupted placeholder users from previous failed runs...");
             userRepository.hardDeleteByUsernameLike("$%");
@@ -44,33 +49,32 @@ public class DatabaseSeeder implements CommandLineRunner {
             log.error("Failed to clean up corrupted placeholder users: ", e);
         }
 
-        // 1. Seed standard Shopper/User
         seedUser(
             seedingProperties.getUser(),
             "ROLE_USER",
             "Customer/Shopper"
         );
 
-        // 2. Seed Creator/Seller
         seedUser(
             seedingProperties.getCreator(),
             "ROLE_CREATOR",
             "Creator/Seller"
         );
 
-        // 3. Seed Platform Admin
         seedUser(
             seedingProperties.getAdmin(),
             "ROLE_ADMIN",
             "Platform Administrator"
         );
 
-        // 4. Seed Category Hierarchy
         seedCategories();
 
         log.info("Database seeding process completed successfully.");
     }
 
+    /**
+     * Khởi tạo cấu trúc cây danh mục sản phẩm mẫu.
+     */
     private void seedCategories() {
         if (categoryRepository.count() > 0) {
             log.info("Categories already exist in database. Skipping category seeding.");
@@ -95,6 +99,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         getOrCreateCategory("Tai nghe", "tai-nghe", phones, 3);
     }
 
+    /**
+     * Lấy danh mục hiện tại hoặc tạo mới nếu chưa tồn tại.
+     */
     private Category getOrCreateCategory(String name, String slug, Category parent, Integer sortOrder) {
         return categoryRepository.findBySlug(slug)
                 .orElseGet(() -> {
@@ -109,6 +116,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                 });
     }
 
+    /**
+     * Lấy vai trò (Role) hiện tại hoặc tạo mới nếu chưa có.
+     */
     private Role getOrCreateRole(String roleName, String roleDisplayName) {
         return roleRepository.findByName(roleName)
                 .orElseGet(() -> {
@@ -121,6 +131,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                 });
     }
 
+    /**
+     * Khởi tạo tài khoản người dùng mẫu theo phân vai trò chỉ định.
+     */
     private void seedUser(DatabaseSeedingProperties.UserSeed seedData, String roleName, String roleDisplayName) {
         if (seedData == null || seedData.getUsername() == null) {
             log.warn("Seeding data is missing or incomplete for role {}", roleName);
@@ -133,7 +146,6 @@ public class DatabaseSeeder implements CommandLineRunner {
             return;
         }
 
-        // Check if email already exists
         if (userRepository.existsByEmail(seedData.getEmail())) {
             log.warn("Email '{}' already exists for another user. Cannot seed sample '{}'.", seedData.getEmail(), username);
             return;

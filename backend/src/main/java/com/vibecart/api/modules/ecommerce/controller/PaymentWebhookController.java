@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * Controller tiếp nhận webhook callback từ PayOS sau khi thanh toán.
+ */
 @RestController
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
@@ -37,19 +40,19 @@ public class PaymentWebhookController {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid payload"));
             }
 
-            // Verify HMAC-SHA256 signature
+
             boolean isValid = payOSService.verifyWebhookSignature(data, receivedSignature);
             if (!isValid) {
                 log.error("SECURITY ALERT: Webhook signature verification FAILED. Possible spoofing attack.");
                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid signature verification failed"));
             }
 
-            // Extract payment info
+
             String orderCode = data.get("orderCode").toString();
             String code = data.get("code") != null ? data.get("code").toString() : "";
             String transactionId = data.get("reference") != null ? data.get("reference").toString() : "";
 
-            // Only process successful payments
+
             if ("00".equals(code)) {
                 orderService.confirmPayment(orderCode, transactionId, payload.toString());
                 log.info("Webhook processed successfully for orderCode: {}", orderCode);
@@ -57,12 +60,12 @@ public class PaymentWebhookController {
                 log.warn("Payment not successful for orderCode: {}, code: {}", orderCode, code);
             }
 
-            // Always return 200 to PayOS (even if we skip processing)
+
             return ResponseEntity.ok(Map.of("success", true, "message", "Webhook processed successfully"));
 
         } catch (Exception e) {
             log.error("Error processing webhook: ", e);
-            // Still return 200 to prevent PayOS from retrying indefinitely
+
             return ResponseEntity.ok(Map.of("success", true, "message", "Error logged"));
         }
     }

@@ -17,6 +17,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
 
+/**
+ * Consumer xử lý các sự kiện đơn hàng (thanh toán, giao thành công, hủy) để tính toán hoa hồng tiếp thị.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -26,7 +29,7 @@ public class AffiliateOrderConsumers {
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
 
-    private static final BigDecimal DEFAULT_COMMISSION_RATE = new BigDecimal("10.00"); // 10% default rate
+    private static final BigDecimal DEFAULT_COMMISSION_RATE = new BigDecimal("10.00");
 
     @KafkaListener(
             topics = KafkaTopicConfig.ORDER_PAID_TOPIC,
@@ -36,7 +39,7 @@ public class AffiliateOrderConsumers {
     public void handleOrderPaidEvent(OrderPaidEvent event) {
         log.info("Affiliate: Received ORDER_PAID event for order: {}", event.getOrderId());
 
-        // Check if this order has an active referral KOL Creator associated
+
         String referralKey = "referral:order:" + event.getOrderId();
         String affiliateCreatorId = redisTemplate.opsForValue().get(referralKey);
 
@@ -45,21 +48,21 @@ public class AffiliateOrderConsumers {
             return;
         }
 
-        // Verify that the referring creator actually exists
+
         if (!userRepository.existsById(affiliateCreatorId)) {
             log.warn("Referral KOL creator {} not found in database. Skipping commission for order {}.", 
                     affiliateCreatorId, event.getOrderId());
             return;
         }
 
-        // Check if commission was already processed (idempotency check)
+
         Optional<Commission> existingOpt = commissionRepository.findByOrderId(event.getOrderId());
         if (existingOpt.isPresent()) {
             log.info("Commission for order {} was already processed. Skipping.", event.getOrderId());
             return;
         }
 
-        // Calculate commission
+
         BigDecimal subtotal = event.getFinalAmount();
         BigDecimal commissionAmount = subtotal.multiply(DEFAULT_COMMISSION_RATE)
                 .divide(new BigDecimal("100.00"), 2, RoundingMode.HALF_UP);

@@ -39,6 +39,9 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Lớp triển khai các dịch vụ nghiệp vụ chat, quản lý phòng và tin nhắn sử dụng MongoDB và Redis.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -54,10 +57,13 @@ public class ChatServiceImpl implements ChatService {
     private final RedisTemplate<String, ChatEvent> chatRedisTemplate;
     private final ObjectMapper objectMapper;
 
-    private static final long MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+    private static final long MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
     private static final Set<String> FORBIDDEN_EXTENSIONS = Set.of(".exe", ".bat", ".sh");
     private static final String CHANNEL_PREFIX = "chat:user:";
 
+    /**
+     * Tạo mới cuộc hội thoại (Direct/Group) hoặc trả về cuộc hội thoại Direct đã có sẵn.
+     */
     @Override
     public ConversationResponse createOrGetConversation(ConversationRequest request, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -66,7 +72,6 @@ public class ChatServiceImpl implements ChatService {
         Set<String> memberIds = new HashSet<>(request.getMemberIds());
         memberIds.add(currentUserId);
 
-        // Validate all members exist in a single batch query
         List<User> foundUsers = userRepository.findAllById(memberIds);
         if (foundUsers.size() != memberIds.size()) {
             throw new AppException(ErrorCode.USER_NOT_EXISTED);
@@ -79,7 +84,6 @@ public class ChatServiceImpl implements ChatService {
 
             List<Conversation> directList = conversationRepository.findDirectConversationsBetween(memberIds);
             if (directList != null && !directList.isEmpty()) {
-                // If there are duplicate conversations, use the most recently updated one
                 directList.sort((c1, c2) -> {
                     Instant u1 = c1.getUpdatedAt() != null ? c1.getUpdatedAt() : Instant.EPOCH;
                     Instant u2 = c2.getUpdatedAt() != null ? c2.getUpdatedAt() : Instant.EPOCH;
@@ -113,6 +117,9 @@ public class ChatServiceImpl implements ChatService {
         return toConversationResponse(saved);
     }
 
+    /**
+     * Lấy tất cả các cuộc hội thoại của người dùng và sắp xếp theo thời gian cập nhật giảm dần.
+     */
     @Override
     public List<ConversationResponse> getConversationsForUser(String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -122,6 +129,9 @@ public class ChatServiceImpl implements ChatService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lấy tin nhắn trong cuộc hội thoại theo phân trang và đánh dấu phòng chat là đã đọc.
+     */
     @Override
     public PageResponse<MessageResponse> getMessages(String conversationId, int page, int size, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -137,7 +147,6 @@ public class ChatServiceImpl implements ChatService {
             throw new AppException(ErrorCode.CONVERSATION_ACCESS_DENIED);
         }
 
-        // Reset unread count for current user
         markConversationAsRead(conversationId, currentUsername);
 
         Pageable pageable = PageRequest.of(page, size);
@@ -157,12 +166,14 @@ public class ChatServiceImpl implements ChatService {
                 .build();
     }
 
+    /**
+     * Lưu tin nhắn mới vào database, cập nhật tin nhắn cuối và tăng số lượng tin nhắn chưa đọc của thành viên khác.
+     */
     @Override
     public MessageResponse saveAndBroadcastMessage(MessageRequest request, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
         String currentUserId = currentUser.getId();
 
-        // Validate content for TEXT messages
         if ("TEXT".equals(request.getType())) {
             if (request.getContent() == null || request.getContent().trim().isEmpty()) {
                 throw new AppException(ErrorCode.INVALID_INPUT);
@@ -176,10 +187,8 @@ public class ChatServiceImpl implements ChatService {
             throw new AppException(ErrorCode.CONVERSATION_ACCESS_DENIED);
         }
 
-        // Prepare message sub-document elements
         Message.AttachmentMetadata attachment = null;
         if (request.getAttachmentMetadata() != null) {
-            // Verify attachment upload confirmation if it's an S3 media file
             String fileUrl = request.getAttachmentMetadata().getFileUrl();
             if (fileUrl != null && !fileUrl.trim().isEmpty()) {
                 String s3Key = extractS3KeyFromUrl(fileUrl);
@@ -218,7 +227,6 @@ public class ChatServiceImpl implements ChatService {
 
         Message savedMessage = messageRepository.save(message);
 
-        // Update Conversation lastMessage & increment unread counts
         Conversation.LastMessage lastMessage = Conversation.LastMessage.builder()
                 .messageId(savedMessage.getId())
                 .senderId(currentUserId)
@@ -245,7 +253,6 @@ public class ChatServiceImpl implements ChatService {
 
         MessageResponse response = chatMapper.toMessageResponse(savedMessage);
 
-        // Broadcast over Redis — publish to each target user's dynamic channel
         List<String> targetUsernames = getTargetUsernames(conversation.getMemberIds(), currentUserId);
         try {
             ChatEvent event = ChatEvent.builder()
@@ -265,6 +272,9 @@ public class ChatServiceImpl implements ChatService {
         return response;
     }
 
+    /**
+     * Phát tán sự kiện đang gõ phím tới tất cả thành viên khác trong phòng chat.
+     */
     @Override
     public void broadcastTyping(TypingRequest request, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -300,14 +310,15 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    /**
+     * Sinh Pre-signed URL để Client trực tiếp tải tệp đính kèm lên S3.
+     */
     @Override
     public PresignedUrlResponse generateAttachmentUploadUrl(PresignedUrlRequest request, String currentUsername) {
-        // Validate file size limit
         if (request.getFileSize() > MAX_FILE_SIZE_BYTES) {
             throw new AppException(ErrorCode.FILE_TOO_LARGE);
         }
 
-        // Validate file format / forbidden extensions
         String fileNameLower = request.getFileName().toLowerCase();
         for (String ext : FORBIDDEN_EXTENSIONS) {
             if (fileNameLower.endsWith(ext)) {
@@ -315,15 +326,12 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        // Generate safe unique key
         String uuid = UUID.randomUUID().toString();
         String fileKey = String.format("chat/attachments/%s_%s", uuid, request.getFileName().replaceAll("[^a-zA-Z0-9.-]", "_"));
 
-        // Generate pre-signed PUT upload URL (valid for 5 minutes)
         String uploadUrl = storageService.generatePresignedUploadUrl(fileKey, request.getContentType(), request.getFileSize(), 5);
         String fileUrl = storageService.getFileUrl(fileKey);
 
-        // Save metadata to track ownership and enforce IDOR check
         MediaMetadata metadata = MediaMetadata.builder()
                 .s3Key(fileKey)
                 .uploadedBy(currentUsername)
@@ -340,16 +348,16 @@ public class ChatServiceImpl implements ChatService {
                 .build();
     }
 
-    // ==================== HELPER METHODS ====================
-
+    /**
+     * Tìm kiếm thông tin người dùng theo Username.
+     */
     private User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
     }
 
     /**
-     * Batch-fetch usernames for all members except the sender.
-     * Uses findAllById to avoid N+1 queries.
+     * Lấy danh sách Username mục tiêu của tất cả thành viên trong nhóm ngoại trừ người gửi.
      */
     private List<String> getTargetUsernames(Set<String> memberIds, String senderId) {
         Set<String> targetIds = memberIds.stream()
@@ -364,20 +372,17 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Build ConversationResponse with batch-resolved member profiles.
-     * Uses findAllById to avoid N+1 queries.
+     * Ánh xạ thông tin Conversation sang ConversationResponse kèm chi tiết thành viên và tin nhắn cuối.
      */
     private ConversationResponse toConversationResponse(Conversation conversation) {
         ConversationResponse response = chatMapper.toConversationResponse(conversation);
 
-        // Resolve member user profiles in a single batch query
         List<User> memberUsers = userRepository.findAllById(conversation.getMemberIds());
         List<UserResponse> memberProfiles = memberUsers.stream()
                 .map(userMapper::toUserResponse)
                 .collect(Collectors.toList());
         response.setMembers(memberProfiles);
 
-        // Resolve last message properties directly from the database to guarantee accuracy
         Pageable pageable = PageRequest.of(0, 1);
         Page<Message> latestMsgPage = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversation.getId(), pageable);
         if (latestMsgPage != null && latestMsgPage.hasContent()) {
@@ -405,8 +410,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Broadcast read receipt to all members via Redis Pub/Sub.
-     * Now includes targetUsernames for DIRECT chat routing.
+     * Phát tán sự kiện đã xem tin nhắn (READ_RECEIPT) tới các thành viên qua Redis Pub/Sub.
      */
     private void broadcastReadReceipt(String conversationId, String readerId, List<String> targetUsernames) {
         try {
@@ -431,6 +435,9 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    /**
+     * Đánh dấu cuộc hội thoại là đã đọc: reset unreadCount, cập nhật danh sách readBy của tin nhắn và broadcast sự kiện seen.
+     */
     @Override
     public void markConversationAsRead(String conversationId, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -451,7 +458,6 @@ public class ChatServiceImpl implements ChatService {
             conversation.getUnreadCounts().put(currentUserId, 0);
             conversationRepository.save(conversation);
 
-            // Update read receipts for messages in MongoDB
             int limit = Math.max(unreadCount, 50);
             org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
             org.springframework.data.domain.Page<Message> msgPage = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
@@ -475,12 +481,14 @@ public class ChatServiceImpl implements ChatService {
                 messageRepository.saveAll(toUpdate);
             }
 
-            // Broadcast read receipt to room (with target usernames for DIRECT routing)
             List<String> targetUsernames = getTargetUsernames(conversation.getMemberIds(), currentUserId);
             broadcastReadReceipt(conversationId, currentUserId, targetUsernames);
         }
     }
 
+    /**
+     * Trích xuất S3 key từ đường dẫn URL đầy đủ.
+     */
     private String extractS3KeyFromUrl(String fileUrl) {
         if (fileUrl == null) return null;
         int index = fileUrl.indexOf("chat/attachments/");

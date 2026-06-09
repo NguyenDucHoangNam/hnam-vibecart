@@ -49,6 +49,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link ProductService} quản lý sản phẩm, biến thể, tồn kho.
+ */
 @Service
 public class ProductServiceImpl implements ProductService {
 
@@ -99,17 +102,17 @@ public class ProductServiceImpl implements ProductService {
         String currentUserId = getCurrentUserId();
         log.info("Creating product '{}' by user: {}", request.name(), currentUserId);
 
-        // Fetch and validate category
+
         String categoryId = request.categoryId();
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // Verify it's a leaf category (no children)
+
         if (categoryRepository.existsByParentId(categoryId)) {
             throw new AppException(ErrorCode.CATEGORY_NOT_LEAF);
         }
 
-        // Build and save Product entity
+
         Product product = Product.builder()
                 .name(request.name())
                 .description(request.description())
@@ -120,7 +123,7 @@ public class ProductServiceImpl implements ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        // Create variants with inventory
+
         if (request.variants() != null) {
             for (ProductVariantRequest variantReq : request.variants()) {
                 ProductVariant variant = ProductVariant.builder()
@@ -137,8 +140,7 @@ public class ProductServiceImpl implements ProductService {
                 int initialQty = variantReq.initialQuantity() != null
                         ? variantReq.initialQuantity() : 0;
 
-                // Create Inventory record with quantity=0 first, then importStock will add the correct amount
-                // (avoids double-counting: if we set quantity=N here AND call importStock(+N), total becomes 2N)
+
                 Inventory inventory = Inventory.builder()
                         .variant(savedVariant)
                         .quantity(0)
@@ -153,7 +155,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // Create images
+
         if (request.images() != null) {
             for (ProductImageRequest imageReq : request.images()) {
                 ProductImage image = ProductImage.builder()
@@ -168,7 +170,7 @@ public class ProductServiceImpl implements ProductService {
 
         log.info("Product created successfully with ID: {}", savedProduct.getId());
 
-        // Save transactional outbox event
+
         saveOutboxEvent("CREATED", savedProduct);
 
         return productMapper.toResponse(
@@ -214,16 +216,16 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Verify ownership or ADMIN
+
         if (!product.getCreatorId().equals(currentUserId) && !isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Update basic fields
+
         product.setName(request.name());
         product.setDescription(request.description());
 
-        // Update category if changed
+
         if (request.categoryId() != null && !request.categoryId().equals(product.getCategory().getId())) {
             Category newCategory = categoryRepository.findById(request.categoryId())
                     .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
@@ -235,9 +237,9 @@ public class ProductServiceImpl implements ProductService {
 
         Product updatedProduct = productRepository.save(product);
 
-        // Handle variant updates: upsert strategy (update existing by skuCode, add new, soft-delete removed)
+
         if (request.variants() != null) {
-            // Load existing active variants for this product (with inventory eagerly)
+
             List<ProductVariant> existingVariants = productVariantRepository.findByProductIdWithInventory(id);
             Map<String, ProductVariant> existingBySkuCode = existingVariants.stream()
                     .collect(Collectors.toMap(ProductVariant::getSkuCode, v -> v));
@@ -249,7 +251,7 @@ public class ProductServiceImpl implements ProductService {
                 ProductVariant existingVariant = existingBySkuCode.get(variantReq.skuCode());
 
                 if (existingVariant != null) {
-                    // UPDATE existing variant — preserve inventory, just update price/name
+
                     existingVariant.setVariantName(variantReq.variantName());
                     existingVariant.setPrice(variantReq.price());
                     existingVariant.setDiscountPrice(variantReq.discountPrice() != null
@@ -257,7 +259,7 @@ public class ProductServiceImpl implements ProductService {
                     productVariantRepository.save(existingVariant);
                     log.debug("Updated existing variant skuCode={}", variantReq.skuCode());
                 } else {
-                    // CREATE new variant + inventory (skuCode is brand new, added during edit)
+
                     ProductVariant newVariant = ProductVariant.builder()
                             .product(updatedProduct)
                             .skuCode(variantReq.skuCode())
@@ -272,7 +274,7 @@ public class ProductServiceImpl implements ProductService {
                     int newInitialQty = variantReq.initialQuantity() != null
                             ? variantReq.initialQuantity() : 0;
 
-                    // Create Inventory record with quantity=0, then importStock to set initial stock
+
                     Inventory inventory = Inventory.builder()
                             .variant(savedVariant)
                             .quantity(0)
@@ -288,7 +290,7 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
 
-            // Soft-delete variants that are no longer in the request
+
             for (ProductVariant existing : existingVariants) {
                 if (!requestedSkuCodes.contains(existing.getSkuCode())) {
                     productVariantRepository.delete(existing);
@@ -297,8 +299,7 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // Handle image updates: clear in-memory collection and rebuild it.
-        // With CascadeType.ALL and orphanRemoval = true, Hibernate handles database deletions automatically.
+
         if (request.images() != null) {
             updatedProduct.getImages().clear();
             productRepository.save(updatedProduct);
@@ -318,7 +319,7 @@ public class ProductServiceImpl implements ProductService {
 
         log.info("Product updated successfully: {}", id);
 
-        // Save transactional outbox event
+
         saveOutboxEvent("UPDATED", updatedProduct);
 
         return productMapper.toResponse(
@@ -334,22 +335,22 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Verify ownership or ADMIN
+
         if (!product.getCreatorId().equals(currentUserId) && !isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Soft delete all variants
+
         List<ProductVariant> variants = productVariantRepository.findByProductId(id);
         for (ProductVariant variant : variants) {
             productVariantRepository.delete(variant);
         }
 
-        // Soft delete product (JPA @SQLDelete handles it)
+
         productRepository.delete(product);
         log.info("Product soft deleted: {}", id);
 
-        // Save transactional outbox delete event
+
         saveDeletedOutboxEvent(id);
     }
 
@@ -360,11 +361,11 @@ public class ProductServiceImpl implements ProductService {
         log.info("Adjusting inventory for variant {}: {}, reason: {}",
                 variantId, request.adjustmentQuantity(), request.reason());
 
-        // Verify variant exists and check ownership
+
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Only the Creator who owns the product or an Admin can adjust inventory
+
         if (!variant.getProduct().getCreatorId().equals(currentUserId) && !isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
@@ -400,7 +401,7 @@ public class ProductServiceImpl implements ProductService {
 
     private void saveOutboxEvent(String eventType, Product product) {
         try {
-            // Find thumbnail URL
+
             String thumbnailUrl = null;
             if (product.getImages() != null) {
                 thumbnailUrl = product.getImages().stream()
@@ -410,7 +411,7 @@ public class ProductServiceImpl implements ProductService {
                         .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
             }
 
-            // Calculate min/max price from variants
+
             BigDecimal minPrice = BigDecimal.ZERO;
             BigDecimal maxPrice = BigDecimal.ZERO;
             if (product.getVariants() != null && !product.getVariants().isEmpty()) {

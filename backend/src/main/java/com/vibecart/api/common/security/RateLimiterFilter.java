@@ -25,17 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Rate Limiter Filter sử dụng Bucket4j (Token Bucket Algorithm).
- * <p>
- * Chạy trước {@link JwtAuthenticationFilter} trong Security Filter Chain.
- * Áp dụng 2 tầng giới hạn:
- * <ul>
- *   <li><b>Global:</b> Giới hạn tổng request từ một IP (mặc định 100 req/phút).</li>
- *   <li><b>Sensitive:</b> Giới hạn chặt hơn cho endpoints nhạy cảm (mặc định 10 req/phút).</li>
- * </ul>
- * <p>
- * Khi vượt quá giới hạn, trả về HTTP 429 (Too Many Requests) với response chuẩn {@link ApiResponse}
- * và header {@code Retry-After} cho biết thời gian chờ (giây).
+ * Bộ lọc giới hạn tần suất yêu cầu (Rate Limiter Filter) sử dụng thuật toán Token Bucket (Bucket4j).
  */
 @Component
 @Slf4j
@@ -55,11 +45,13 @@ public class RateLimiterFilter extends OncePerRequestFilter {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Thực hiện kiểm tra giới hạn tần suất request (IP Global & endpoint nhạy cảm).
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Bypass nếu Rate Limiter bị tắt
         if (!properties.isEnabled()) {
             filterChain.doFilter(request, response);
             return;
@@ -68,7 +60,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
         String clientIp = extractClientIp(request);
         String requestUri = request.getRequestURI();
 
-        // 1. Kiểm tra Global Rate Limit
         Bucket globalBucket = globalBuckets.computeIfAbsent(
                 GLOBAL_PREFIX + clientIp,
                 key -> createBucket(properties.getGlobal())
@@ -82,7 +73,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 2. Kiểm tra Sensitive Rate Limit (nếu là endpoint nhạy cảm)
         if (isSensitivePath(requestUri)) {
             Bucket sensitiveBucket = sensitiveBuckets.computeIfAbsent(
                     SENSITIVE_PREFIX + clientIp,
@@ -98,20 +88,17 @@ public class RateLimiterFilter extends OncePerRequestFilter {
             }
         }
 
-        // Thêm headers thông tin rate limit cho client
         response.setHeader("X-RateLimit-Remaining", String.valueOf(globalProbe.getRemainingTokens()));
 
         filterChain.doFilter(request, response);
     }
 
     /**
-     * Trích xuất IP thực của client, hỗ trợ reverse proxy (Nginx, Load Balancer).
-     * Thứ tự ưu tiên: X-Forwarded-For → X-Real-IP → remoteAddr.
+     * Trích xuất địa chỉ IP của client từ request (hỗ trợ reverse proxy).
      */
     private String extractClientIp(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (StringUtils.hasText(xForwardedFor)) {
-            // X-Forwarded-For có thể chứa nhiều IP, lấy IP đầu tiên (client gốc)
             return xForwardedFor.split(",")[0].trim();
         }
 
@@ -124,7 +111,7 @@ public class RateLimiterFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Kiểm tra xem URI có thuộc danh sách endpoint nhạy cảm không.
+     * Kiểm tra xem đường dẫn request có thuộc danh sách endpoint nhạy cảm cần giới hạn chặt hơn không.
      */
     private boolean isSensitivePath(String requestUri) {
         return properties.getSensitive().getPaths().stream()
@@ -132,7 +119,7 @@ public class RateLimiterFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Tạo Bucket4j bucket từ cấu hình.
+     * Tạo đối tượng Bucket4j cấu hình lượng token và thời gian hồi.
      */
     private Bucket createBucket(RateLimiterProperties.BucketConfig config) {
         Bandwidth bandwidth = Bandwidth.builder()
@@ -145,7 +132,7 @@ public class RateLimiterFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Gửi response HTTP 429 Too Many Requests với format ApiResponse chuẩn.
+     * Trả về phản hồi HTTP 429 (Too Many Requests) định dạng JSON chuẩn.
      */
     private void sendRateLimitResponse(HttpServletResponse response, long retryAfterSeconds, long remainingTokens)
             throws IOException {
@@ -167,15 +154,13 @@ public class RateLimiterFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Dọn dẹp các bucket hết hạn mỗi 10 phút để tránh memory leak.
-     * Bucket không còn token đang refill sẽ bị xóa, tạo lại khi request mới đến.
+     * Định kỳ dọn dẹp bộ nhớ lưu trữ bucket đã đầy token không còn hoạt động.
      */
-    @Scheduled(fixedRate = 600_000) // 10 phút
+    @Scheduled(fixedRate = 600_000)
     public void cleanupExpiredBuckets() {
         long beforeGlobal = globalBuckets.size();
         long beforeSensitive = sensitiveBuckets.size();
 
-        // Xóa bucket đã đầy token (không hoạt động gần đây)
         globalBuckets.entrySet().removeIf(entry ->
                 entry.getValue().getAvailableTokens() >= properties.getGlobal().getCapacity()
         );

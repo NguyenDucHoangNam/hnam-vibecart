@@ -31,6 +31,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Implementation của {@link ShortLinkService} xử lý tạo shortlink, cache Redis và chuyển hướng.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -57,11 +60,9 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Generate UUID first
         String uuid = UUID.randomUUID().toString();
         String shortCode = Base62Encoder.generateShortCode(uuid);
 
-        // Ensure shortCode is unique, fallback check
         int attempts = 0;
         while (shortLinkRepository.findByShortCode(shortCode).isPresent() && attempts < 5) {
             uuid = UUID.randomUUID().toString();
@@ -75,11 +76,11 @@ public class ShortLinkServiceImpl implements ShortLinkService {
                 .product(product)
                 .creator(creator)
                 .build();
-        shortLink.setId(uuid); // Explicitly set generated UUID to match PostgreSQL key structure
+        shortLink.setId(uuid);
 
         shortLink = shortLinkRepository.save(shortLink);
 
-        // Save to Redis cache: shortlink:cache:{shortcode}
+
         try {
             Map<String, String> cacheMap = new HashMap<>();
             cacheMap.put("id", shortLink.getId());
@@ -154,7 +155,7 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             }
         }
 
-        // On miss or parse failure, read from DB
+
         if (originalUrl == null) {
             log.info("Redis cache miss for shortCode: {}. Reading from DB...", shortCode);
             ShortLink shortLink = shortLinkRepository.findByShortCode(shortCode)
@@ -165,7 +166,7 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             creatorId = shortLink.getCreator().getId();
             productId = shortLink.getProduct().getId();
 
-            // Write through to Redis
+
             try {
                 Map<String, String> cacheMap = new HashMap<>();
                 cacheMap.put("id", shortLinkId);
@@ -180,20 +181,20 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             }
         }
 
-        // Set affiliate KOL creator ID cookie on the response. The cookie will expire in 30 days.
+
         Cookie cookie = new Cookie("affiliate_creator_id", creatorId);
         cookie.setPath("/");
-        cookie.setMaxAge(30 * 24 * 60 * 60); // 30 days in seconds
+        cookie.setMaxAge(30 * 24 * 60 * 60);
         cookie.setHttpOnly(true);
         response.addCookie(cookie);
 
         String ipAddress = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
 
-        // Asynchronously emit click event using Kafka
+
         String browser = parseBrowser(userAgent);
         String deviceType = parseDeviceType(userAgent);
-        String country = "Vietnam"; // Simple default country mapping or resolver
+        String country = "Vietnam";
 
         com.vibecart.api.modules.shortener.event.ClickEventMessage clickMsg = 
             com.vibecart.api.modules.shortener.event.ClickEventMessage.builder()
@@ -212,7 +213,7 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             log.error("Failed to emit click event via Kafka", e);
         }
 
-        // Perform redirect
+
         try {
             response.sendRedirect(originalUrl);
         } catch (IOException e) {

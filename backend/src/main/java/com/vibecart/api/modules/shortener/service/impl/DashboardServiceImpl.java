@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Implementation của {@link DashboardService} tính toán các chỉ số dashboard tiếp thị liên kết.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j

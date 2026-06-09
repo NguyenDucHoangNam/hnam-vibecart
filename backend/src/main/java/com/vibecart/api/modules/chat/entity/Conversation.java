@@ -9,6 +9,9 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Thực thể MongoDB đại diện cho một cuộc hội thoại (Direct hoặc Group).
+ */
 @Document(collection = "conversations")
 @Getter
 @Setter
@@ -21,13 +24,13 @@ public class Conversation {
     private String id;
 
     @Field("type")
-    private String type; // DIRECT or GROUP
+    private String type;
 
     @Field("name")
-    private String name; // Null if DIRECT
+    private String name;
 
     @Field("avatar_url")
-    private String avatarUrl; // Null if DIRECT
+    private String avatarUrl;
 
     @Field("member_ids")
     private Set<String> memberIds;
@@ -46,6 +49,9 @@ public class Conversation {
     @Field("updated_at")
     private Instant updatedAt = Instant.now();
 
+    /**
+     * Thông tin tin nhắn cuối cùng để hiển thị nhanh trên danh sách hội thoại.
+     */
     @Getter
     @Setter
     @Builder
@@ -62,7 +68,7 @@ public class Conversation {
         private String content;
 
         @Field("type")
-        private String type; // TEXT, IMAGE, VIDEO, DOCUMENT, PRODUCT, ORDER
+        private String type;
 
         @Field("created_at")
         private Instant createdAt;

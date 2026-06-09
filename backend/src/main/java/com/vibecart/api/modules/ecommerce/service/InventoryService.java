@@ -1,5 +1,8 @@
 package com.vibecart.api.modules.ecommerce.service;
 
+/**
+ * Service quản lý tồn kho sản phẩm (reserve/release/confirm).
+ */
 public interface InventoryService {
     void importStock(String variantId, int quantity, String reason, String userId);
     void exportStock(String variantId, int quantity, String reason, String userId);

@@ -15,6 +15,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller quản lý bài viết trong mạng xã hội.
+ */
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
@@ -23,7 +26,9 @@ public class PostController {
 
     private final PostService postService;
 
-    // ==================== 1. TẠO BÀI VIẾT (CREATOR ONLY) ====================
+    /**
+     * Tạo bài viết mới (chỉ dành cho Creator).
+     */
     @PostMapping
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<PostResponse>> createPost(@Valid @RequestBody PostRequest request) {
@@ -40,7 +45,9 @@ public class PostController {
         );
     }
 
-    // ==================== 2. DANH SÁCH BÀI VIẾT (PUBLIC) ====================
+    /**
+     * Lấy danh sách bài viết theo phân trang, có thể lọc theo Creator.
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<PostResponse>>> getPosts(
             @RequestParam(defaultValue = "0") int page,
@@ -59,7 +66,9 @@ public class PostController {
         );
     }
 
-    // ==================== 3. CHI TIẾT BÀI VIẾT (PUBLIC) ====================
+    /**
+     * Lấy chi tiết bài viết theo ID.
+     */
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostResponse>> getPost(@PathVariable String postId) {
         String username = getOptionalUsername();
@@ -74,7 +83,9 @@ public class PostController {
         );
     }
 
-    // ==================== 4. CẬP NHẬT BÀI VIẾT (OWNER ONLY) ====================
+    /**
+     * Cập nhật bài viết (chỉ chủ bài viết).
+     */
     @PutMapping("/{postId}")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<PostResponse>> updatePost(
@@ -93,7 +104,9 @@ public class PostController {
         );
     }
 
-    // ==================== 5. XÓA BÀI VIẾT (OWNER HOẶC ADMIN) ====================
+    /**
+     * Xóa bài viết (chủ bài viết hoặc Admin).
+     */
     @DeleteMapping("/{postId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable String postId) {
@@ -109,7 +122,9 @@ public class PostController {
         );
     }
 
-    // ==================== 6. NEWS FEED (AUTHENTICATED) ====================
+    /**
+     * Lấy news feed của người dùng hiện tại.
+     */
     @GetMapping("/feed")
     public ResponseEntity<ApiResponse<PageResponse<PostResponse>>> getFeed(
             @RequestParam(defaultValue = "0") int page,
@@ -127,7 +142,9 @@ public class PostController {
         );
     }
 
-    // ==================== 7. TOGGLE LIKE (AUTHENTICATED) ====================
+    /**
+     * Bật/tắt like bài viết.
+     */
     @PostMapping("/{postId}/likes")
     public ResponseEntity<ApiResponse<Boolean>> toggleLike(@PathVariable String postId) {
         String username = getCurrentUsername();
@@ -142,7 +159,9 @@ public class PostController {
         );
     }
 
-    // ==================== 8. CHECK LIKED (AUTHENTICATED) ====================
+    /**
+     * Kiểm tra trạng thái like của người dùng hiện tại với bài viết.
+     */
     @GetMapping("/{postId}/likes/check")
     public ResponseEntity<ApiResponse<Boolean>> checkLiked(@PathVariable String postId) {
         String username = getCurrentUsername();
@@ -156,7 +175,9 @@ public class PostController {
         );
     }
 
-    // ==================== 9. LIKE COUNT (PUBLIC) ====================
+    /**
+     * Lấy số lượng like của bài viết.
+     */
     @GetMapping("/{postId}/likes/count")
     public ResponseEntity<ApiResponse<Long>> getLikeCount(@PathVariable String postId) {
         long count = postService.getLikeCount(postId);
@@ -169,7 +190,6 @@ public class PostController {
         );
     }
 
-    // ==================== HELPER ====================
 
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();

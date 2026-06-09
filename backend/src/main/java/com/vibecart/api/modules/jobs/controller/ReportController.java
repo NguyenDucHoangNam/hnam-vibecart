@@ -24,6 +24,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Controller xữ lý kết xuất báo cáo và truy vấn trạng thái background task.
+ */
 @RestController
 @RequestMapping("/api/v1/reports")
 public class ReportController {
@@ -51,7 +54,7 @@ public class ReportController {
         User creator = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 1. Initialize background task record in PENDING state
+
         BackgroundTask task = BackgroundTask.builder()
                 .id(UUID.randomUUID().toString())
                 .userId(creator.getId())
@@ -61,10 +64,10 @@ public class ReportController {
 
         task = taskRepository.save(task);
 
-        // 2. Trigger asynchronous Excel report generation
+
         reportWorkerService.executeExportReportTask(task.getId(), creator.getId(), request.getStartDate(), request.getEndDate());
 
-        // 3. Assemble response payload
+
         Map<String, Object> result = new HashMap<>();
         result.put("taskId", task.getId());
         result.put("status", "PENDING");
@@ -91,7 +94,7 @@ public class ReportController {
         BackgroundTask task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT)); // Task not found
 
-        // Enforce security ownership check (Only creator owner or ADMIN role can fetch)
+
         boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
@@ -100,7 +103,7 @@ public class ReportController {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Translate ZonedDateTime for response (retaining BaseEntity auditing times)
+
         ZonedDateTime createdAtZoned = task.getCreatedAt();
 
         TaskStatusResponse result = TaskStatusResponse.builder()

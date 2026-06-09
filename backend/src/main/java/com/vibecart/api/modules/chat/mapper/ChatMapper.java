@@ -7,6 +7,9 @@ import com.vibecart.api.modules.chat.dto.response.MessageResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+/**
+ * Lớp ánh xạ (Mapper) chuyển đổi giữa các thực thể Chat và các đối tượng phản hồi DTO.
+ */
 @Mapper(componentModel = "spring")
 public interface ChatMapper {
 

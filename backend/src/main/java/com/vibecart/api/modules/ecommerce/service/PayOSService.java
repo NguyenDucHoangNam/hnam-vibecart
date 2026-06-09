@@ -15,6 +15,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * Service tích hợp cổng thanh toán PayOS: tạo link, xác thực webhook.
+ */
 @Service
 @RequiredArgsConstructor
 public class PayOSService {
@@ -33,7 +36,7 @@ public class PayOSService {
         log.info("Creating PayOS payment link for orderCode: {}, amount: {}", orderCode, amount);
 
         try {
-            // Build signature data
+
             String signatureData = "amount=" + amount
                     + "&cancelUrl=" + payOSProperties.getCancelUrl()
                     + "&description=" + description
@@ -42,7 +45,7 @@ public class PayOSService {
 
             String signature = hmacSHA256(payOSProperties.getChecksumKey(), signatureData);
 
-            // Build request body
+
             Map<String, Object> body = Map.of(
                     "orderCode", orderCode,
                     "amount", amount,
@@ -52,7 +55,7 @@ public class PayOSService {
                     "signature", signature
             );
 
-            // Build headers
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("x-client-id", payOSProperties.getClientId());
@@ -90,10 +93,10 @@ public class PayOSService {
      */
     public boolean verifyWebhookSignature(Map<String, Object> data, String receivedSignature) {
         try {
-            // Sort keys alphabetically
+
             TreeMap<String, Object> sortedData = new TreeMap<>(data);
 
-            // Build query string
+
             StringBuilder sb = new StringBuilder();
             for (Map.Entry<String, Object> entry : sortedData.entrySet()) {
                 if (!sb.isEmpty()) {

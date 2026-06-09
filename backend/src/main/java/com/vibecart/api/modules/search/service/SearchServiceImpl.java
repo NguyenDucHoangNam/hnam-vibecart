@@ -48,6 +48,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link SearchService} xử lý các logic tìm kiếm tích hợp Elasticsearch, MongoDB và Redis.
+ */
 @Service
 public class SearchServiceImpl implements SearchService {
 
@@ -63,6 +66,9 @@ public class SearchServiceImpl implements SearchService {
     private final UserRepository userRepository;
     private final FollowService followService;
 
+    /**
+     * Khởi tạo service tìm kiếm với các phụ thuộc được tiêm.
+     */
     public SearchServiceImpl(ElasticsearchOperations elasticsearchOperations,
                              ElasticsearchClient elasticsearchClient,
                              MongoTemplate mongoTemplate,
@@ -89,10 +95,8 @@ public class SearchServiceImpl implements SearchService {
         log.info("Searching products with query='{}', categoryId={}, minPrice={}, maxPrice={}, sort={}, page={}, size={}",
                 query, categoryId, minPrice, maxPrice, sort, page, size);
 
-        // 1. Build Bool Query
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-        // Full-text with Fuzzy search
         if (query != null && !query.isBlank()) {
             boolQueryBuilder.must(m -> m
                     .multiMatch(mm -> mm
@@ -107,12 +111,10 @@ public class SearchServiceImpl implements SearchService {
             boolQueryBuilder.must(m -> m.matchAll(ma -> ma));
         }
 
-        // Category Filter
         if (categoryId != null && !categoryId.isBlank()) {
             boolQueryBuilder.filter(f -> f.term(t -> t.field("categoryId").value(categoryId)));
         }
 
-        // Price filters
         if (minPrice != null) {
             boolQueryBuilder.filter(f -> f.range(r -> r
                     .number(n -> n.field("maxPrice").gte(minPrice.doubleValue()))));
@@ -122,18 +124,15 @@ public class SearchServiceImpl implements SearchService {
                     .number(n -> n.field("minPrice").lte(maxPrice.doubleValue()))));
         }
 
-        // Status active constraint
         boolQueryBuilder.filter(f -> f.term(t -> t.field("status").value("ACTIVE")));
 
-        // 2. Build sorting
         Sort sortSpec = switch (sort != null ? sort : "relevance") {
             case "price_asc" -> Sort.by(Sort.Direction.ASC, "minPrice");
             case "price_desc" -> Sort.by(Sort.Direction.DESC, "maxPrice");
             case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
-            default -> Sort.unsorted(); // relevance
+            default -> Sort.unsorted();
         };
 
-        // 3. Execute main search query
         NativeQuery searchQuery = NativeQuery.builder()
                 .withQuery(q -> q.bool(boolQueryBuilder.build()))
                 .withPageable(PageRequest.of(page, Math.min(size, 50)))
@@ -151,12 +150,10 @@ public class SearchServiceImpl implements SearchService {
 
         String suggestion = null;
 
-        // 4. Handle Spellcheck Suggestions Fallback
         if (totalElements == 0 && query != null && !query.isBlank()) {
             suggestion = getSpellcheckSuggestion(query);
         }
 
-        // 5. Track trending search patterns & history if results are found
         if (totalElements > 0 && query != null && !query.isBlank()) {
             recordSearchKeyword(query, userId);
             if (userId != null && !userId.isBlank()) {
@@ -217,12 +214,11 @@ public class SearchServiceImpl implements SearchService {
         try {
             String cleanKeyword = keyword.trim().toLowerCase();
             if (cleanKeyword.length() < 2) {
-                return; // Business rule: length >= 2 characters
+                return;
             }
 
             String todayStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
             
-            // Resolve identifier: if userIdentifier is null/blank/anonymous, resolve client IP
             String identifier = userIdentifier;
             if (identifier == null || identifier.isBlank() || identifier.equals("anonymousUser")) {
                 identifier = getClientIp();
@@ -237,7 +233,7 @@ public class SearchServiceImpl implements SearchService {
                 }
                 if (currentRate > 3) {
                     log.debug("Keyword anti-spam limit exceeded for user/IP: {}, term: {}", identifier, cleanKeyword);
-                    return; // Exceeded 3 times per 24h, skip score increment
+                    return;
                 }
             }
 
@@ -270,12 +266,10 @@ public class SearchServiceImpl implements SearchService {
 
     private void recordPersonalHistory(String userId, String keyword) {
         try {
-            // Step A: Remove any matching keyword from history to de-duplicate
             Query pullQuery = Query.query(Criteria.where("id").is(userId));
             Update pullUpdate = new Update().pull("items", Query.query(Criteria.where("keyword").is(keyword)));
             mongoTemplate.updateFirst(pullQuery, pullUpdate, SearchHistory.class);
 
-            // Step B: Push to the front of history array, slice to maintain max 10 elements
             SearchItem newItem = new SearchItem(keyword, LocalDateTime.now());
             Update pushUpdate = new Update()
                     .push("items")
@@ -320,7 +314,6 @@ public class SearchServiceImpl implements SearchService {
             String weeklyKey = "search:trending:weekly";
             Set<String> trending = redisTemplate.opsForZSet().reverseRange(weeklyKey, 0, 7);
             if (trending == null || trending.isEmpty()) {
-                // Trigger manual aggregation if weekly set is empty or expired
                 aggregateWeeklyTrending();
                 trending = redisTemplate.opsForZSet().reverseRange(weeklyKey, 0, 7);
             }
@@ -377,7 +370,6 @@ public class SearchServiceImpl implements SearchService {
             return;
         }
         log.info("Merging search history from localStorage for user {}: {} terms", userId, request.getKeywords().size());
-        // Reverse iterate to preserve newer elements at the top after sequential push
         List<String> keywords = new ArrayList<>(request.getKeywords());
         Collections.reverse(keywords);
         for (String keyword : keywords) {
@@ -432,7 +424,6 @@ public class SearchServiceImpl implements SearchService {
             productSearchRepository.saveAll(documents);
             log.info("Successfully reindexed {} product documents in Elasticsearch", documents.size());
 
-            // Bulk reindex users
             log.info("Reindexing all PostgreSQL user records into Elasticsearch...");
             List<com.vibecart.api.modules.iam.entity.User> users = userRepository.findAll();
             List<UserDocument> userDocs = users.stream().map(user -> {
@@ -461,7 +452,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     @Override
-    @Scheduled(cron = "0 0 * * * *") // Daily/Hourly Weekly Trending Aggregation
+    @Scheduled(cron = "0 0 * * * *")
     public void aggregateWeeklyTrending() {
         log.info("Aggregating weekly trending terms...");
         try {
@@ -475,7 +466,6 @@ public class SearchServiceImpl implements SearchService {
 
             String weeklyKey = "search:trending:weekly";
             if (!keys.isEmpty()) {
-                // Aggregate scores from the past 7 days using ZSET union
                 redisTemplate.opsForZSet().unionAndStore(keys.get(0), keys.subList(1, keys.size()), weeklyKey);
                 redisTemplate.expire(weeklyKey, Duration.ofDays(8));
                 log.info("Weekly search trends synchronized in ZSET: {}", weeklyKey);
@@ -506,13 +496,10 @@ public class SearchServiceImpl implements SearchService {
             boolQueryBuilder.must(m -> m.matchAll(ma -> ma));
         }
 
-        // Lọc tài khoản Active
         boolQueryBuilder.filter(f -> f.term(t -> t.field("status").value("ACTIVE")));
 
-        // Chỉ tìm Creator (ROLE_CREATOR)
         boolQueryBuilder.filter(f -> f.term(t -> t.field("roles").value("ROLE_CREATOR")));
 
-        // Loại bỏ bản thân khỏi danh sách tìm kiếm
         if (currentUsername != null && !currentUsername.isBlank() && !currentUsername.equals("anonymousUser")) {
             boolQueryBuilder.mustNot(mn -> mn.term(t -> t.field("username.keyword").value(currentUsername)));
         }
@@ -589,17 +576,17 @@ public class SearchServiceImpl implements SearchService {
                     .size(0)
                     .suggest(su -> su
                             .suggesters("user-spelling-suggestion", sg -> sg
-                                    .text(query)
-                                    .phrase(ph -> ph
-                                            .field("fullName")
-                                            .confidence(1.0)
-                                            .size(1)
-                                            .directGenerator(dg -> dg
-                                                    .field("fullName")
-                                                    .suggestMode(co.elastic.clients.elasticsearch._types.SuggestMode.Popular)
-                                                    .minWordLength(2)
-                                            )
-                                    )
+                                     .text(query)
+                                     .phrase(ph -> ph
+                                             .field("fullName")
+                                             .confidence(1.0)
+                                             .size(1)
+                                             .directGenerator(dg -> dg
+                                                     .field("fullName")
+                                                     .suggestMode(co.elastic.clients.elasticsearch._types.SuggestMode.Popular)
+                                                     .minWordLength(2)
+                                             )
+                                     )
                             )
                     ),
                     UserDocument.class

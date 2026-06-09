@@ -28,6 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation của {@link CommentService} xử lý bình luận phân cấp đa tầng.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -46,7 +49,7 @@ public class CommentServiceImpl implements CommentService {
      */
     private static final int MAX_NESTING_DEPTH = 2;
 
-    // ==================== THÊM COMMENT ====================
+
     @Override
     @Transactional
     public CommentResponse addComment(String postId, CommentRequest request, String username) {
@@ -56,7 +59,7 @@ public class CommentServiceImpl implements CommentService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // [BE-4] Profanity Filter — kiểm tra từ ngữ thô tục trước khi lưu
+
         if (profanityFilter.containsProfanity(request.content())) {
             throw new AppException(ErrorCode.PROFANITY_DETECTED);
         }
@@ -67,12 +70,12 @@ public class CommentServiceImpl implements CommentService {
                 .content(request.content())
                 .build();
 
-        // Handle nested reply
+
         if (request.parentId() != null && !request.parentId().isBlank()) {
             PostComment parent = commentRepository.findById(request.parentId())
                     .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
 
-            // [BE-3] Tính depth thực sự: đếm ngược qua chuỗi parent
+
             int parentDepth = calculateDepth(parent);
             if (parentDepth >= MAX_NESTING_DEPTH) {
                 throw new AppException(ErrorCode.MAX_COMMENT_DEPTH);
@@ -87,36 +90,33 @@ public class CommentServiceImpl implements CommentService {
         return commentMapper.toCommentResponse(savedComment, List.of());
     }
 
-    // ==================== LẤY DANH SÁCH COMMENT ====================
+
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CommentResponse> getComments(String postId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
 
-        // Lấy root comments (parent IS NULL) — phân trang
         Page<PostComment> rootCommentsPage = commentRepository
                 .findByPostIdAndParentIsNullOrderByCreatedAtDesc(postId, pageable);
 
         List<PostComment> rootComments = rootCommentsPage.getContent();
 
-        // [PERF-2] Batch Replies theo Root Page — chỉ load replies thuộc root comments trong trang hiện tại
-        // thay vì bốc TOÀN BỘ replies của bài viết vào RAM (tránh OOM trên bài viral).
+
         Map<String, List<PostComment>> repliesByParentId;
         if (rootComments.isEmpty()) {
             repliesByParentId = Map.of();
         } else {
-            // Depth 1: Lấy replies trực tiếp của root comments trong trang
             List<String> rootIds = rootComments.stream().map(PostComment::getId).toList();
             List<PostComment> depth1Replies = commentRepository
                     .findRepliesByPostIdAndParentIds(postId, rootIds);
 
-            // Depth 2: Lấy sub-replies (cấp 3 cuối cùng) của depth-1 replies
+
             List<String> depth1Ids = depth1Replies.stream().map(PostComment::getId).toList();
             List<PostComment> depth2Replies = depth1Ids.isEmpty()
                     ? List.of()
                     : commentRepository.findRepliesByPostIdAndParentIds(postId, depth1Ids);
 
-            // Gom nhóm tất cả replies (depth 1 + depth 2) theo parentId
+
             List<PostComment> allReplies = new ArrayList<>();
             allReplies.addAll(depth1Replies);
             allReplies.addAll(depth2Replies);
@@ -129,7 +129,7 @@ public class CommentServiceImpl implements CommentService {
                     ));
         }
 
-        // Map root comments + attach replies from grouped map
+
         List<CommentResponse> content = rootComments.stream()
                 .map(rootComment -> toCommentResponseTree(rootComment, repliesByParentId))
                 .toList();
@@ -144,19 +144,19 @@ public class CommentServiceImpl implements CommentService {
                 .build();
     }
 
-    // ==================== XÓA COMMENT ====================
+
     @Override
     @Transactional
     public void deleteComment(String postId, String commentId, String username, boolean isAdmin) {
         PostComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
 
-        // Verify comment belongs to this post
+
         if (!comment.getPost().getId().equals(postId)) {
             throw new AppException(ErrorCode.COMMENT_NOT_FOUND);
         }
 
-        // Check permission: comment owner, post creator, or admin
+
         boolean isCommentOwner = comment.getUser().getUsername().equals(username);
         boolean isPostCreator = comment.getPost().getCreator().getUsername().equals(username);
 
@@ -164,11 +164,11 @@ public class CommentServiceImpl implements CommentService {
             throw new AppException(ErrorCode.COMMENT_ACCESS_DENIED);
         }
 
-        commentRepository.delete(comment); // Soft delete via @SQLDelete
+        commentRepository.delete(comment);
         log.info("Comment {} deleted by {}", commentId, username);
     }
 
-    // ==================== HELPER METHODS ====================
+
 
     /**
      * Tính depth (số cấp cha) của 1 comment.

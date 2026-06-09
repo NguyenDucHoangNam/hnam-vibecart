@@ -16,6 +16,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller quản trị người dùng dành cho Admin.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
@@ -24,7 +27,9 @@ public class AdminUserController {
 
     private final AuthService authService;
 
-    // ==================== ADMIN: TÌM KIẾM & PHÂN TRANG NGƯỜI DÙNG ====================
+    /**
+     * Tìm kiếm và phân trang người dùng theo bộ lọc.
+     */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
@@ -45,7 +50,9 @@ public class AdminUserController {
         return ResponseEntity.ok(response);
     }
 
-    // ==================== ADMIN: CẬP NHẬT TRẠNG THÁI TÀI KHOẢN ====================
+    /**
+     * Cập nhật trạng thái tài khoản người dùng.
+     */
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
@@ -66,7 +73,9 @@ public class AdminUserController {
         return ResponseEntity.ok(response);
     }
 
-    // ==================== ADMIN: CẬP NHẬT VAI TRÒ (PHÂN QUYỀN) ====================
+    /**
+     * Cập nhật vai trò (phân quyền) của người dùng.
+     */
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserRoles(

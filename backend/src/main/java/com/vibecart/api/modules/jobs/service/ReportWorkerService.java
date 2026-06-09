@@ -22,6 +22,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service xuất báo cáo Excel bất đồng bộ và upload lên S3.
+ */
 @Service
 public class ReportWorkerService {
 
@@ -43,14 +46,14 @@ public class ReportWorkerService {
     public void executeExportReportTask(String taskId, String creatorId, ZonedDateTime startDate, ZonedDateTime endDate) {
         log.info("Starting async report export worker. TaskID={}, CreatorID={}", taskId, creatorId);
 
-        // 1. Update status to RUNNING
+
         updateTaskStatus(taskId, TaskStatus.RUNNING, null, null);
 
         try {
-            // 2. Fetch Creator Orders with full details
+
             List<Order> orders = orderRepository.findByCreatorIdWithItems(creatorId);
 
-            // Filter by date range if provided
+
             if (startDate != null) {
                 orders = orders.stream().filter(o -> o.getCreatedAt().isAfter(startDate)).toList();
             }
@@ -58,10 +61,10 @@ public class ReportWorkerService {
                 orders = orders.stream().filter(o -> o.getCreatedAt().isBefore(endDate)).toList();
             }
 
-            // 3. Render Excel workbook using Apache POI
+
             ByteArrayOutputStream outputStream = generateExcelReport(orders);
 
-            // 4. Upload to S3/MinIO using unified StorageService
+
             String s3Key = "reports/" + creatorId + "/" + UUID.randomUUID().toString() + ".xlsx";
             byte[] bytes = outputStream.toByteArray();
             ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
@@ -74,7 +77,7 @@ public class ReportWorkerService {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             );
 
-            // 5. Update background task as COMPLETED with the public URL
+
             updateTaskStatus(taskId, TaskStatus.COMPLETED, downloadUrl, null);
             log.info("Successfully completed report export task. TaskID={}, URL={}", taskId, downloadUrl);
         } catch (Exception e) {
@@ -89,7 +92,7 @@ public class ReportWorkerService {
 
             Sheet sheet = workbook.createSheet("Creator Sales Report");
 
-            // Header Style
+
             Row headerRow = sheet.createRow(0);
             String[] headers = {
                     "Mã Đơn Hàng", "Tên Người Nhận", "Số Điện Thoại", "Địa Chỉ Giao Hàng",
@@ -100,7 +103,7 @@ public class ReportWorkerService {
                 headerRow.createCell(i).setCellValue(headers[i]);
             }
 
-            // Populate rows
+
             int rowNum = 1;
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -119,7 +122,7 @@ public class ReportWorkerService {
                 row.createCell(8).setCellValue(formattedDate);
             }
 
-            // Auto-size columns
+
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);
             }

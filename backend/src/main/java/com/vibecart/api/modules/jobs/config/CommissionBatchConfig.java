@@ -27,6 +27,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Cấu hình Spring Batch job quyết toán hoa hồng (Commission Settlement).
+ */
 @Configuration
 public class CommissionBatchConfig {
 
@@ -67,7 +70,7 @@ public class CommissionBatchConfig {
         queryProvider.setDataSource(dataSource);
         queryProvider.setSelectClause("SELECT id, order_id, creator_id, subtotal_amount, commission_rate, commission_amount, status, created_at");
         queryProvider.setFromClause("FROM commissions");
-        // Filter pending commission orders older than 30 days
+
         queryProvider.setWhereClause("status = 'PENDING' AND created_at <= CURRENT_DATE - INTERVAL '30 days'");
         Map<String, org.springframework.batch.infrastructure.item.database.Order> sortKeys = new HashMap<>();
         sortKeys.put("id", org.springframework.batch.infrastructure.item.database.Order.ASCENDING);
@@ -108,8 +111,7 @@ public class CommissionBatchConfig {
                 return commission;
             }
 
-            // If order is still pending, paid, shipped, etc. we do not finalize commission yet.
-            // Returning null filters this commission out of this chunk execution, keeping it PENDING.
+
             return null;
         };
     }

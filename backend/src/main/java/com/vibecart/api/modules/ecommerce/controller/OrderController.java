@@ -22,6 +22,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Controller quản lý đơn hàng: đặt hàng, xem lịch sử, cập nhật trạng thái.
+ */
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor

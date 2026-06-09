@@ -5,6 +5,9 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Cấu hình kết nối cổng thanh toán PayOS.
+ */
 @Configuration
 @ConfigurationProperties(prefix = "app.payos")
 @Getter

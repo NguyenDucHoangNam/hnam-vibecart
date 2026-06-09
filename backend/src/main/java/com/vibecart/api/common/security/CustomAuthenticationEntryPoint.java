@@ -13,15 +13,26 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * Xử lý các yêu cầu truy cập không hợp lệ hoặc thiếu xác thực
+ * (Unauthenticated/Anonymous).
+ *
+ * <p>
+ * Khi client gọi một API được bảo mật nhưng không cung cấp JWT token hợp lệ,
+ * Spring Security sẽ kích hoạt Entry Point này để trả về phản hồi lỗi JSON
+ * đồng nhất dưới dạng {@link ApiResponse} thay vì trang lỗi mặc định của
+ * Spring.
+ * </p>
+ */
 @Component
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException, ServletException {
-        
+            AuthenticationException authException) throws IOException, ServletException {
+
         ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
-        
+
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setStatus(errorCode.getStatusCode().value());
 
