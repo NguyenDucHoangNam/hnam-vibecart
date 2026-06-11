@@ -19,6 +19,7 @@ import com.vibecart.api.modules.social.mapper.PostMapper;
 import com.vibecart.api.modules.social.repository.PostCommentRepository;
 import com.vibecart.api.modules.social.repository.PostLikeRepository;
 import com.vibecart.api.modules.social.repository.PostRepository;
+import com.vibecart.api.modules.social.service.FeedFanoutService;
 import com.vibecart.api.modules.social.service.PostService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +27,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -47,9 +50,13 @@ public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
     private final ProductRepository productRepository;
     private final MediaMetadataRepository mediaMetadataRepository;
+    private final FeedFanoutService feedFanoutService;
+    private final StringRedisTemplate redisTemplate;
 
     private static final int MAX_MEDIA_URLS = 10;
     private static final int MAX_TAGGED_PRODUCTS = 5;
+    private static final String TIMELINE_KEY_PREFIX = "feed:timeline:";
+    private static final long TIMELINE_TTL_DAYS = 30;
 
     @Override
     @Transactional
@@ -90,6 +97,9 @@ public class PostServiceImpl implements PostService {
 
         Post savedPost = postRepository.save(post);
         log.info("Post created by {}: {}", username, savedPost.getId());
+
+        // [FAN-OUT] Đẩy bài viết mới vào timeline Redis của tất cả follower (async)
+        feedFanoutService.fanoutNewPost(creator.getId(), savedPost.getId());
 
         return toSinglePostResponse(savedPost, username);
     }
@@ -184,8 +194,12 @@ public class PostServiceImpl implements PostService {
             throw new AppException(ErrorCode.POST_ACCESS_DENIED);
         }
 
+        String creatorId = post.getCreator().getId();
         postRepository.delete(post);
         log.info("Post deleted by {}: {}", username, postId);
+
+        // [FAN-OUT] Xóa bài viết khỏi timeline Redis của tất cả follower (async)
+        feedFanoutService.removeDeletedPost(creatorId, postId);
     }
 
 
@@ -193,12 +207,52 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public PageResponse<PostResponse> getFeed(int page, int size, String username) {
         User user = findUserByUsername(username);
+        String timelineKey = TIMELINE_KEY_PREFIX + user.getId();
+
+        // [FAN-OUT] Đọc postIds từ Redis Timeline
+        long start = (long) page * size;
+        long end = start + size - 1;
+        List<String> postIds = redisTemplate.opsForList().range(timelineKey, start, end);
+
+        if (postIds != null && !postIds.isEmpty()) {
+            // Cache HIT: gia hạn TTL và lấy bài viết từ DB theo batch ID
+            redisTemplate.expire(timelineKey, TIMELINE_TTL_DAYS, TimeUnit.DAYS);
+
+            List<Post> posts = postRepository.findAllById(postIds);
+
+            // Giữ nguyên thứ tự từ Redis (mới nhất trước)
+            Map<String, Post> postMap = posts.stream()
+                    .collect(Collectors.toMap(Post::getId, p -> p));
+            List<Post> orderedPosts = postIds.stream()
+                    .map(postMap::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            List<PostResponse> content = toBatchPostResponses(orderedPosts, username);
+
+            // Kiểm tra hasNext bằng cách xem Redis list còn phần tử không
+            Long totalSize = redisTemplate.opsForList().size(timelineKey);
+            boolean isLast = totalSize == null || end >= totalSize - 1;
+
+            return PageResponse.<PostResponse>builder()
+                    .content(content)
+                    .page(page)
+                    .size(size)
+                    .totalElements(totalSize != null ? totalSize : -1)
+                    .totalPages(totalSize != null ? (int) Math.ceil((double) totalSize / size) : -1)
+                    .last(isLast)
+                    .build();
+        }
+
+        // Cache MISS: fallback query DB + async warm-up
+        log.info("Timeline cache miss for user {}, falling back to DB query", user.getId());
         Pageable pageable = PageRequest.of(page, size);
-
-
         Slice<Post> feedSlice = postRepository.findFeedByUserId(user.getId(), pageable);
 
         List<PostResponse> content = toBatchPostResponses(feedSlice.getContent(), username);
+
+        // Async warm-up timeline cho lần sau
+        feedFanoutService.warmUpTimeline(user.getId());
 
         return PageResponse.<PostResponse>builder()
                 .content(content)

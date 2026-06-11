@@ -52,7 +52,10 @@ graph TD
             LACT["presence:last_active:userId (String)"]
             ASET["presence:active_users (Set)"]
         end
-        subgraph "5. Search Engine"
+        subgraph "5. Social (News Feed)"
+            FTL["feed:timeline:userId (List, TTL 30d)"]
+        end
+        subgraph "6. Search Engine"
             SR["search:rate:date:user:term (String, TTL 24h)"]
             STD["search:trending:date (ZSet, TTL 10d)"]
             STW["search:trending:weekly (ZSet, TTL 8d)"]
@@ -133,15 +136,27 @@ Sử dụng cấu trúc dữ liệu Sorted Set để tạo bảng xếp hạng t
 
 ---
 
-## 4. Lưu ý về Sự khác biệt giữa Thiết kế Lý thuyết và Code Thực tế
+### 3.6. Module Social (News Feed Fan-out)
+Redis được sử dụng làm bộ đệm timeline cho News Feed theo mô hình **Fan-out on Write** — khi creator đăng bài mới, `postId` được đẩy vào Redis List của tất cả follower.
 
-Trong tài liệu hướng dẫn tổng quan của dự án, có đề cập đến một số thiết kế sử dụng Redis nhưng trong mã nguồn thực tế hiện tại (source code backend) đang được xử lý bằng giải pháp khác:
-
-1.  **News Feed (Fan-out Timelines):**
-    *   *Tài liệu lý thuyết:* Đề xuất sử dụng mô hình Fan-out đẩy ID bài viết mới vào Redis Timeline của các Follower.
-    *   *Mã nguồn thực tế:* Hiện tại class `PostServiceImpl.java` (hàm `getFeed`) đang truy vấn trực tiếp cơ sở dữ liệu quan hệ thông qua phương thức `postRepository.findFeedByUserId` sử dụng phân trang `Slice`.
+| Key Pattern | Kiểu Dữ Liệu | TTL | Chức năng & Mô tả chi tiết |
+| :--- | :---: | :---: | :--- |
+| `feed:timeline:<userId>` | **List** | 30 ngày (Gia hạn khi đọc) | Lưu danh sách `postId` sắp xếp mới nhất → cũ nhất. Tối đa 500 phần tử. Khi user mở feed, hệ thống đọc `LRANGE` từ Redis và query DB theo batch ID để lấy chi tiết bài viết. Nếu cache miss (user mới hoặc timeline hết TTL), hệ thống fallback query DB và async warm-up lại timeline. |
 
 > [!NOTE]
-> Các thiết kế lý thuyết khác đã được triển khai đầy đủ trong mã nguồn:
+> **Các event kích hoạt fan-out:**
+> * **Đăng bài (`createPost`):** `LPUSH` postId vào timeline của tất cả follower + chính creator → `LTRIM` 500.
+> * **Xóa bài (`deletePost`):** `LREM` postId khỏi timeline tất cả follower + creator.
+> * **Follow:** Backfill 20 bài gần nhất của người được follow vào timeline follower.
+> * **Unfollow:** `LREM` async xóa bài của người bị unfollow khỏi timeline.
+> * Toàn bộ các thao tác fan-out chạy **bất đồng bộ** (`@Async("feedFanoutExecutor")`) trên thread pool riêng.
+
+---
+
+## 4. Lưu ý về Sự khác biệt giữa Thiết kế Lý thuyết và Code Thực tế
+
+> [!NOTE]
+> Tất cả các thiết kế lý thuyết đã được triển khai đầy đủ trong mã nguồn:
+> *   **News Feed (Fan-out on Write):** Đã triển khai qua `FeedFanoutServiceImpl` và tích hợp vào `PostServiceImpl.getFeed()`, `createPost()`, `deletePost()` cũng như `FollowServiceImpl.toggleFollow()`. Chi tiết tại mục 3.6.
 > *   **Rate Limiting API:** Đã triển khai `RateLimiterFilter` sử dụng `Bucket4j` (Token Bucket Algorithm) với 2 tầng giới hạn: Global (100 req/phút/IP) và Sensitive (10 req/phút/IP cho các endpoint xác thực). Cấu hình tại `application.yaml` dưới prefix `app.rate-limiter`.
 > *   **Chat Message Sync (Redis Pub/Sub):** Đã triển khai đầy đủ qua `DynamicRedisSubscriptionManager`, `RedisChatConfig` và `ChatServiceImpl`. Chi tiết tại tài liệu `11_realtime_websocket_design.md`.

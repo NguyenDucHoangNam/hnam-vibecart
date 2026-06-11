@@ -24,4 +24,20 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * Thread pool riêng cho Fan-out on Write (News Feed).
+     * Core=4 để xử lý đồng thời nhiều fan-out, max=16 cho burst khi creator có nhiều follower.
+     * Queue=200 để buffer các tác vụ khi thread pool đầy.
+     */
+    @Bean(name = "feedFanoutExecutor")
+    public Executor feedFanoutExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("FeedFanout-");
+        executor.initialize();
+        return executor;
+    }
 }

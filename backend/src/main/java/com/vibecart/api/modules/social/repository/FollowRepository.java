@@ -35,4 +35,8 @@ public interface FollowRepository extends JpaRepository<Follow, FollowId> {
     /** [BATCH] Lấy danh sách followingId mà follower đang follow, trong phạm vi danh sách cho trước */
     @Query("SELECT f.id.followingId FROM Follow f WHERE f.id.followerId = :followerId AND f.id.followingId IN :followingIds")
     List<String> findFollowingIdsIn(@Param("followerId") String followerId, @Param("followingIds") List<String> followingIds);
+
+    /** [FAN-OUT] Lấy toàn bộ follower IDs của một user (không phân trang) - phục vụ fan-out timeline */
+    @Query("SELECT f.id.followerId FROM Follow f WHERE f.id.followingId = :followingId")
+    List<String> findAllFollowerIdsByFollowingId(@Param("followingId") String followingId);
 }

@@ -10,6 +10,7 @@ import com.vibecart.api.modules.social.entity.Follow;
 import com.vibecart.api.modules.social.entity.FollowId;
 import com.vibecart.api.modules.social.mapper.FollowMapper;
 import com.vibecart.api.modules.social.repository.FollowRepository;
+import com.vibecart.api.modules.social.service.FeedFanoutService;
 import com.vibecart.api.modules.social.service.FollowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ public class FollowServiceImpl implements FollowService {
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final FollowMapper followMapper;
+    private final FeedFanoutService feedFanoutService;
 
 
     @Override
@@ -58,6 +60,10 @@ public class FollowServiceImpl implements FollowService {
         if (followRepository.existsById(followId)) {
             followRepository.deleteById(followId);
             log.info("User {} unfollowed {}", currentUsername, targetUser.getUsername());
+
+            // [FAN-OUT] Xóa bài viết của người bị unfollow khỏi timeline (async)
+            feedFanoutService.onUnfollow(currentUser.getId(), targetUserId);
+
             return false;
         } else {
             Follow follow = Follow.builder()
@@ -67,6 +73,10 @@ public class FollowServiceImpl implements FollowService {
                     .build();
             followRepository.save(follow);
             log.info("User {} followed {}", currentUsername, targetUser.getUsername());
+
+            // [FAN-OUT] Backfill bài viết gần nhất của người được follow vào timeline (async)
+            feedFanoutService.onFollow(currentUser.getId(), targetUserId);
+
             return true;
         }
     }

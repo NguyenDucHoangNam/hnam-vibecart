@@ -1,8 +1,10 @@
 package com.vibecart.api.modules.social.service.impl;
 
 import com.vibecart.api.common.dto.PageResponse;
+import com.vibecart.api.common.entity.MediaMetadata;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
+import com.vibecart.api.common.repository.MediaMetadataRepository;
 import com.vibecart.api.modules.iam.entity.User;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.social.dto.request.PostRequest;
@@ -14,6 +16,7 @@ import com.vibecart.api.modules.social.mapper.PostMapper;
 import com.vibecart.api.modules.social.repository.PostCommentRepository;
 import com.vibecart.api.modules.social.repository.PostLikeRepository;
 import com.vibecart.api.modules.social.repository.PostRepository;
+import com.vibecart.api.modules.social.service.FeedFanoutService;
 import com.vibecart.api.modules.ecommerce.entity.Product;
 import com.vibecart.api.modules.ecommerce.repository.ProductRepository;
 import com.vibecart.api.modules.ecommerce.enums.ProductStatus;
@@ -29,6 +32,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.ListOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -57,6 +62,18 @@ class PostServiceImplTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private MediaMetadataRepository mediaMetadataRepository;
+
+    @Mock
+    private FeedFanoutService feedFanoutService;
+
+    @Mock
+    private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private ListOperations<String, String> listOperations;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -133,6 +150,19 @@ class PostServiceImplTest {
         lenient().when(postMapper.toPostResponse(eq(post), anyLong(), anyLong(), anyBoolean())).thenReturn(response);
     }
 
+    /**
+     * Helper: stub media validation cho bất kỳ S3 key nào đều trả về media VERIFIED thuộc TEST_USERNAME.
+     */
+    private void stubMediaValidation() {
+        MediaMetadata verifiedMedia = MediaMetadata.builder()
+                .s3Key("any")
+                .uploadedBy(TEST_USERNAME)
+                .fileSize(1024)
+                .status("VERIFIED")
+                .build();
+        lenient().when(mediaMetadataRepository.findByS3Key(anyString())).thenReturn(Optional.of(verifiedMedia));
+    }
+
     // ==================== createPost ====================
     @Nested
     @DisplayName("createPost")
@@ -143,6 +173,7 @@ class PostServiceImplTest {
             PostRequest request = new PostRequest("Test post content", List.of("url1.jpg", "url2.jpg"), null);
 
             when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+            stubMediaValidation();
             when(postRepository.save(any(Post.class))).thenReturn(testPost);
             stubToPostResponse(testPost, TEST_USERNAME, testPostResponse);
 
@@ -152,6 +183,7 @@ class PostServiceImplTest {
             assertEquals(TEST_POST_ID, result.id());
             assertEquals("Test post content", result.content());
             verify(postRepository, times(1)).save(any(Post.class));
+            verify(feedFanoutService).fanoutNewPost(TEST_USER_ID, TEST_POST_ID);
         }
 
         @Test
@@ -168,6 +200,7 @@ class PostServiceImplTest {
             when(productRepository.findById("prod-2")).thenReturn(Optional.of(prod2));
 
             when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+            stubMediaValidation();
             when(postRepository.save(any(Post.class))).thenReturn(testPost);
             stubToPostResponse(testPost, TEST_USERNAME, testPostResponse);
 
@@ -260,6 +293,7 @@ class PostServiceImplTest {
             PostRequest request = new PostRequest("Content", maxUrls, null);
 
             when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+            stubMediaValidation();
             when(postRepository.save(any(Post.class))).thenReturn(testPost);
             stubToPostResponse(testPost, TEST_USERNAME, testPostResponse);
 
@@ -441,6 +475,7 @@ class PostServiceImplTest {
             when(productRepository.findById("prod-1")).thenReturn(Optional.of(prod1));
 
             when(postRepository.findById(TEST_POST_ID)).thenReturn(Optional.of(testPost));
+            stubMediaValidation();
             when(postRepository.save(any(Post.class))).thenReturn(updatedPost);
             stubToPostResponse(updatedPost, TEST_USERNAME, updatedResponse);
 
@@ -535,6 +570,7 @@ class PostServiceImplTest {
             assertDoesNotThrow(() -> postService.deletePost(TEST_POST_ID, TEST_USERNAME, false));
 
             verify(postRepository).delete(testPost);
+            verify(feedFanoutService).removeDeletedPost(TEST_USER_ID, TEST_POST_ID);
         }
 
         @Test
@@ -573,11 +609,34 @@ class PostServiceImplTest {
     class GetFeedTests {
 
         @Test
-        void getFeed_success_returnsFeedPosts() {
+        void getFeed_cacheHit_returnsFeedFromRedis() {
+            List<String> cachedPostIds = List.of(TEST_POST_ID);
+
+            when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+            when(redisTemplate.opsForList()).thenReturn(listOperations);
+            when(listOperations.range("feed:timeline:" + TEST_USER_ID, 0, 9)).thenReturn(cachedPostIds);
+            when(redisTemplate.expire(anyString(), anyLong(), any())).thenReturn(true);
+            when(postRepository.findAllById(cachedPostIds)).thenReturn(List.of(testPost));
+            when(listOperations.size("feed:timeline:" + TEST_USER_ID)).thenReturn(1L);
+            stubToPostResponse(testPost, TEST_USERNAME, testPostResponse);
+
+            PageResponse<PostResponse> result = postService.getFeed(0, 10, TEST_USERNAME);
+
+            assertNotNull(result);
+            assertEquals(1, result.getContent().size());
+            assertTrue(result.isLast());
+            // Should NOT fall back to DB feed query
+            verify(postRepository, never()).findFeedByUserId(anyString(), any());
+        }
+
+        @Test
+        void getFeed_cacheMiss_fallsBackToDbAndWarmsUp() {
             Pageable pageable = PageRequest.of(0, 10);
             Page<Post> feedPage = new PageImpl<>(List.of(testPost), pageable, 1);
 
             when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
+            when(redisTemplate.opsForList()).thenReturn(listOperations);
+            when(listOperations.range("feed:timeline:" + TEST_USER_ID, 0, 9)).thenReturn(List.of());
             when(postRepository.findFeedByUserId(TEST_USER_ID, pageable)).thenReturn(feedPage);
             stubToPostResponse(testPost, TEST_USERNAME, testPostResponse);
 
@@ -585,26 +644,26 @@ class PostServiceImplTest {
 
             assertNotNull(result);
             assertEquals(1, result.getContent().size());
-            assertEquals(0, result.getPage());
-            assertEquals(10, result.getSize());
-            assertEquals(1, result.getTotalElements());
-            assertTrue(result.isLast());
             verify(postRepository).findFeedByUserId(TEST_USER_ID, pageable);
+            verify(feedFanoutService).warmUpTimeline(TEST_USER_ID);
         }
 
         @Test
-        void getFeed_emptyFeed_returnsEmptyPage() {
+        void getFeed_cacheNull_fallsBackToDbAndWarmsUp() {
             Pageable pageable = PageRequest.of(0, 10);
-            Page<Post> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            Page<Post> feedPage = new PageImpl<>(List.of(testPost), pageable, 1);
 
             when(userRepository.findByUsername(TEST_USERNAME)).thenReturn(Optional.of(testUser));
-            when(postRepository.findFeedByUserId(TEST_USER_ID, pageable)).thenReturn(emptyPage);
+            when(redisTemplate.opsForList()).thenReturn(listOperations);
+            when(listOperations.range("feed:timeline:" + TEST_USER_ID, 0, 9)).thenReturn(null);
+            when(postRepository.findFeedByUserId(TEST_USER_ID, pageable)).thenReturn(feedPage);
+            stubToPostResponse(testPost, TEST_USERNAME, testPostResponse);
 
             PageResponse<PostResponse> result = postService.getFeed(0, 10, TEST_USERNAME);
 
             assertNotNull(result);
-            assertTrue(result.getContent().isEmpty());
-            assertEquals(0, result.getTotalElements());
+            verify(postRepository).findFeedByUserId(TEST_USER_ID, pageable);
+            verify(feedFanoutService).warmUpTimeline(TEST_USER_ID);
         }
 
         @Test
