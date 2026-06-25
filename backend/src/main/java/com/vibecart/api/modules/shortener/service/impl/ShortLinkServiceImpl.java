@@ -32,7 +32,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Implementation của {@link ShortLinkService} xử lý tạo shortlink, cache Redis và chuyển hướng.
+ * Implementation của {@link ShortLinkService} xử lý tạo shortlink, cache Redis
+ * và chuyển hướng.
  */
 @Service
 @RequiredArgsConstructor
@@ -80,7 +81,6 @@ public class ShortLinkServiceImpl implements ShortLinkService {
 
         shortLink = shortLinkRepository.save(shortLink);
 
-
         try {
             Map<String, String> cacheMap = new HashMap<>();
             cacheMap.put("id", shortLink.getId());
@@ -96,8 +96,8 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             log.error("Failed to serialize and cache shortlink in Redis", e);
         }
 
-        String fullShortLink = domainPrefix.endsWith("/") 
-                ? domainPrefix + "v/" + shortCode 
+        String fullShortLink = domainPrefix.endsWith("/")
+                ? domainPrefix + "v/" + shortCode
                 : domainPrefix + "/v/" + shortCode;
 
         return ShortlinkResponse.builder()
@@ -117,8 +117,8 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         List<ShortLink> shortLinks = shortLinkRepository.findByCreatorIdOrderByCreatedAtDesc(creator.getId());
 
         return shortLinks.stream().map(sl -> {
-            String fullShortLink = domainPrefix.endsWith("/") 
-                    ? domainPrefix + "v/" + sl.getShortCode() 
+            String fullShortLink = domainPrefix.endsWith("/")
+                    ? domainPrefix + "v/" + sl.getShortCode()
                     : domainPrefix + "/v/" + sl.getShortCode();
 
             return ShortlinkResponse.builder()
@@ -155,7 +155,6 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             }
         }
 
-
         if (originalUrl == null) {
             log.info("Redis cache miss for shortCode: {}. Reading from DB...", shortCode);
             ShortLink shortLink = shortLinkRepository.findByShortCode(shortCode)
@@ -165,7 +164,6 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             originalUrl = shortLink.getOriginalUrl();
             creatorId = shortLink.getCreator().getId();
             productId = shortLink.getProduct().getId();
-
 
             try {
                 Map<String, String> cacheMap = new HashMap<>();
@@ -181,7 +179,6 @@ public class ShortLinkServiceImpl implements ShortLinkService {
             }
         }
 
-
         Cookie cookie = new Cookie("affiliate_creator_id", creatorId);
         cookie.setPath("/");
         cookie.setMaxAge(30 * 24 * 60 * 60);
@@ -191,13 +188,12 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         String ipAddress = getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
 
-
         String browser = parseBrowser(userAgent);
         String deviceType = parseDeviceType(userAgent);
         String country = "Vietnam";
 
-        com.vibecart.api.modules.shortener.event.ClickEventMessage clickMsg = 
-            com.vibecart.api.modules.shortener.event.ClickEventMessage.builder()
+        com.vibecart.api.modules.shortener.event.ClickEventMessage clickMsg = com.vibecart.api.modules.shortener.event.ClickEventMessage
+                .builder()
                 .shortLinkId(shortLinkId)
                 .ipAddress(ipAddress)
                 .userAgent(userAgent)
@@ -212,7 +208,6 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         } catch (Exception e) {
             log.error("Failed to emit click event via Kafka", e);
         }
-
 
         try {
             response.sendRedirect(originalUrl);
@@ -231,20 +226,28 @@ public class ShortLinkServiceImpl implements ShortLinkService {
     }
 
     private String parseBrowser(String userAgent) {
-        if (userAgent == null) return "Unknown";
+        if (userAgent == null)
+            return "Unknown";
         String ua = userAgent.toLowerCase();
-        if (ua.contains("chrome")) return "Chrome";
-        if (ua.contains("firefox")) return "Firefox";
-        if (ua.contains("safari") && !ua.contains("chrome")) return "Safari";
-        if (ua.contains("edge")) return "Edge";
+        if (ua.contains("chrome"))
+            return "Chrome";
+        if (ua.contains("firefox"))
+            return "Firefox";
+        if (ua.contains("safari") && !ua.contains("chrome"))
+            return "Safari";
+        if (ua.contains("edge"))
+            return "Edge";
         return "Other";
     }
 
     private String parseDeviceType(String userAgent) {
-        if (userAgent == null) return "Desktop";
+        if (userAgent == null)
+            return "Desktop";
         String ua = userAgent.toLowerCase();
-        if (ua.contains("mobile") || ua.contains("android") || ua.contains("iphone")) return "Mobile";
-        if (ua.contains("tablet") || ua.contains("ipad")) return "Tablet";
+        if (ua.contains("mobile") || ua.contains("android") || ua.contains("iphone"))
+            return "Mobile";
+        if (ua.contains("tablet") || ua.contains("ipad"))
+            return "Tablet";
         return "Desktop";
     }
 }

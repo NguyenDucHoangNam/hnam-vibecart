@@ -31,3 +31,6 @@ management:
   endpoint:
     health:
       show-details: always
+
+app:
+  frontend-url: ${FRONTEND_URL}

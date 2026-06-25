@@ -9,6 +9,7 @@ export interface User {
   roles?: UserRole[];
   status?: string;
   oauthProvider?: string;
+  hasPassword?: boolean;
   createdAt?: string;
 }
 

@@ -1,6 +1,7 @@
 package com.vibecart.api.modules.jobs.dto;
 
 import lombok.*;
+import java.util.Map;
 
 @Data
 @Builder
@@ -11,4 +12,6 @@ public class NotificationEvent {
     private String recipientEmail;
     private String subject;
     private String body;
+    private String templateType;
+    private Map<String, Object> templateParams;
 }

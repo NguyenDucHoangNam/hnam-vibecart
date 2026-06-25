@@ -17,5 +17,6 @@ public class UserResponse {
     private String status;
     private String oauthProvider;
     private Set<String> roles;
+    private boolean hasPassword;
     private java.time.ZonedDateTime createdAt;
 }

@@ -21,17 +21,13 @@ public class RegisterRequest {
 
     @NotBlank(message = "INVALID_PASSWORD")
     @Size(min = 8, max = 100, message = "INVALID_PASSWORD")
-    @Pattern(
-            regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$",
-            message = "INVALID_PASSWORD"
-    )
+    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$", message = "INVALID_PASSWORD")
     private String password;
 
     @NotBlank(message = "INVALID_INPUT")
     @Size(min = 2, max = 100, message = "INVALID_INPUT")
     @Pattern(regexp = "^[\\p{L} ]+$", message = "INVALID_INPUT")
     private String fullName;
-
 
     private String role;
 }

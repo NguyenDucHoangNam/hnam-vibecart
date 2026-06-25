@@ -303,8 +303,10 @@ public class CommentServiceImplTest {
 
             when(commentRepository.findByPostIdAndParentIsNullOrderByCreatedAtDesc("post-1", pageable))
                     .thenReturn(rootPage);
-            when(commentRepository.findByPostIdAndParentIsNotNullOrderByCreatedAtAsc("post-1"))
+            when(commentRepository.findRepliesByPostIdAndParentIds("post-1", List.of("comment-1")))
                     .thenReturn(List.of(replyComment));
+            when(commentRepository.findRepliesByPostIdAndParentIds("post-1", List.of("comment-2")))
+                    .thenReturn(List.of());
             when(commentMapper.toCommentResponse(eq(replyComment), eq(List.of())))
                     .thenReturn(replyResponse);
             when(commentMapper.toCommentResponse(eq(rootComment), eq(List.of(replyResponse))))
@@ -326,9 +328,9 @@ public class CommentServiceImplTest {
             assertEquals("comment-1", firstComment.id());
             assertEquals(1, firstComment.replies().size());
             assertEquals("comment-2", firstComment.replies().get(0).id());
-
             verify(commentRepository).findByPostIdAndParentIsNullOrderByCreatedAtDesc("post-1", pageable);
-            verify(commentRepository).findByPostIdAndParentIsNotNullOrderByCreatedAtAsc("post-1");
+            verify(commentRepository).findRepliesByPostIdAndParentIds("post-1", List.of("comment-1"));
+            verify(commentRepository).findRepliesByPostIdAndParentIds("post-1", List.of("comment-2"));
         }
 
         @Test

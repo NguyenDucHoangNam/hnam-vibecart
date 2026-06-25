@@ -29,33 +29,45 @@ public class NotificationKafkaListener {
         this.emailService = emailService;
     }
 
-    @RetryableTopic(
-            attempts = "4",
-            backOff = @BackOff(delay = 5000, multiplier = 2.0),
-            dltStrategy = DltStrategy.FAIL_ON_ERROR,
-            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE
-    )
+    @RetryableTopic(attempts = "4", backOff = @BackOff(delay = 5000, multiplier = 2.0), dltStrategy = DltStrategy.FAIL_ON_ERROR, topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
     @KafkaListener(topics = "notification-events", groupId = "vibecart-notification-group")
     public void consumeNotificationEvent(@Payload NotificationEvent event) {
-        log.info("Received Kafka notification event: ID={}, Recipient={}", event.getEventId(), event.getRecipientEmail());
-
+        log.info("Received Kafka notification event: ID={}, Recipient={}, TemplateType={}", 
+                event.getEventId(), event.getRecipientEmail(), event.getTemplateType());
 
         if (event.getRecipientEmail() == null || !event.getRecipientEmail().contains("@")) {
-            log.warn("Invalid email format for event {}: {}. Triggering Kafka retry...", event.getEventId(), event.getRecipientEmail());
+            log.warn("Invalid email format for event {}: {}. Triggering Kafka retry...", event.getEventId(),
+                     event.getRecipientEmail());
             throw new IllegalArgumentException("Địa chỉ email người nhận không hợp lệ");
         }
 
+        if (event.getTemplateType() != null && !event.getTemplateType().trim().isEmpty()) {
+            String templateName = getTemplatePath(event.getTemplateType());
+            emailService.sendEmailWithTemplate(
+                    event.getRecipientEmail(), 
+                    event.getSubject(), 
+                    templateName, 
+                    event.getTemplateParams()
+            );
+        } else {
+            emailService.sendEmail(event.getRecipientEmail(), event.getSubject(), event.getBody());
+        }
+    }
 
-        emailService.sendEmail(event.getRecipientEmail(), event.getSubject(), event.getBody());
+    private String getTemplatePath(String templateType) {
+        return switch (templateType.toUpperCase()) {
+            case "REGISTRATION_OTP" -> "email/registration-otp";
+            case "FORGOT_PASSWORD" -> "email/forgot-password";
+            default -> throw new IllegalArgumentException("Unknown template type: " + templateType);
+        };
     }
 
     @DltHandler
     public void handleDeadLetterMessage(NotificationEvent event,
-                                        @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
-                                        @Header(KafkaHeaders.EXCEPTION_MESSAGE) String exceptionMessage) {
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(KafkaHeaders.EXCEPTION_MESSAGE) String exceptionMessage) {
         log.error("CRITICAL - KAFKA MESSAGE FAILED ALL RETRIES. Directed to DLT topic '{}'. Event ID='{}', Error: {}",
                 topic, event.getEventId(), exceptionMessage);
-
 
     }
 }

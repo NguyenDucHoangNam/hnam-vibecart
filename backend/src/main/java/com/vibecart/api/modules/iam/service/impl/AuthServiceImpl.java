@@ -33,7 +33,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Implementation của {@link AuthService} xử lý đăng ký, đăng nhập, OAuth2, OTP, token, quản lý tài khoản.
+ * Implementation của {@link AuthService} xử lý đăng ký, đăng nhập, OAuth2, OTP,
+ * token, quản lý tài khoản.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,6 +54,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${app.jwt.expiration-ms:3600000}")
     private long jwtExpirationInMs;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final SecureRandom secureRandom = new SecureRandom();
@@ -80,12 +84,10 @@ public class AuthServiceImpl implements AuthService {
 
     private static final Set<String> DISPOSABLE_DOMAINS = Set.of(
             "tempmail.com", "10minutemail.com", "yopmail.com",
-            "mailinator.com", "guerrillamail.com", "throwaway.email"
-    );
+            "mailinator.com", "guerrillamail.com", "throwaway.email");
 
     private static final Set<String> VALID_STATUSES = Set.of(
-            "ACTIVE", "BANNED", "PENDING_VERIFICATION", "PENDING_DELETION"
-    );
+            "ACTIVE", "BANNED", "PENDING_VERIFICATION", "PENDING_DELETION");
 
     @Override
     @Transactional
@@ -118,7 +120,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String roleName = (request.getRole() != null && request.getRole().equalsIgnoreCase("CREATOR"))
-                ? "ROLE_CREATOR" : "ROLE_USER";
+                ? "ROLE_CREATOR"
+                : "ROLE_USER";
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
 
@@ -229,7 +232,8 @@ public class AuthServiceImpl implements AuthService {
         switch (user.getStatus()) {
             case "PENDING_VERIFICATION" -> throw new AppException(ErrorCode.ACCOUNT_PENDING_VERIFICATION);
             case "BANNED" -> throw new AppException(ErrorCode.ACCOUNT_BANNED);
-            case "ACTIVE", "PENDING_DELETION" -> { /* OK — Frontend sẽ kiểm tra status trong response để điều hướng */ }
+            case "ACTIVE", "PENDING_DELETION" -> {
+                /* OK — Frontend sẽ kiểm tra status trong response để điều hướng */ }
             default -> throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
         }
 
@@ -320,7 +324,8 @@ public class AuthServiceImpl implements AuthService {
             String graceKey = KEY_GRACE_REFRESH + oldRefreshToken;
             String gracedTokensJson = redisTemplate.opsForValue().get(graceKey);
             if (gracedTokensJson != null) {
-                log.info("Grace Period hit: returning cached tokens for rotated refresh token (race condition, not theft)");
+                log.info(
+                        "Grace Period hit: returning cached tokens for rotated refresh token (race condition, not theft)");
                 try {
                     @SuppressWarnings("unchecked")
                     Map<String, String> cachedTokens = objectMapper.readValue(gracedTokensJson, Map.class);
@@ -343,7 +348,8 @@ public class AuthServiceImpl implements AuthService {
             String rotatedUser = redisTemplate.opsForValue().get(rotatedTokenKey);
             if (rotatedUser != null) {
                 log.error("CẢNH BÁO BẢO MẬT: Phát hiện hành vi tái sử dụng Refresh Token đã xoay vòng (nguy cơ rò rỉ)! "
-                        + "Token cũ: {}. Thu hồi tất cả các phiên hiện hoạt của người dùng: {}", oldRefreshToken, rotatedUser);
+                        + "Token cũ: {}. Thu hồi tất cả các phiên hiện hoạt của người dùng: {}", oldRefreshToken,
+                        rotatedUser);
                 purgeAllSessions(rotatedUser);
             } else {
                 log.warn("Refresh token không tồn tại hoặc đã hết hạn: {}", oldRefreshToken);
@@ -371,13 +377,11 @@ public class AuthServiceImpl implements AuthService {
             Map<String, String> graceData = Map.of(
                     "accessToken", authResponse.getAccessToken(),
                     "refreshToken", authResponse.getRefreshToken(),
-                    "username", user.getUsername()
-            );
+                    "username", user.getUsername());
             String graceJson = objectMapper.writeValueAsString(graceData);
             redisTemplate.opsForValue().set(
                     KEY_GRACE_REFRESH + oldRefreshToken, graceJson,
-                    Duration.ofSeconds(GRACE_PERIOD_SECONDS)
-            );
+                    Duration.ofSeconds(GRACE_PERIOD_SECONDS));
         } catch (Exception e) {
             log.warn("Failed to save grace period shadow key (non-critical): {}", e.getMessage());
         }
@@ -403,8 +407,7 @@ public class AuthServiceImpl implements AuthService {
                 if (remainingMs > 0) {
                     redisTemplate.opsForValue().set(
                             KEY_BLACKLIST_TOKEN + accessToken, "true",
-                            Duration.ofMillis(remainingMs)
-                    );
+                            Duration.ofMillis(remainingMs));
                     log.info("Blacklisted access token for {} ms", remainingMs);
                 }
             } catch (Exception ex) {
@@ -415,85 +418,7 @@ public class AuthServiceImpl implements AuthService {
         log.info("User logged out successfully");
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public UserResponse getProfile(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-        return userMapper.toUserResponse(user);
-    }
 
-    @Override
-    @Transactional
-    public AuthResponse updateProfile(String oldUsername, UpdateProfileRequest request) {
-        User user = userRepository.findByUsername(oldUsername)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        boolean usernameChanged = false;
-        String newUsername = request.getUsername();
-        if (newUsername != null && !newUsername.trim().isEmpty() && !newUsername.equals(oldUsername)) {
-            newUsername = newUsername.trim();
-            if (newUsername.length() < 5 || newUsername.length() > 30) {
-                throw new AppException(ErrorCode.USERNAME_INVALID);
-            }
-            if (!newUsername.matches("^[a-zA-Z0-9._-]+$")) {
-                throw new AppException(ErrorCode.USERNAME_INVALID);
-            }
-            if (userRepository.existsByUsernameAnywhere(newUsername)) {
-                throw new AppException(ErrorCode.USERNAME_EXISTED);
-            }
-            user.setUsername(newUsername);
-            usernameChanged = true;
-        }
-
-        if (request.getFullName() != null) {
-            user.setFullName(request.getFullName());
-        }
-        if (request.getAvatarUrl() != null) {
-            user.setAvatarUrl(request.getAvatarUrl());
-        }
-
-        User updatedUser = userRepository.save(user);
-        searchService.indexUser(updatedUser);
-        log.info("Profile updated for user: {}. Username changed: {}", oldUsername, usernameChanged);
-
-        UserResponse userResponse = userMapper.toUserResponse(updatedUser);
-
-        if (usernameChanged) {
-            purgeAllSessions(oldUsername);
-            return generateAuthResponse(updatedUser);
-        } else {
-            return AuthResponse.builder()
-                    .user(userResponse)
-                    .build();
-        }
-    }
-
-    @Override
-    @Transactional
-    public void changePassword(String username, ChangePasswordRequest request) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        if (user.getPassword() == null || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new AppException(ErrorCode.OLD_PASSWORD_INCORRECT);
-        }
-
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new AppException(ErrorCode.PASSWORD_MISMATCH);
-        }
-
-        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
-            throw new AppException(ErrorCode.SAME_PASSWORD);
-        }
-
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-
-        purgeAllSessions(username);
-
-        log.info("Password changed for user: {}. All other sessions purged.", username);
-    }
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
@@ -506,37 +431,18 @@ public class AuthServiceImpl implements AuthService {
             redisTemplate.opsForValue().set(
                     KEY_PASSWORD_RESET_TOKEN + resetToken,
                     email,
-                    Duration.ofMinutes(PASSWORD_RESET_TTL_MINUTES)
-            );
+                    Duration.ofMinutes(PASSWORD_RESET_TTL_MINUTES));
             log.info("Password reset token generated for email: {}", email);
 
-            String resetLink = "http://localhost:3000/reset-password?token=" + resetToken;
+            String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
             String subject = "[VibeCart] Yêu cầu đặt lại mật khẩu tài khoản";
-            
-            String body = "<div style=\"font-family: 'Inter', system-ui, sans-serif; background-color: #f4fbf7; padding: 40px 20px; text-align: center; min-height: 100%;\">"
-                    + "  <div style=\"max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); border: 1px solid #e6f7ee; text-align: left;\">"
-                    + "    <div style=\"text-align: center; margin-bottom: 30px;\">"
-                    + "      <div style=\"display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; font-size: 22px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);\">VibeCart</div>"
-                    + "    </div>"
-                    + "    <h2 style=\"color: #065f46; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 16px; text-align: center;\">Yêu cầu đặt lại mật khẩu</h2>"
-                    + "    <p style=\"color: #374151; font-size: 15px; line-height: 1.6; margin-bottom: 24px; text-align: center;\">Chào bạn, chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại VibeCart. Vui lòng bấm vào liên kết bảo mật bên dưới để thiết lập mật khẩu mới:</p>"
-                    + "    <div style=\"margin: 30px 0; text-align: center;\">"
-                    + "      <a href=\"" + resetLink + "\" style=\"display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);\">Đặt lại mật khẩu</a>"
-                    + "    </div>"
-                    + "    <p style=\"color: #6b7280; font-size: 13px; line-height: 1.5; text-align: center; margin-bottom: 30px;\">Liên kết này chỉ có hiệu lực trong vòng <b>10 phút</b> và chỉ sử dụng được một lần duy nhất. Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>"
-                    + "    <hr style=\"border: none; border-top: 1px solid #f0fdf4; margin-bottom: 24px;\">"
-                    + "    <div style=\"text-align: center; color: #9ca3af; font-size: 12px;\">"
-                    + "      <p style=\"margin: 0;\">Đây là email tự động từ hệ thống VibeCart.</p>"
-                    + "      <p style=\"margin: 4px 0 0 0;\">© 2026 VibeCart. All rights reserved.</p>"
-                    + "    </div>"
-                    + "  </div>"
-                    + "</div>";
 
             NotificationEvent event = NotificationEvent.builder()
                     .eventId(UUID.randomUUID().toString())
                     .recipientEmail(email)
                     .subject(subject)
-                    .body(body)
+                    .templateType("FORGOT_PASSWORD")
+                    .templateParams(Map.of("resetLink", resetLink))
                     .build();
 
             try {
@@ -581,88 +487,6 @@ public class AuthServiceImpl implements AuthService {
         log.info("Password reset completed for user: {}. All sessions purged.", user.getUsername());
     }
 
-    @Override
-    @Transactional
-    public void deleteAccount(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        user.setStatus("PENDING_DELETION");
-        user.setDeleted(true);
-        userRepository.save(user);
-        searchService.deleteUser(user.getId());
-
-        purgeAllSessions(username);
-
-        log.info("Account deletion requested for user: {}. Status set to PENDING_DELETION.", username);
-    }
-
-    @Override
-    @Transactional
-    public UserResponse updateUserStatus(String userId, UpdateUserStatusRequest request, String adminUsername) {
-        User targetUser = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        if (targetUser.getUsername().equals(adminUsername)) {
-            throw new AppException(ErrorCode.CANNOT_CHANGE_OWN_STATUS);
-        }
-
-        String newStatus = request.getStatus().toUpperCase();
-        if (!VALID_STATUSES.contains(newStatus)) {
-            throw new AppException(ErrorCode.INVALID_STATUS);
-        }
-
-        targetUser.setStatus(newStatus);
-        User updatedUser = userRepository.save(targetUser);
-        searchService.indexUser(updatedUser);
-
-        if ("BANNED".equals(newStatus)) {
-            purgeAllSessions(targetUser.getUsername());
-            log.info("User {} BANNED by admin {}. All sessions purged.", targetUser.getUsername(), adminUsername);
-        } else {
-            log.info("User {} status updated to {} by admin {}", targetUser.getUsername(), newStatus, adminUsername);
-        }
-
-        return userMapper.toUserResponse(updatedUser);
-    }
-
-    @Override
-    public org.springframework.data.domain.Page<UserResponse> searchUsers(String search, String status, String role, org.springframework.data.domain.Pageable pageable) {
-        String normalizedSearch = (search == null || search.trim().isEmpty()) ? null : "%" + search.trim().toLowerCase() + "%";
-        String normalizedStatus = (status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status)) ? null : status.trim();
-        String normalizedRole = (role == null || role.trim().isEmpty() || "ALL".equalsIgnoreCase(role)) ? null : role.trim();
-
-        return userRepository.searchUsers(normalizedSearch, normalizedStatus, normalizedRole, pageable)
-                .map(userMapper::toUserResponse);
-    }
-
-    @Override
-    @Transactional
-    public UserResponse updateUserRoles(String userId, com.vibecart.api.modules.iam.dto.request.UpdateUserRolesRequest request, String adminUsername) {
-        User targetUser = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        if (targetUser.getUsername().equals(adminUsername)) {
-            throw new AppException(ErrorCode.CANNOT_CHANGE_OWN_ROLE);
-        }
-
-        Set<Role> newRoles = new HashSet<>();
-        for (String roleName : request.getRoles()) {
-            Role role = roleRepository.findByName(roleName)
-                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-            newRoles.add(role);
-        }
-
-        targetUser.setRoles(newRoles);
-        User updatedUser = userRepository.save(targetUser);
-        searchService.indexUser(updatedUser);
-
-        log.info("User {} roles updated to {} by admin {}", targetUser.getUsername(), request.getRoles(), adminUsername);
-
-        purgeAllSessions(targetUser.getUsername());
-
-        return userMapper.toUserResponse(updatedUser);
-    }
 
 
     /**
@@ -678,13 +502,11 @@ public class AuthServiceImpl implements AuthService {
 
         redisTemplate.opsForValue().set(
                 KEY_REGISTRATION_OTP + email, otp,
-                Duration.ofMinutes(OTP_TTL_MINUTES)
-        );
+                Duration.ofMinutes(OTP_TTL_MINUTES));
 
         redisTemplate.opsForValue().set(
                 cooldownKey, "true",
-                Duration.ofSeconds(OTP_COOLDOWN_SECONDS)
-        );
+                Duration.ofSeconds(OTP_COOLDOWN_SECONDS));
 
         log.info("OTP generated for {}: {}", email, otp);
         return otp;
@@ -707,30 +529,12 @@ public class AuthServiceImpl implements AuthService {
         String eventId = UUID.randomUUID().toString();
         String subject = "[VibeCart] Mã xác thực OTP kích hoạt tài khoản";
 
-        String body = "<div style=\"font-family: 'Inter', system-ui, sans-serif; background-color: #f4fbf7; padding: 40px 20px; text-align: center; min-height: 100%;\">"
-                + "  <div style=\"max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); border: 1px solid #e6f7ee; text-align: left;\">"
-                + "    <div style=\"text-align: center; margin-bottom: 30px;\">"
-                + "      <div style=\"display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; font-size: 22px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);\">VibeCart</div>"
-                + "    </div>"
-                + "    <h2 style=\"color: #065f46; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 16px; text-align: center;\">Xác thực tài khoản của bạn</h2>"
-                + "    <p style=\"color: #374151; font-size: 15px; line-height: 1.6; margin-bottom: 24px; text-align: center;\">Cảm ơn bạn đã lựa chọn mua sắm tại VibeCart. Để hoàn tất quy trình đăng ký, vui lòng sử dụng mã OTP bên dưới:</p>"
-                + "    <div style=\"margin: 30px 0; text-align: center;\">"
-                + "      <div style=\"display: inline-block; background-color: #f0fdf4; border: 2px dashed #34d399; padding: 16px 36px; border-radius: 12px; font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; color: #047857; letter-spacing: 6px; box-shadow: inset 0 2px 4px rgba(4, 120, 87, 0.04);\">" + otp + "</div>"
-                + "    </div>"
-                + "    <p style=\"color: #6b7280; font-size: 13px; line-height: 1.5; text-align: center; margin-bottom: 30px;\">Mã OTP này có hiệu lực trong vòng <b>5 phút</b> và chỉ được sử dụng một lần duy nhất. Vì sự an toàn của bạn, tuyệt đối không chia sẻ mã này cho bất kỳ ai.</p>"
-                + "    <hr style=\"border: none; border-top: 1px solid #f0fdf4; margin-bottom: 24px;\">"
-                + "    <div style=\"text-align: center; color: #9ca3af; font-size: 12px;\">"
-                + "      <p style=\"margin: 0;\">Đây là email tự động từ hệ thống VibeCart.</p>"
-                + "      <p style=\"margin: 4px 0 0 0;\">© 2026 VibeCart. All rights reserved.</p>"
-                + "    </div>"
-                + "  </div>"
-                + "</div>";
-
         NotificationEvent event = NotificationEvent.builder()
                 .eventId(eventId)
                 .recipientEmail(email)
                 .subject(subject)
-                .body(body)
+                .templateType("REGISTRATION_OTP")
+                .templateParams(Map.of("otp", otp))
                 .build();
 
         try {
@@ -781,14 +585,24 @@ public class AuthServiceImpl implements AuthService {
                     Optional<User> existingUser = userRepository.findByEmail(normalizedEmail);
                     if (existingUser.isPresent()) {
                         User u = existingUser.get();
-                        u.setOauthProvider(provider);
-                        u.setOauthId(oauthId);
-                        if (u.getAvatarUrl() == null) {
-                            u.setAvatarUrl(picture);
+                        if ("PENDING_VERIFICATION".equals(u.getStatus())) {
+                            log.info("Hard deleting clashing unverified user before OAuth2 mapping: {}", u.getEmail());
+                            userRepository.hardDeleteUserRolesByUserId(u.getId());
+                            userRepository.hardDeleteUserByUserId(u.getId());
+                            // Clean up OTP state in Redis
+                            redisTemplate.delete(KEY_REGISTRATION_OTP + normalizedEmail);
+                            redisTemplate.delete(KEY_OTP_COOLDOWN + normalizedEmail);
+                            redisTemplate.delete(KEY_OTP_ATTEMPTS + normalizedEmail);
+                        } else {
+                            u.setOauthProvider(provider);
+                            u.setOauthId(oauthId);
+                            if (u.getAvatarUrl() == null) {
+                                u.setAvatarUrl(picture);
+                            }
+                            User saved = userRepository.save(u);
+                            searchService.indexUser(saved);
+                            return saved;
                         }
-                        User saved = userRepository.save(u);
-                        searchService.indexUser(saved);
-                        return saved;
                     }
 
                     String username = normalizedEmail.substring(0, normalizedEmail.indexOf("@"));
@@ -845,8 +659,7 @@ public class AuthServiceImpl implements AuthService {
         redisTemplate.opsForValue().set(
                 KEY_REFRESH_TOKEN + refreshToken,
                 user.getUsername(),
-                Duration.ofDays(REFRESH_TOKEN_TTL_DAYS)
-        );
+                Duration.ofDays(REFRESH_TOKEN_TTL_DAYS));
 
         redisTemplate.opsForSet().add(sessionKey, refreshToken);
         redisTemplate.expire(sessionKey, Duration.ofDays(REFRESH_TOKEN_TTL_DAYS));
@@ -876,36 +689,3 @@ public class AuthServiceImpl implements AuthService {
         log.info("All sessions purged for user: {}", username);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

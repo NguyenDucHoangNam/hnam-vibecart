@@ -510,7 +510,7 @@ export default function ProfilePage() {
                   <p className="text-zinc-400 text-xs mt-0.5">Đặt lại mật khẩu tài khoản và quản lý bảo mật phiên</p>
                 </div>
 
-                {user.oauthProvider !== "LOCAL" ? (
+                {user.oauthProvider !== "LOCAL" && !user.hasPassword ? (
                   /* Social accounts warning */
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-3 text-amber-700 text-sm leading-relaxed">
                     <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />

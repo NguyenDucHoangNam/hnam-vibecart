@@ -10,6 +10,7 @@ import com.vibecart.api.modules.social.entity.Follow;
 import com.vibecart.api.modules.social.entity.FollowId;
 import com.vibecart.api.modules.social.mapper.FollowMapper;
 import com.vibecart.api.modules.social.repository.FollowRepository;
+import com.vibecart.api.modules.social.service.FeedFanoutService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,9 @@ public class FollowServiceImplTest {
 
     @Mock
     private FollowMapper followMapper;
+
+    @Mock
+    private FeedFanoutService feedFanoutService;
 
     @InjectMocks
     private FollowServiceImpl followService;

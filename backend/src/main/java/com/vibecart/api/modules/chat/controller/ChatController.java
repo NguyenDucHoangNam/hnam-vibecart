@@ -28,7 +28,8 @@ import java.security.Principal;
 import java.util.List;
 
 /**
- * Controller xử lý các yêu cầu REST API và tin nhắn WebSocket liên quan đến chat/trò chuyện.
+ * Controller xử lý các yêu cầu REST API và tin nhắn WebSocket liên quan đến
+ * chat/trò chuyện.
  */
 @RestController
 @RequiredArgsConstructor
@@ -56,8 +57,7 @@ public class ChatController {
                         .code(1000)
                         .message("Khởi tạo cuộc hội thoại thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -77,8 +77,7 @@ public class ChatController {
                         .code(1000)
                         .message("Lấy danh sách hội thoại thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -101,8 +100,7 @@ public class ChatController {
                         .code(1000)
                         .message("Lấy danh sách tin nhắn thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -123,8 +121,7 @@ public class ChatController {
                         .code(1000)
                         .message("Sinh URL upload tệp đính kèm thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -142,8 +139,7 @@ public class ChatController {
                         .code(1000)
                         .message("Lấy trạng thái trực tuyến thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -155,15 +151,15 @@ public class ChatController {
         String username = getCurrentUsername();
         log.info("REST: getActiveUsers requested by '{}'", username);
 
-        List<com.vibecart.api.modules.social.dto.response.FollowResponse> result = presenceService.getActiveUsers(username);
+        List<com.vibecart.api.modules.social.dto.response.FollowResponse> result = presenceService
+                .getActiveUsers(username);
 
         return ResponseEntity.ok(
                 ApiResponse.<List<com.vibecart.api.modules.social.dto.response.FollowResponse>>builder()
                         .code(1000)
                         .message("Lấy danh sách người dùng đang hoạt động thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -185,7 +181,8 @@ public class ChatController {
     public void typing(@Valid TypingRequest request, Principal principal) {
         if (principal != null) {
             String username = principal.getName();
-            log.debug("STOMP: typing state in room '{}' isTyping={} by '{}'", request.getConversationId(), request.isTyping(), username);
+            log.debug("STOMP: typing state in room '{}' isTyping={} by '{}'", request.getConversationId(),
+                    request.isTyping(), username);
             chatService.broadcastTyping(request, username);
         }
     }

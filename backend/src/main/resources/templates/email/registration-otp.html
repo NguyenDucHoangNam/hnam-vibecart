@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác thực tài khoản VibeCart</title>
+</head>
+<body>
+<div style="font-family: 'Inter', system-ui, sans-serif; background-color: #f4fbf7; padding: 40px 20px; text-align: center; min-height: 100%;">
+  <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; padding: 40px; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); border: 1px solid #e6f7ee; text-align: left;">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 800; font-size: 22px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);">VibeCart</div>
+    </div>
+    <h2 style="color: #065f46; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 16px; text-align: center;">Xác thực tài khoản của bạn</h2>
+    <p style="color: #374151; font-size: 15px; line-height: 1.6; margin-bottom: 24px; text-align: center;">Cảm ơn bạn đã lựa chọn mua sắm tại VibeCart. Để hoàn tất quy trình đăng ký, vui lòng sử dụng mã OTP bên dưới:</p>
+    <div style="margin: 30px 0; text-align: center;">
+      <div style="display: inline-block; background-color: #f0fdf4; border: 2px dashed #34d399; padding: 16px 36px; border-radius: 12px; font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; color: #047857; letter-spacing: 6px; box-shadow: inset 0 2px 4px rgba(4, 120, 87, 0.04);" th:text="${otp}">123456</div>
+    </div>
+    <p style="color: #6b7280; font-size: 13px; line-height: 1.5; text-align: center; margin-bottom: 30px;">Mã OTP này có hiệu lực trong vòng <b>5 phút</b> và chỉ được sử dụng một lần duy nhất. Vì sự an toàn của bạn, tuyệt đối không chia sẻ mã này cho bất kỳ ai.</p>
+    <hr style="border: none; border-top: 1px solid #f0fdf4; margin-bottom: 24px;">
+    <div style="text-align: center; color: #9ca3af; font-size: 12px;">
+      <p style="margin: 0;">Đây là email tự động từ hệ thống VibeCart.</p>
+      <p style="margin: 4px 0 0 0;">© 2026 VibeCart. All rights reserved.</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

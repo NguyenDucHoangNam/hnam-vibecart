@@ -45,8 +45,7 @@ public class FollowController {
                         .code(1000)
                         .message(isFollowing ? "Đã theo dõi thành công" : "Đã hủy theo dõi")
                         .result(isFollowing)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -66,8 +65,7 @@ public class FollowController {
                         .code(1000)
                         .message("Lấy danh sách người theo dõi thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -87,8 +85,7 @@ public class FollowController {
                         .code(1000)
                         .message("Lấy danh sách đang theo dõi thành công")
                         .result(result)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -103,8 +100,7 @@ public class FollowController {
                 ApiResponse.<Boolean>builder()
                         .code(1000)
                         .result(isFollowing)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -118,8 +114,7 @@ public class FollowController {
                 ApiResponse.<Long>builder()
                         .code(1000)
                         .result(count)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -133,8 +128,7 @@ public class FollowController {
                 ApiResponse.<Long>builder()
                         .code(1000)
                         .result(count)
-                        .build()
-        );
+                        .build());
     }
 
     /**
@@ -154,7 +148,7 @@ public class FollowController {
                 .avatarUrl(userEntity.getAvatarUrl())
                 .status(userEntity.getStatus())
                 .oauthProvider(userEntity.getOauthProvider())
-                .roles(userEntity.getRoles() != null 
+                .roles(userEntity.getRoles() != null
                         ? userEntity.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
                         : Collections.emptySet())
                 .createdAt(userEntity.getCreatedAt())
@@ -165,10 +159,8 @@ public class FollowController {
                         .code(1000)
                         .message("Lấy thông tin cá nhân thành công")
                         .result(userResponse)
-                        .build()
-        );
+                        .build());
     }
-
 
     private String getCurrentUsername() {
         return SecurityContextHolder.getContext().getAuthentication().getName();

@@ -4,7 +4,7 @@ import com.vibecart.api.common.dto.ApiResponse;
 import com.vibecart.api.modules.iam.dto.request.UpdateUserRolesRequest;
 import com.vibecart.api.modules.iam.dto.request.UpdateUserStatusRequest;
 import com.vibecart.api.modules.iam.dto.response.UserResponse;
-import com.vibecart.api.modules.iam.service.AuthService;
+import com.vibecart.api.modules.iam.service.AdminUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,74 +25,74 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AdminUserController {
 
-    private final AuthService authService;
+        private final AdminUserService adminUserService;
 
-    /**
-     * Tìm kiếm và phân trang người dùng theo bộ lọc.
-     */
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String role,
-            @PageableDefault(size = 10) Pageable pageable) {
+        /**
+         * Tìm kiếm và phân trang người dùng theo bộ lọc.
+         */
+        @GetMapping
+        @PreAuthorize("hasRole('ADMIN')")
+        public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
+                        @RequestParam(required = false) String search,
+                        @RequestParam(required = false) String status,
+                        @RequestParam(required = false) String role,
+                        @PageableDefault(size = 10) Pageable pageable) {
 
-        log.info("Admin request to search users - search: {}, status: {}, role: {}", search, status, role);
-        Page<UserResponse> result = authService.searchUsers(search, status, role, pageable);
+                log.info("Admin request to search users - search: {}, status: {}, role: {}", search, status, role);
+                Page<UserResponse> result = adminUserService.searchUsers(search, status, role, pageable);
 
-        ApiResponse<Page<UserResponse>> response = ApiResponse.<Page<UserResponse>>builder()
-                .code(1000)
-                .message("Lấy danh sách người dùng thành công")
-                .result(result)
-                .build();
+                ApiResponse<Page<UserResponse>> response = ApiResponse.<Page<UserResponse>>builder()
+                                .code(1000)
+                                .message("Lấy danh sách người dùng thành công")
+                                .result(result)
+                                .build();
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    /**
-     * Cập nhật trạng thái tài khoản người dùng.
-     */
-    @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
-            @PathVariable String id,
-            @Valid @RequestBody UpdateUserStatusRequest request) {
+        /**
+         * Cập nhật trạng thái tài khoản người dùng.
+         */
+        @PutMapping("/{id}/status")
+        @PreAuthorize("hasRole('ADMIN')")
+        public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
+                        @PathVariable String id,
+                        @Valid @RequestBody UpdateUserStatusRequest request) {
 
-        String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        log.info("Admin {} request to update user {} status to {}", adminUsername, id, request.getStatus());
+                String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                log.info("Admin {} request to update user {} status to {}", adminUsername, id, request.getStatus());
 
-        UserResponse result = authService.updateUserStatus(id, request, adminUsername);
+                UserResponse result = adminUserService.updateUserStatus(id, request, adminUsername);
 
-        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
-                .code(1000)
-                .message("Cập nhật trạng thái tài khoản thành công")
-                .result(result)
-                .build();
+                ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
+                                .code(1000)
+                                .message("Cập nhật trạng thái tài khoản thành công")
+                                .result(result)
+                                .build();
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 
-    /**
-     * Cập nhật vai trò (phân quyền) của người dùng.
-     */
-    @PutMapping("/{id}/roles")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<UserResponse>> updateUserRoles(
-            @PathVariable String id,
-            @Valid @RequestBody UpdateUserRolesRequest request) {
+        /**
+         * Cập nhật vai trò (phân quyền) của người dùng.
+         */
+        @PutMapping("/{id}/roles")
+        @PreAuthorize("hasRole('ADMIN')")
+        public ResponseEntity<ApiResponse<UserResponse>> updateUserRoles(
+                        @PathVariable String id,
+                        @Valid @RequestBody UpdateUserRolesRequest request) {
 
-        String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        log.info("Admin {} request to update user {} roles to {}", adminUsername, id, request.getRoles());
+                String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                log.info("Admin {} request to update user {} roles to {}", adminUsername, id, request.getRoles());
 
-        UserResponse result = authService.updateUserRoles(id, request, adminUsername);
+                UserResponse result = adminUserService.updateUserRoles(id, request, adminUsername);
 
-        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
-                .code(1000)
-                .message("Cập nhật vai trò thành công")
-                .result(result)
-                .build();
+                ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
+                                .code(1000)
+                                .message("Cập nhật vai trò thành công")
+                                .result(result)
+                                .build();
 
-        return ResponseEntity.ok(response);
-    }
+                return ResponseEntity.ok(response);
+        }
 }

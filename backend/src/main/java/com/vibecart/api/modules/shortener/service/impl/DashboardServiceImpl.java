@@ -18,54 +18,55 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Implementation của {@link DashboardService} tính toán các chỉ số dashboard tiếp thị liên kết.
+ * Implementation của {@link DashboardService} tính toán các chỉ số dashboard
+ * tiếp thị liên kết.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class DashboardServiceImpl implements DashboardService {
 
-    private final UserRepository userRepository;
-    private final ClickEventRepository clickEventRepository;
-    private final CommissionRepository commissionRepository;
+        private final UserRepository userRepository;
+        private final ClickEventRepository clickEventRepository;
+        private final CommissionRepository commissionRepository;
 
-    @Override
-    @Transactional(readOnly = true)
-    public DashboardResponse getDashboardMetrics(String currentUsername) {
-        log.info("Fetching dashboard metrics for user: {}", currentUsername);
+        @Override
+        @Transactional(readOnly = true)
+        public DashboardResponse getDashboardMetrics(String currentUsername) {
+                log.info("Fetching dashboard metrics for user: {}", currentUsername);
 
-        User creator = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                User creator = userRepository.findByUsername(currentUsername)
+                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        String creatorId = creator.getId();
+                String creatorId = creator.getId();
 
-        long totalClicks = clickEventRepository.countByShortLinkCreatorId(creatorId);
+                long totalClicks = clickEventRepository.countByShortLinkCreatorId(creatorId);
 
-        List<Commission> commissions = commissionRepository.findByCreatorId(creatorId);
+                List<Commission> commissions = commissionRepository.findByCreatorId(creatorId);
 
-        long totalOrders = commissions.stream()
-                .filter(c -> "PENDING".equals(c.getStatus()) || "APPROVED".equals(c.getStatus()))
-                .count();
+                long totalOrders = commissions.stream()
+                                .filter(c -> "PENDING".equals(c.getStatus()) || "APPROVED".equals(c.getStatus()))
+                                .count();
 
-        double conversionRate = totalClicks == 0 ? 0.0 : ((double) totalOrders / totalClicks) * 100.0;
+                double conversionRate = totalClicks == 0 ? 0.0 : ((double) totalOrders / totalClicks) * 100.0;
 
-        BigDecimal pendingCommission = commissions.stream()
-                .filter(c -> "PENDING".equals(c.getStatus()))
-                .map(Commission::getCommissionAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal pendingCommission = commissions.stream()
+                                .filter(c -> "PENDING".equals(c.getStatus()))
+                                .map(Commission::getCommissionAmount)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal approvedCommission = commissions.stream()
-                .filter(c -> "APPROVED".equals(c.getStatus()))
-                .map(Commission::getCommissionAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal approvedCommission = commissions.stream()
+                                .filter(c -> "APPROVED".equals(c.getStatus()))
+                                .map(Commission::getCommissionAmount)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return DashboardResponse.builder()
-                .creatorId(creatorId)
-                .totalClicks(totalClicks)
-                .totalOrders(totalOrders)
-                .conversionRate(conversionRate)
-                .pendingCommission(pendingCommission)
-                .approvedCommission(approvedCommission)
-                .build();
-    }
+                return DashboardResponse.builder()
+                                .creatorId(creatorId)
+                                .totalClicks(totalClicks)
+                                .totalOrders(totalOrders)
+                                .conversionRate(conversionRate)
+                                .pendingCommission(pendingCommission)
+                                .approvedCommission(approvedCommission)
+                                .build();
+        }
 }

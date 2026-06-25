@@ -39,18 +39,18 @@ public class AffiliateController {
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<ShortlinkResponse>> createShortLink(
             @Valid @RequestBody ShortlinkCreateRequest request) {
-        
+
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Creator {} is creating a short link for product {}", username, request.getProductId());
-        
+
         ShortlinkResponse result = shortLinkService.createShortLink(request, username);
-        
+
         ApiResponse<ShortlinkResponse> response = ApiResponse.<ShortlinkResponse>builder()
                 .code(1000)
                 .message("Tạo link tiếp thị liên kết thành công")
                 .result(result)
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -60,18 +60,18 @@ public class AffiliateController {
     @GetMapping("/shortlinks")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<List<ShortlinkResponse>>> getMyShortLinks() {
-        
+
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Creator {} is fetching short links list", username);
-        
+
         List<ShortlinkResponse> result = shortLinkService.getMyShortLinks(username);
-        
+
         ApiResponse<List<ShortlinkResponse>> response = ApiResponse.<List<ShortlinkResponse>>builder()
                 .code(1000)
                 .message("Lấy danh sách link tiếp thị thành công")
                 .result(result)
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -81,18 +81,18 @@ public class AffiliateController {
     @GetMapping("/dashboard")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics() {
-        
+
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Creator {} is fetching affiliate dashboard metrics", username);
-        
+
         DashboardResponse result = dashboardService.getDashboardMetrics(username);
-        
+
         ApiResponse<DashboardResponse> response = ApiResponse.<DashboardResponse>builder()
                 .code(1000)
                 .message("Lấy thông tin dashboard tiếp thị thành công")
                 .result(result)
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -103,18 +103,18 @@ public class AffiliateController {
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<PayoutResponse>> requestPayout(
             @Valid @RequestBody PayoutRequestDto requestDto) {
-        
+
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Creator {} requesting withdrawal of {} VND", username, requestDto.getAmount());
-        
+
         PayoutResponse result = payoutService.createPayoutRequest(requestDto, username);
-        
+
         ApiResponse<PayoutResponse> response = ApiResponse.<PayoutResponse>builder()
                 .code(1000)
                 .message("Gửi yêu cầu rút tiền thành công")
                 .result(result)
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -124,18 +124,18 @@ public class AffiliateController {
     @GetMapping("/payouts")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<List<PayoutResponse>>> getMyPayoutRequests() {
-        
+
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         log.info("Creator {} is fetching payout request history", username);
-        
+
         List<PayoutResponse> result = payoutService.getMyPayoutRequests(username);
-        
+
         ApiResponse<List<PayoutResponse>> response = ApiResponse.<List<PayoutResponse>>builder()
                 .code(1000)
                 .message("Lấy danh sách lịch sử yêu cầu rút tiền thành công")
                 .result(result)
                 .build();
-        
+
         return ResponseEntity.ok(response);
     }
 }

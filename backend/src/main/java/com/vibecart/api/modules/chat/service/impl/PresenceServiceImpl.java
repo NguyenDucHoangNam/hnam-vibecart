@@ -20,7 +20,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * Lớp triển khai dịch vụ kiểm soát trạng thái trực tuyến (Presence) sử dụng Redis.
+ * Lớp triển khai dịch vụ kiểm soát trạng thái trực tuyến (Presence) sử dụng
+ * Redis.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,7 +38,8 @@ public class PresenceServiceImpl implements PresenceService {
     private static final long ONLINE_TTL_SECONDS = 40;
 
     /**
-     * Cập nhật trạng thái trực tuyến của người dùng lên Redis với thời gian hết hạn (TTL).
+     * Cập nhật trạng thái trực tuyến của người dùng lên Redis với thời gian hết hạn
+     * (TTL).
      */
     @Override
     public void setOnline(String username) {
@@ -56,7 +58,8 @@ public class PresenceServiceImpl implements PresenceService {
     }
 
     /**
-     * Cập nhật trạng thái ngoại tuyến của người dùng bằng cách xóa key trạng thái trong Redis.
+     * Cập nhật trạng thái ngoại tuyến của người dùng bằng cách xóa key trạng thái
+     * trong Redis.
      */
     @Override
     public void setOffline(String username) {
@@ -109,7 +112,8 @@ public class PresenceServiceImpl implements PresenceService {
     }
 
     /**
-     * Lấy danh sách tối đa 10 người dùng đang online mà người dùng hiện tại đang theo dõi.
+     * Lấy danh sách tối đa 10 người dùng đang online mà người dùng hiện tại đang
+     * theo dõi.
      */
     @Override
     public List<FollowResponse> getActiveUsers(String currentUsername) {
@@ -151,7 +155,8 @@ public class PresenceServiceImpl implements PresenceService {
                     .map(user -> {
                         boolean followedByMe = false;
                         if (finalCurrentUserId != null) {
-                            followedByMe = followRepository.existsByIdFollowerIdAndIdFollowingId(finalCurrentUserId, user.getId());
+                            followedByMe = followRepository.existsByIdFollowerIdAndIdFollowingId(finalCurrentUserId,
+                                    user.getId());
                         }
 
                         return new FollowResponse(
@@ -160,8 +165,7 @@ public class PresenceServiceImpl implements PresenceService {
                                 user.getFullName(),
                                 user.getAvatarUrl(),
                                 followedByMe,
-                                ZonedDateTime.now()
-                        );
+                                ZonedDateTime.now());
                     })
                     .limit(10)
                     .toList();

@@ -132,7 +132,9 @@ Quy trình giúp tối ưu hóa tỷ lệ chuyển đổi khách hàng nhờ cơ
 3.  **Chuẩn hóa Email OAuth (OAuth Email Normalization):** Trước khi đem Email nhận được từ Google/Facebook đi đối chiếu với Database, hệ thống **bắt buộc** phải chạy qua hàm chuẩn hóa `toLowerCase()` — tương tự như chuẩn hóa Email khi đăng ký cục bộ — để tránh lệch pha chữ hoa/chữ thường giữa Email mạng xã hội và Email lưu trong DB (ví dụ: Google trả về `HoangNam@Gmail.com` nhưng DB lưu `hoangnam@gmail.com`).
 4.  **Cơ chế xử lý liên kết (OAuth Account Linker):**
     *   *Trường hợp 1 (Đã tồn tại tài khoản OAuth cùng Provider):* Đăng nhập thành công, trả về Access/Refresh Token.
-    *   *Trường hợp 2 (Email OAuth đã tồn tại dưới dạng tài khoản LOCAL):* Hệ thống tự động liên kết ID mạng xã hội vào tài khoản Local hiện tại mà không làm thay đổi hay đè thông tin đăng nhập Local. Lần sau người dùng có thể đăng nhập bằng cả 2 cách.
+    *   *Trường hợp 2 (Email OAuth đã tồn tại dưới dạng tài khoản LOCAL):*
+        *   **Nếu tài khoản Local đã hoạt động (`ACTIVE`):** Hệ thống tự động liên kết ID mạng xã hội vào tài khoản Local hiện tại mà không làm thay đổi hay đè thông tin đăng nhập Local. Lần sau người dùng có thể đăng nhập bằng cả 2 cách.
+        *   **Nếu tài khoản Local chưa kích hoạt (`PENDING_VERIFICATION`):** Nhằm ngăn chặn lỗ hổng chiếm dụng tài khoản và kế thừa thông tin đăng nhập (mật khẩu) chưa được xác thực, hệ thống sẽ thực hiện xóa cứng (Hard Delete) tài khoản unverified đó, sau đó đăng ký mới một tài khoản OAuth2 sạch ở trạng thái `ACTIVE`.
     *   *Trường hợp 3 (Tài khoản chưa từng tồn tại):* Tự động tạo mới một tài khoản, tự sinh `Username` duy nhất tách từ tiền tố Email, đặt tên đầy đủ và ảnh đại diện lấy từ mạng xã hội, gán Role mặc định `ROLE_USER`.
 
 

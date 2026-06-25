@@ -49,7 +49,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Implementation của {@link SearchService} xử lý các logic tìm kiếm tích hợp Elasticsearch, MongoDB và Redis.
+ * Implementation của {@link SearchService} xử lý các logic tìm kiếm tích hợp
+ * Elasticsearch, MongoDB và Redis.
  */
 @Service
 public class SearchServiceImpl implements SearchService {
@@ -70,14 +71,14 @@ public class SearchServiceImpl implements SearchService {
      * Khởi tạo service tìm kiếm với các phụ thuộc được tiêm.
      */
     public SearchServiceImpl(ElasticsearchOperations elasticsearchOperations,
-                             ElasticsearchClient elasticsearchClient,
-                             MongoTemplate mongoTemplate,
-                             RedisTemplate<String, String> redisTemplate,
-                             ProductSearchRepository productSearchRepository,
-                             ProductRepository productRepository,
-                             UserSearchRepository userSearchRepository,
-                             UserRepository userRepository,
-                             FollowService followService) {
+            ElasticsearchClient elasticsearchClient,
+            MongoTemplate mongoTemplate,
+            RedisTemplate<String, String> redisTemplate,
+            ProductSearchRepository productSearchRepository,
+            ProductRepository productRepository,
+            UserSearchRepository userSearchRepository,
+            UserRepository userRepository,
+            FollowService followService) {
         this.elasticsearchOperations = elasticsearchOperations;
         this.elasticsearchClient = elasticsearchClient;
         this.mongoTemplate = mongoTemplate;
@@ -91,8 +92,9 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public SearchResultResponse search(String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-                                       String sort, int page, int size, String userId) {
-        log.info("Searching products with query='{}', categoryId={}, minPrice={}, maxPrice={}, sort={}, page={}, size={}",
+            String sort, int page, int size, String userId) {
+        log.info(
+                "Searching products with query='{}', categoryId={}, minPrice={}, maxPrice={}, sort={}, page={}, size={}",
                 query, categoryId, minPrice, maxPrice, sort, page, size);
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
@@ -104,9 +106,7 @@ public class SearchServiceImpl implements SearchService {
                             .fields("name^3", "description")
                             .fuzziness("AUTO")
                             .prefixLength(2)
-                            .maxExpansions(50)
-                    )
-            );
+                            .maxExpansions(50)));
         } else {
             boolQueryBuilder.must(m -> m.matchAll(ma -> ma));
         }
@@ -186,20 +186,17 @@ public class SearchServiceImpl implements SearchService {
                                             .size(1)
                                             .directGenerator(dg -> dg
                                                     .field("name")
-                                                    .suggestMode(co.elastic.clients.elasticsearch._types.SuggestMode.Popular)
-                                                    .minWordLength(2)
-                                            )
-                                    )
-                            )
-                    ),
-                    ProductDocument.class
-            );
+                                                    .suggestMode(
+                                                            co.elastic.clients.elasticsearch._types.SuggestMode.Popular)
+                                                    .minWordLength(2))))),
+                    ProductDocument.class);
 
             if (response.suggest() != null && response.suggest().containsKey("spelling-suggestion")) {
                 var suggestList = response.suggest().get("spelling-suggestion");
                 if (!suggestList.isEmpty()) {
                     var firstSuggest = suggestList.get(0);
-                    if (firstSuggest.isPhrase() && firstSuggest.phrase().options() != null && !firstSuggest.phrase().options().isEmpty()) {
+                    if (firstSuggest.isPhrase() && firstSuggest.phrase().options() != null
+                            && !firstSuggest.phrase().options().isEmpty()) {
                         return firstSuggest.phrase().options().get(0).text();
                     }
                 }
@@ -217,15 +214,16 @@ public class SearchServiceImpl implements SearchService {
                 return;
             }
 
-            String todayStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-            
+            String todayStr = java.time.LocalDate.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+
             String identifier = userIdentifier;
             if (identifier == null || identifier.isBlank() || identifier.equals("anonymousUser")) {
                 identifier = getClientIp();
             }
 
             String rateKey = "search:rate:" + todayStr + ":" + identifier + ":" + cleanKeyword;
-            
+
             Long currentRate = redisTemplate.opsForValue().increment(rateKey, 1);
             if (currentRate != null) {
                 if (currentRate == 1) {
@@ -247,8 +245,8 @@ public class SearchServiceImpl implements SearchService {
 
     private String getClientIp() {
         try {
-            var attributes = (org.springframework.web.context.request.ServletRequestAttributes) 
-                    org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            var attributes = (org.springframework.web.context.request.ServletRequestAttributes) org.springframework.web.context.request.RequestContextHolder
+                    .getRequestAttributes();
             if (attributes != null) {
                 var request = attributes.getRequest();
                 String xfHeader = request.getHeader("X-Forwarded-For");
@@ -369,7 +367,8 @@ public class SearchServiceImpl implements SearchService {
         if (request == null || request.getKeywords() == null || request.getKeywords().isEmpty()) {
             return;
         }
-        log.info("Merging search history from localStorage for user {}: {} terms", userId, request.getKeywords().size());
+        log.info("Merging search history from localStorage for user {}: {} terms", userId,
+                request.getKeywords().size());
         List<String> keywords = new ArrayList<>(request.getKeywords());
         Collections.reverse(keywords);
         for (String keyword : keywords) {
@@ -396,13 +395,17 @@ public class SearchServiceImpl implements SearchService {
                 BigDecimal maxPrice = BigDecimal.ZERO;
                 if (product.getVariants() != null && !product.getVariants().isEmpty()) {
                     minPrice = product.getVariants().stream()
-                            .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                    ? v.getDiscountPrice() : v.getPrice())
+                            .map(v -> v.getDiscountPrice() != null
+                                    && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                            ? v.getDiscountPrice()
+                                            : v.getPrice())
                             .min(BigDecimal::compareTo)
                             .orElse(BigDecimal.ZERO);
                     maxPrice = product.getVariants().stream()
-                            .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                    ? v.getDiscountPrice() : v.getPrice())
+                            .map(v -> v.getDiscountPrice() != null
+                                    && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                            ? v.getDiscountPrice()
+                                            : v.getPrice())
                             .max(BigDecimal::compareTo)
                             .orElse(BigDecimal.ZERO);
                 }
@@ -427,8 +430,8 @@ public class SearchServiceImpl implements SearchService {
             log.info("Reindexing all PostgreSQL user records into Elasticsearch...");
             List<com.vibecart.api.modules.iam.entity.User> users = userRepository.findAll();
             List<UserDocument> userDocs = users.stream().map(user -> {
-                Set<String> roles = user.getRoles() == null ? Collections.emptySet() :
-                        user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+                Set<String> roles = user.getRoles() == null ? Collections.emptySet()
+                        : user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
 
                 return UserDocument.builder()
                         .id(user.getId())
@@ -489,9 +492,7 @@ public class SearchServiceImpl implements SearchService {
                             .fields("username^3", "fullName^2")
                             .fuzziness("AUTO")
                             .prefixLength(2)
-                            .maxExpansions(50)
-                    )
-            );
+                            .maxExpansions(50)));
         } else {
             boolQueryBuilder.must(m -> m.matchAll(ma -> ma));
         }
@@ -510,14 +511,15 @@ public class SearchServiceImpl implements SearchService {
                 .build();
 
         SearchHits<UserDocument> searchHits = elasticsearchOperations.search(searchQuery, UserDocument.class);
-        
+
         List<UserSearchResponse> items = searchHits.getSearchHits().stream()
                 .map(SearchHit::getContent)
                 .map(doc -> {
                     boolean isFollowing = false;
                     long followerCount = 0;
                     try {
-                        if (currentUsername != null && !currentUsername.equals("anonymousUser") && !currentUsername.isBlank()) {
+                        if (currentUsername != null && !currentUsername.equals("anonymousUser")
+                                && !currentUsername.isBlank()) {
                             isFollowing = followService.isFollowing(doc.getId(), currentUsername);
                         }
                         followerCount = followService.getFollowerCount(doc.getId());
@@ -576,27 +578,24 @@ public class SearchServiceImpl implements SearchService {
                     .size(0)
                     .suggest(su -> su
                             .suggesters("user-spelling-suggestion", sg -> sg
-                                     .text(query)
-                                     .phrase(ph -> ph
-                                             .field("fullName")
-                                             .confidence(1.0)
-                                             .size(1)
-                                             .directGenerator(dg -> dg
-                                                     .field("fullName")
-                                                     .suggestMode(co.elastic.clients.elasticsearch._types.SuggestMode.Popular)
-                                                     .minWordLength(2)
-                                             )
-                                     )
-                            )
-                    ),
-                    UserDocument.class
-            );
+                                    .text(query)
+                                    .phrase(ph -> ph
+                                            .field("fullName")
+                                            .confidence(1.0)
+                                            .size(1)
+                                            .directGenerator(dg -> dg
+                                                    .field("fullName")
+                                                    .suggestMode(
+                                                            co.elastic.clients.elasticsearch._types.SuggestMode.Popular)
+                                                    .minWordLength(2))))),
+                    UserDocument.class);
 
             if (response.suggest() != null && response.suggest().containsKey("user-spelling-suggestion")) {
                 var suggestList = response.suggest().get("user-spelling-suggestion");
                 if (!suggestList.isEmpty()) {
                     var firstSuggest = suggestList.get(0);
-                    if (firstSuggest.isPhrase() && firstSuggest.phrase().options() != null && !firstSuggest.phrase().options().isEmpty()) {
+                    if (firstSuggest.isPhrase() && firstSuggest.phrase().options() != null
+                            && !firstSuggest.phrase().options().isEmpty()) {
                         return firstSuggest.phrase().options().get(0).text();
                     }
                 }
@@ -617,8 +616,7 @@ public class SearchServiceImpl implements SearchService {
             NativeQuery autocompleteQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(b -> b
                             .should(s -> s.match(m -> m.field("username.suggest").query(prefix)))
-                            .should(s -> s.match(m -> m.field("fullName.suggest").query(prefix)))
-                    ))
+                            .should(s -> s.match(m -> m.field("fullName.suggest").query(prefix)))))
                     .withPageable(PageRequest.of(0, 20))
                     .build();
 
@@ -636,11 +634,12 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public void indexUser(com.vibecart.api.modules.iam.entity.User user) {
-        if (user == null) return;
+        if (user == null)
+            return;
         log.info("Indexing user to Elasticsearch: {}", user.getUsername());
         try {
-            Set<String> roles = user.getRoles() == null ? Collections.emptySet() :
-                    user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+            Set<String> roles = user.getRoles() == null ? Collections.emptySet()
+                    : user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
 
             UserDocument document = UserDocument.builder()
                     .id(user.getId())
@@ -663,7 +662,8 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public void deleteUser(String userId) {
-        if (userId == null) return;
+        if (userId == null)
+            return;
         log.info("Deleting user from Elasticsearch: {}", userId);
         try {
             userSearchRepository.deleteById(userId);

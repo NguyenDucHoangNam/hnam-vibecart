@@ -40,7 +40,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Lớp triển khai các dịch vụ nghiệp vụ chat, quản lý phòng và tin nhắn sử dụng MongoDB và Redis.
+ * Lớp triển khai các dịch vụ nghiệp vụ chat, quản lý phòng và tin nhắn sử dụng
+ * MongoDB và Redis.
  */
 @Service
 @Slf4j
@@ -62,7 +63,8 @@ public class ChatServiceImpl implements ChatService {
     private static final String CHANNEL_PREFIX = "chat:user:";
 
     /**
-     * Tạo mới cuộc hội thoại (Direct/Group) hoặc trả về cuộc hội thoại Direct đã có sẵn.
+     * Tạo mới cuộc hội thoại (Direct/Group) hoặc trả về cuộc hội thoại Direct đã có
+     * sẵn.
      */
     @Override
     public ConversationResponse createOrGetConversation(ConversationRequest request, String currentUsername) {
@@ -118,22 +120,26 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Lấy tất cả các cuộc hội thoại của người dùng và sắp xếp theo thời gian cập nhật giảm dần.
+     * Lấy tất cả các cuộc hội thoại của người dùng và sắp xếp theo thời gian cập
+     * nhật giảm dần.
      */
     @Override
     public List<ConversationResponse> getConversationsForUser(String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
-        List<Conversation> list = conversationRepository.findByMemberIdsContainingOrderByUpdatedAtDesc(currentUser.getId());
+        List<Conversation> list = conversationRepository
+                .findByMemberIdsContainingOrderByUpdatedAtDesc(currentUser.getId());
         return list.stream()
                 .map(this::toConversationResponse)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Lấy tin nhắn trong cuộc hội thoại theo phân trang và đánh dấu phòng chat là đã đọc.
+     * Lấy tin nhắn trong cuộc hội thoại theo phân trang và đánh dấu phòng chat là
+     * đã đọc.
      */
     @Override
-    public PageResponse<MessageResponse> getMessages(String conversationId, int page, int size, String currentUsername) {
+    public PageResponse<MessageResponse> getMessages(String conversationId, int page, int size,
+            String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
         String currentUserId = currentUser.getId();
 
@@ -167,7 +173,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Lưu tin nhắn mới vào database, cập nhật tin nhắn cuối và tăng số lượng tin nhắn chưa đọc của thành viên khác.
+     * Lưu tin nhắn mới vào database, cập nhật tin nhắn cuối và tăng số lượng tin
+     * nhắn chưa đọc của thành viên khác.
      */
     @Override
     public MessageResponse saveAndBroadcastMessage(MessageRequest request, String currentUsername) {
@@ -327,9 +334,11 @@ public class ChatServiceImpl implements ChatService {
         }
 
         String uuid = UUID.randomUUID().toString();
-        String fileKey = String.format("chat/attachments/%s_%s", uuid, request.getFileName().replaceAll("[^a-zA-Z0-9.-]", "_"));
+        String fileKey = String.format("chat/attachments/%s_%s", uuid,
+                request.getFileName().replaceAll("[^a-zA-Z0-9.-]", "_"));
 
-        String uploadUrl = storageService.generatePresignedUploadUrl(fileKey, request.getContentType(), request.getFileSize(), 5);
+        String uploadUrl = storageService.generatePresignedUploadUrl(fileKey, request.getContentType(),
+                request.getFileSize(), 5);
         String fileUrl = storageService.getFileUrl(fileKey);
 
         MediaMetadata metadata = MediaMetadata.builder()
@@ -340,7 +349,8 @@ public class ChatServiceImpl implements ChatService {
                 .build();
         mediaMetadataRepository.save(metadata);
 
-        log.info("Generated S3 Pre-signed URL for user {} upload. Key: {}, Size: {} bytes", currentUsername, fileKey, request.getFileSize());
+        log.info("Generated S3 Pre-signed URL for user {} upload. Key: {}, Size: {} bytes", currentUsername, fileKey,
+                request.getFileSize());
 
         return PresignedUrlResponse.builder()
                 .uploadUrl(uploadUrl)
@@ -357,14 +367,16 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Lấy danh sách Username mục tiêu của tất cả thành viên trong nhóm ngoại trừ người gửi.
+     * Lấy danh sách Username mục tiêu của tất cả thành viên trong nhóm ngoại trừ
+     * người gửi.
      */
     private List<String> getTargetUsernames(Set<String> memberIds, String senderId) {
         Set<String> targetIds = memberIds.stream()
                 .filter(id -> !id.equals(senderId))
                 .collect(Collectors.toSet());
 
-        if (targetIds.isEmpty()) return Collections.emptyList();
+        if (targetIds.isEmpty())
+            return Collections.emptyList();
 
         return userRepository.findAllById(targetIds).stream()
                 .map(User::getUsername)
@@ -372,7 +384,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Ánh xạ thông tin Conversation sang ConversationResponse kèm chi tiết thành viên và tin nhắn cuối.
+     * Ánh xạ thông tin Conversation sang ConversationResponse kèm chi tiết thành
+     * viên và tin nhắn cuối.
      */
     private ConversationResponse toConversationResponse(Conversation conversation) {
         ConversationResponse response = chatMapper.toConversationResponse(conversation);
@@ -384,10 +397,12 @@ public class ChatServiceImpl implements ChatService {
         response.setMembers(memberProfiles);
 
         Pageable pageable = PageRequest.of(0, 1);
-        Page<Message> latestMsgPage = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversation.getId(), pageable);
+        Page<Message> latestMsgPage = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversation.getId(),
+                pageable);
         if (latestMsgPage != null && latestMsgPage.hasContent()) {
             Message latestMsg = latestMsgPage.getContent().get(0);
-            ConversationResponse.LastMessageResponse lastMsgResponse = ConversationResponse.LastMessageResponse.builder()
+            ConversationResponse.LastMessageResponse lastMsgResponse = ConversationResponse.LastMessageResponse
+                    .builder()
                     .messageId(latestMsg.getId())
                     .senderId(latestMsg.getSenderId())
                     .content(latestMsg.getContent())
@@ -396,7 +411,8 @@ public class ChatServiceImpl implements ChatService {
                     .build();
             response.setLastMessage(lastMsgResponse);
         } else if (conversation.getLastMessage() != null) {
-            ConversationResponse.LastMessageResponse lastMsgResponse = ConversationResponse.LastMessageResponse.builder()
+            ConversationResponse.LastMessageResponse lastMsgResponse = ConversationResponse.LastMessageResponse
+                    .builder()
                     .messageId(conversation.getLastMessage().getMessageId())
                     .senderId(conversation.getLastMessage().getSenderId())
                     .content(conversation.getLastMessage().getContent())
@@ -410,15 +426,15 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Phát tán sự kiện đã xem tin nhắn (READ_RECEIPT) tới các thành viên qua Redis Pub/Sub.
+     * Phát tán sự kiện đã xem tin nhắn (READ_RECEIPT) tới các thành viên qua Redis
+     * Pub/Sub.
      */
     private void broadcastReadReceipt(String conversationId, String readerId, List<String> targetUsernames) {
         try {
             Map<String, Object> receiptPayload = Map.of(
                     "conversationId", conversationId,
                     "userId", readerId,
-                    "readAt", Instant.now().toString()
-            );
+                    "readAt", Instant.now().toString());
 
             ChatEvent event = ChatEvent.builder()
                     .type("READ_RECEIPT")
@@ -436,7 +452,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
     /**
-     * Đánh dấu cuộc hội thoại là đã đọc: reset unreadCount, cập nhật danh sách readBy của tin nhắn và broadcast sự kiện seen.
+     * Đánh dấu cuộc hội thoại là đã đọc: reset unreadCount, cập nhật danh sách
+     * readBy của tin nhắn và broadcast sự kiện seen.
      */
     @Override
     public void markConversationAsRead(String conversationId, String currentUsername) {
@@ -453,15 +470,18 @@ public class ChatServiceImpl implements ChatService {
             throw new AppException(ErrorCode.CONVERSATION_ACCESS_DENIED);
         }
 
-        if (conversation.getUnreadCounts() != null && conversation.getUnreadCounts().getOrDefault(currentUserId, 0) > 0) {
+        if (conversation.getUnreadCounts() != null
+                && conversation.getUnreadCounts().getOrDefault(currentUserId, 0) > 0) {
             int unreadCount = conversation.getUnreadCounts().get(currentUserId);
             conversation.getUnreadCounts().put(currentUserId, 0);
             conversationRepository.save(conversation);
 
             int limit = Math.max(unreadCount, 50);
-            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, limit);
-            org.springframework.data.domain.Page<Message> msgPage = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
-            
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0,
+                    limit);
+            org.springframework.data.domain.Page<Message> msgPage = messageRepository
+                    .findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
+
             List<Message> toUpdate = new ArrayList<>();
             Instant now = Instant.now();
             for (Message m : msgPage.getContent()) {
@@ -490,7 +510,8 @@ public class ChatServiceImpl implements ChatService {
      * Trích xuất S3 key từ đường dẫn URL đầy đủ.
      */
     private String extractS3KeyFromUrl(String fileUrl) {
-        if (fileUrl == null) return null;
+        if (fileUrl == null)
+            return null;
         int index = fileUrl.indexOf("chat/attachments/");
         if (index != -1) {
             return fileUrl.substring(index);

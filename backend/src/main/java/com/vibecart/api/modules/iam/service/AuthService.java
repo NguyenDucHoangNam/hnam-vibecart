@@ -41,36 +41,9 @@ public interface AuthService {
 
 
 
-    /** Lấy thông tin cá nhân theo username (từ JWT) */
-    UserResponse getProfile(String username);
-
-    /** Cập nhật hồ sơ cá nhân (username, fullName, avatarUrl) */
-    AuthResponse updateProfile(String username, UpdateProfileRequest request);
-
-
-
-    /** Đổi mật khẩu (yêu cầu oldPassword) → kick all other sessions */
-    void changePassword(String username, ChangePasswordRequest request);
-
     /** Yêu cầu khôi phục mật khẩu → sinh UUID Reset Token → gửi email */
     void forgotPassword(ForgotPasswordRequest request);
 
     /** Đặt lại mật khẩu bằng Reset Token → kick all sessions */
     void resetPassword(ResetPasswordRequest request);
-
-
-
-    /** Yêu cầu xóa tài khoản → PENDING_DELETION → purge sessions */
-    void deleteAccount(String username);
-
-
-
-    /** Admin: Cập nhật trạng thái tài khoản (ACTIVE, BANNED, v.v.) */
-    UserResponse updateUserStatus(String userId, UpdateUserStatusRequest request, String adminUsername);
-
-    /** Admin: Tìm kiếm & Lọc danh sách người dùng phân trang */
-    org.springframework.data.domain.Page<UserResponse> searchUsers(String search, String status, String role, org.springframework.data.domain.Pageable pageable);
-
-    /** Admin: Cập nhật vai trò (phân quyền) người dùng */
-    UserResponse updateUserRoles(String userId, com.vibecart.api.modules.iam.dto.request.UpdateUserRolesRequest request, String adminUsername);
 }
