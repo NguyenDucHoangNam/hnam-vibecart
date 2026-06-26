@@ -146,8 +146,8 @@ public class ChatServiceImpl implements ChatService {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
 
-        boolean isAdmin = currentUser.getRoles() != null && currentUser.getRoles().stream()
-                .anyMatch(role -> "ADMIN".equals(role.getName()) || "ROLE_ADMIN".equals(role.getName()));
+        boolean isAdmin = currentUser.getRole() != null 
+                && ("ADMIN".equals(currentUser.getRole().getName()) || "ROLE_ADMIN".equals(currentUser.getRole().getName()));
 
         if (!conversation.getMemberIds().contains(currentUserId) && !isAdmin) {
             throw new AppException(ErrorCode.CONVERSATION_ACCESS_DENIED);
@@ -463,8 +463,8 @@ public class ChatServiceImpl implements ChatService {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new AppException(ErrorCode.CONVERSATION_NOT_FOUND));
 
-        boolean isAdmin = currentUser.getRoles() != null && currentUser.getRoles().stream()
-                .anyMatch(role -> "ADMIN".equals(role.getName()) || "ROLE_ADMIN".equals(role.getName()));
+        boolean isAdmin = currentUser.getRole() != null 
+                && ("ADMIN".equals(currentUser.getRole().getName()) || "ROLE_ADMIN".equals(currentUser.getRole().getName()));
 
         if (!conversation.getMemberIds().contains(currentUserId) && !isAdmin) {
             throw new AppException(ErrorCode.CONVERSATION_ACCESS_DENIED);

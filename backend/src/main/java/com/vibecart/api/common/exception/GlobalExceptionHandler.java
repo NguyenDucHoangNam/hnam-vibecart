@@ -7,12 +7,26 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(value = NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNoHandlerFoundException(NoHandlerFoundException exception) {
+        log.warn("API Endpoint not found: {} {}", exception.getHttpMethod(), exception.getRequestURL());
+
+        ErrorCode errorCode = ErrorCode.API_ENDPOINT_NOT_FOUND;
+        ApiResponse<Object> apiResponse = ApiResponse.builder()
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .build();
+
+        return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
+    }
 
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleRuntimeException(Exception exception) {

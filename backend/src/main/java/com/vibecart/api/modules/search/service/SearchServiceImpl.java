@@ -21,8 +21,8 @@ import com.vibecart.api.modules.iam.repository.UserSearchRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.social.service.FollowService;
 import com.vibecart.api.modules.iam.entity.Role;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -53,9 +53,9 @@ import java.util.stream.Collectors;
  * Elasticsearch, MongoDB và Redis.
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class SearchServiceImpl implements SearchService {
-
-    private static final Logger log = LoggerFactory.getLogger(SearchServiceImpl.class);
 
     private final ElasticsearchOperations elasticsearchOperations;
     private final ElasticsearchClient elasticsearchClient;
@@ -66,29 +66,6 @@ public class SearchServiceImpl implements SearchService {
     private final UserSearchRepository userSearchRepository;
     private final UserRepository userRepository;
     private final FollowService followService;
-
-    /**
-     * Khởi tạo service tìm kiếm với các phụ thuộc được tiêm.
-     */
-    public SearchServiceImpl(ElasticsearchOperations elasticsearchOperations,
-            ElasticsearchClient elasticsearchClient,
-            MongoTemplate mongoTemplate,
-            RedisTemplate<String, String> redisTemplate,
-            ProductSearchRepository productSearchRepository,
-            ProductRepository productRepository,
-            UserSearchRepository userSearchRepository,
-            UserRepository userRepository,
-            FollowService followService) {
-        this.elasticsearchOperations = elasticsearchOperations;
-        this.elasticsearchClient = elasticsearchClient;
-        this.mongoTemplate = mongoTemplate;
-        this.redisTemplate = redisTemplate;
-        this.productSearchRepository = productSearchRepository;
-        this.productRepository = productRepository;
-        this.userSearchRepository = userSearchRepository;
-        this.userRepository = userRepository;
-        this.followService = followService;
-    }
 
     @Override
     public SearchResultResponse search(String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
@@ -430,8 +407,8 @@ public class SearchServiceImpl implements SearchService {
             log.info("Reindexing all PostgreSQL user records into Elasticsearch...");
             List<com.vibecart.api.modules.iam.entity.User> users = userRepository.findAll();
             List<UserDocument> userDocs = users.stream().map(user -> {
-                Set<String> roles = user.getRoles() == null ? Collections.emptySet()
-                        : user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+                Set<String> roles = user.getRole() == null ? Collections.emptySet()
+                        : Set.of(user.getRole().getName());
 
                 return UserDocument.builder()
                         .id(user.getId())
@@ -638,8 +615,8 @@ public class SearchServiceImpl implements SearchService {
             return;
         log.info("Indexing user to Elasticsearch: {}", user.getUsername());
         try {
-            Set<String> roles = user.getRoles() == null ? Collections.emptySet()
-                    : user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+            Set<String> roles = user.getRole() == null ? Collections.emptySet()
+                    : Set.of(user.getRole().getName());
 
             UserDocument document = UserDocument.builder()
                     .id(user.getId())

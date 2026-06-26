@@ -20,9 +20,8 @@ import java.util.TreeMap;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PayOSService {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PayOSService.class);
 
     private final PayOSProperties payOSProperties;
     private final RestTemplate restTemplate = new RestTemplate();

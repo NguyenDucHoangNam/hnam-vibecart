@@ -76,7 +76,7 @@ public class DatabaseSeeder implements CommandLineRunner {
      * Khởi tạo cấu trúc cây danh mục sản phẩm mẫu.
      */
     private void seedCategories() {
-        if (categoryRepository.count() > 0) {
+        if (categoryRepository.findBySlug("thoi-trang").isPresent()) {
             log.info("Categories already exist in database. Skipping category seeding.");
             return;
         }
@@ -97,6 +97,10 @@ public class DatabaseSeeder implements CommandLineRunner {
         getOrCreateCategory("Ốp lưng", "op-lung", phones, 1);
         getOrCreateCategory("Cáp sạc", "cap-sac", phones, 2);
         getOrCreateCategory("Tai nghe", "tai-nghe", phones, 3);
+
+        // Seed default "Khác" category for miscellaneous items
+        Category otherCategory = getOrCreateCategory("Khác", "khac", null, 999);
+        getOrCreateCategory("Sản phẩm khác", "san-pham-khac", otherCategory, 1);
     }
 
     /**
@@ -161,7 +165,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .fullName(seedData.getFullName())
                     .oauthProvider("LOCAL")
                     .status("ACTIVE")
-                    .roles(Set.of(role))
+                    .role(role)
                     .build();
 
             userRepository.save(user);

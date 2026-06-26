@@ -10,9 +10,6 @@ import org.mapstruct.Mapping;
 public interface UserMapper {
 
     @Mapping(target = "hasPassword", expression = "java(user.getPassword() != null)")
+    @Mapping(target = "roles", expression = "java(user.getRole() != null ? java.util.Set.of(user.getRole().getName()) : java.util.Collections.emptySet())")
     UserResponse toUserResponse(User user);
-
-    default String mapRole(Role role) {
-        return role != null ? role.getName() : null;
-    }
 }

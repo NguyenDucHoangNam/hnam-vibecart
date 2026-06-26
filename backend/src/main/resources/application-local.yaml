@@ -1,25 +1,25 @@
-# ===================================================================
-# Local Development Profile - 'local'
-# ===================================================================
+
+
+
 
 spring:
-  # 1. Database Configuration (PostgreSQL)
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
-  # 2. JPA & Hibernate Configuration
+
   jpa:
     hibernate:
-      ddl-auto: none # Flyway manages local schema
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         format_sql: false
 
-  # 3. Database Migration (Flyway)
+
   flyway:
     enabled: true
     url: ${DB_URL}
@@ -28,21 +28,21 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  # 4. NoSQL Configuration (MongoDB)
+
   data:
     mongodb:
       uri: ${MONGODB_URI}
-    
-    # 5. Cache Configuration (Redis)
+
+
     redis:
       host: localhost
       port: 6379
 
-  # 6. Search Configuration (Elasticsearch)
+
   elasticsearch:
     uris: http://localhost:9200
 
-  # 7. Message Queue Configuration (Kafka)
+
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
@@ -56,7 +56,7 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-  # 8. Email Configuration (SMTP - Gmail)
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -69,14 +69,14 @@ spring:
           starttls:
             enable: true
 
-  # 9. Thymeleaf (for email templates)
+
   thymeleaf:
     check-template-location: false
 
 
-# ===================================================================
-# Application JWT Configurations
-# ===================================================================
+
+
+
 app:
   jwt:
     secret: ${JWT_SECRET}

@@ -43,6 +43,7 @@ public enum ErrorCode {
         CANNOT_CHANGE_OWN_ROLE(1026, "Không thể tự thay đổi vai trò (phân quyền) của chính mình",
                         HttpStatus.BAD_REQUEST),
         RATE_LIMIT_EXCEEDED(1030, "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau", HttpStatus.TOO_MANY_REQUESTS),
+        API_ENDPOINT_NOT_FOUND(1031, "Đường dẫn API không tồn tại", HttpStatus.NOT_FOUND),
 
         PRODUCT_NOT_FOUND(2001, "Sản phẩm không tồn tại hoặc đã bị xóa", HttpStatus.NOT_FOUND),
         PRODUCT_INACTIVE(2002, "Sản phẩm hiện không khả dụng", HttpStatus.BAD_REQUEST),

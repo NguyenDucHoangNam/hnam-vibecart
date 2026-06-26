@@ -97,14 +97,14 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new AppException(ErrorCode.CANNOT_CHANGE_OWN_ROLE);
         }
 
-        Set<Role> newRoles = new HashSet<>();
-        for (String roleName : request.getRoles()) {
-            Role role = roleRepository.findByName(roleName)
-                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
-            newRoles.add(role);
+        if (request.getRoles() == null || request.getRoles().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_INPUT);
         }
+        String roleName = request.getRoles().iterator().next();
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
-        targetUser.setRoles(newRoles);
+        targetUser.setRole(role);
         User updatedUser = userRepository.save(targetUser);
         searchService.indexUser(updatedUser);
 

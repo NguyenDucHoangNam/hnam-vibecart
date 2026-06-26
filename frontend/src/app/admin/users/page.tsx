@@ -170,18 +170,9 @@ export default function AdminUsersPage() {
     setIsRoleModalOpen(true);
   };
 
-  // Toggle roles in checkbox state
-  const handleRoleCheckboxChange = (roleName: string) => {
-    if (updatingRoles.includes(roleName)) {
-      // Must have at least one role
-      if (updatingRoles.length === 1) {
-        toast.warning("Ràng buộc", "Người dùng phải có ít nhất một vai trò.");
-        return;
-      }
-      setUpdatingRoles(updatingRoles.filter((r) => r !== roleName));
-    } else {
-      setUpdatingRoles([...updatingRoles, roleName]);
-    }
+  // Change selected role (only 1 role allowed)
+  const handleRoleChange = (roleName: string) => {
+    setUpdatingRoles([roleName]);
   };
 
   // Handle submit role update
@@ -724,7 +715,7 @@ export default function AdminUsersPage() {
                     return (
                       <label
                         key={roleObj.code}
-                        onClick={() => handleRoleCheckboxChange(roleObj.code)}
+                        onClick={() => handleRoleChange(roleObj.code)}
                         className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer hover:bg-zinc-50/50 transition-all select-none ${
                           isChecked 
                             ? "bg-emerald-50/10 border-emerald-500/40 shadow-2xs" 
@@ -732,10 +723,10 @@ export default function AdminUsersPage() {
                         }`}
                       >
                         <input
-                          type="checkbox"
+                          type="radio"
                           checked={isChecked}
                           onChange={() => {}} // Controlled manually by label click
-                          className="h-4.5 w-4.5 rounded-sm border-zinc-300 text-emerald-600 focus:ring-emerald-500/20 mt-0.5 pointer-events-none accent-emerald-600"
+                          className="h-4.5 w-4.5 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20 mt-0.5 pointer-events-none accent-emerald-600"
                         />
                         <div className="flex flex-col gap-0.5">
                           <span className="font-bold text-sm text-zinc-800">{roleObj.name}</span>
@@ -745,13 +736,6 @@ export default function AdminUsersPage() {
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700 leading-relaxed flex items-start gap-2">
-                <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-500 animate-pulse" />
-                <span>
-                  <strong>Lưu ý:</strong> Thay đổi vai trò sẽ tự động hủy các phiên kết nối cũ để hệ thống Next.js cập nhật thông tin vai trò mới trong JWT token ở phiên đăng nhập kế tiếp.
-                </span>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

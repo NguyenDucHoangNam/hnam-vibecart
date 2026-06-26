@@ -147,9 +147,9 @@ public class FollowController {
                 .avatarUrl(userEntity.getAvatarUrl())
                 .status(userEntity.getStatus())
                 .oauthProvider(userEntity.getOauthProvider())
-                .roles(userEntity.getRoles() != null
-                        ? userEntity.getRoles().stream().map(Role::getName).collect(Collectors.toSet())
-                        : Collections.emptySet())
+                .roles(userEntity.getRole() != null
+                        ? java.util.Set.of(userEntity.getRole().getName())
+                        : java.util.Collections.emptySet())
                 .createdAt(userEntity.getCreatedAt())
                 .build();
 

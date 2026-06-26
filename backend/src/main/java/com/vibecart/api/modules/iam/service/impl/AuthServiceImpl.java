@@ -100,7 +100,6 @@ public class AuthServiceImpl implements AuthService {
                 .filter(u -> "PENDING_VERIFICATION".equals(u.getStatus()))
                 .ifPresent(u -> {
                     log.info("Hard deleting clashing unverified user by username: {}", u.getUsername());
-                    userRepository.hardDeleteUserRolesByUserId(u.getId());
                     userRepository.hardDeleteUserByUserId(u.getId());
                 });
 
@@ -108,7 +107,6 @@ public class AuthServiceImpl implements AuthService {
                 .filter(u -> "PENDING_VERIFICATION".equals(u.getStatus()))
                 .ifPresent(u -> {
                     log.info("Hard deleting clashing unverified user by email: {}", u.getEmail());
-                    userRepository.hardDeleteUserRolesByUserId(u.getId());
                     userRepository.hardDeleteUserByUserId(u.getId());
                 });
 
@@ -132,7 +130,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(request.getFullName())
                 .status("PENDING_VERIFICATION")
                 .oauthProvider("LOCAL")
-                .roles(Set.of(role))
+                .role(role)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -587,7 +585,6 @@ public class AuthServiceImpl implements AuthService {
                         User u = existingUser.get();
                         if ("PENDING_VERIFICATION".equals(u.getStatus())) {
                             log.info("Hard deleting clashing unverified user before OAuth2 mapping: {}", u.getEmail());
-                            userRepository.hardDeleteUserRolesByUserId(u.getId());
                             userRepository.hardDeleteUserByUserId(u.getId());
                             // Clean up OTP state in Redis
                             redisTemplate.delete(KEY_REGISTRATION_OTP + normalizedEmail);
@@ -621,7 +618,7 @@ public class AuthServiceImpl implements AuthService {
                             .status("ACTIVE")
                             .oauthProvider(provider)
                             .oauthId(oauthId)
-                            .roles(Set.of(userRole))
+                            .role(userRole)
                             .build();
 
                     User saved = userRepository.save(newUser);
@@ -640,9 +637,7 @@ public class AuthServiceImpl implements AuthService {
      * Generate access token, refresh token and session info for AuthResponse.
      */
     private AuthResponse generateAuthResponse(User user) {
-        String rolesStr = user.getRoles().stream()
-                .map(Role::getName)
-                .collect(Collectors.joining(","));
+        String rolesStr = user.getRole().getName();
 
         String accessToken = jwtTokenProvider.generateToken(user.getUsername(), user.getId(), rolesStr);
         String refreshToken = UUID.randomUUID().toString();

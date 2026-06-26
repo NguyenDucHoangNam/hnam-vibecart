@@ -3,8 +3,8 @@ package com.vibecart.api.modules.jobs.service.impl;
 import com.vibecart.api.modules.jobs.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -18,20 +18,15 @@ import java.util.Map;
  * Implementation của {@link EmailService} gửi email thông qua JavaMailSender.
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class EmailServiceImpl implements EmailService {
-
-    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
     @Value("${spring.mail.username:no-reply@vibecart.com}")
     private String fromEmail;
-
-    public EmailServiceImpl(JavaMailSender mailSender, TemplateEngine templateEngine) {
-        this.mailSender = mailSender;
-        this.templateEngine = templateEngine;
-    }
 
     @Override
     public void sendEmail(String to, String subject, String htmlContent) {

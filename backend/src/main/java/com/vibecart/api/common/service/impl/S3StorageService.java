@@ -3,6 +3,7 @@ package com.vibecart.api.common.service.impl;
 import com.vibecart.api.config.StorageProperties;
 import com.vibecart.api.common.service.StorageService;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -19,18 +20,13 @@ import java.time.Duration;
  * Dịch vụ lưu trữ tệp tin tương tác trực tiếp với AWS S3 hoặc MinIO.
  */
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class S3StorageService implements StorageService {
 
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final StorageProperties storageProperties;
-
-    public S3StorageService(S3Client s3Client, S3Presigner s3Presigner, StorageProperties storageProperties) {
-        this.s3Client = s3Client;
-        this.s3Presigner = s3Presigner;
-        this.storageProperties = storageProperties;
-    }
 
     /**
      * Kiểm tra tính khả dụng của S3 Bucket khi ứng dụng khởi động.

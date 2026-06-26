@@ -33,10 +33,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByEmailAnywhere(@Param("email") String email);
 
     @Modifying(clearAutomatically = true)
-    @Query(value = "DELETE FROM user_roles WHERE user_id = :userId", nativeQuery = true)
-    void hardDeleteUserRolesByUserId(@Param("userId") String userId);
-
-    @Modifying(clearAutomatically = true)
     @Query(value = "DELETE FROM users WHERE id = :userId", nativeQuery = true)
     void hardDeleteUserByUserId(@Param("userId") String userId);
 
@@ -45,7 +41,7 @@ public interface UserRepository extends JpaRepository<User, String> {
     void hardDeleteByUsernameLike(@Param("pattern") String pattern);
 
     @Query(
-        "SELECT DISTINCT u FROM User u LEFT JOIN u.roles r " +
+        "SELECT u FROM User u LEFT JOIN u.role r " +
         "WHERE (:search IS NULL OR LOWER(u.username) LIKE :search " +
         "   OR LOWER(u.email) LIKE :search " +
         "   OR LOWER(u.fullName) LIKE :search) " +

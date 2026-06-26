@@ -26,21 +26,13 @@ import java.util.stream.Collectors;
  * Implementation của {@link CartService} quản lý giỏ hàng qua Redis.
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class CartServiceImpl implements CartService {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CartServiceImpl.class);
 
     private final StringRedisTemplate redisTemplate;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
-
-    public CartServiceImpl(StringRedisTemplate redisTemplate,
-                           ProductVariantRepository productVariantRepository,
-                           UserRepository userRepository) {
-        this.redisTemplate = redisTemplate;
-        this.productVariantRepository = productVariantRepository;
-        this.userRepository = userRepository;
-    }
 
     private static final String CART_KEY_PREFIX = "cart:";
     private static final long CART_TTL_SECONDS = 2592000L;

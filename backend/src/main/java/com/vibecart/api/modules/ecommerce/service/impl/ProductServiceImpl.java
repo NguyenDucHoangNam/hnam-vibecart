@@ -32,6 +32,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.PageRequest;
 import com.vibecart.api.common.util.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,9 +52,9 @@ import java.util.stream.Collectors;
  * Implementation của {@link ProductService} quản lý sản phẩm, biến thể, tồn kho.
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProductServiceImpl.class);
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
@@ -65,30 +67,6 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryHistoryRepository inventoryHistoryRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
-
-    public ProductServiceImpl(ProductRepository productRepository,
-                              ProductVariantRepository productVariantRepository,
-                              ProductImageRepository productImageRepository,
-                              InventoryRepository inventoryRepository,
-                              CategoryRepository categoryRepository,
-                              InventoryService inventoryService,
-                              ProductMapper productMapper,
-                              ProductSyncProducer productSyncProducer,
-                              InventoryHistoryRepository inventoryHistoryRepository,
-                              OutboxEventRepository outboxEventRepository,
-                              ObjectMapper objectMapper) {
-        this.productRepository = productRepository;
-        this.productVariantRepository = productVariantRepository;
-        this.productImageRepository = productImageRepository;
-        this.inventoryRepository = inventoryRepository;
-        this.categoryRepository = categoryRepository;
-        this.inventoryService = inventoryService;
-        this.productMapper = productMapper;
-        this.productSyncProducer = productSyncProducer;
-        this.inventoryHistoryRepository = inventoryHistoryRepository;
-        this.outboxEventRepository = outboxEventRepository;
-        this.objectMapper = objectMapper;
-    }
 
     @Override
     @Transactional

@@ -11,8 +11,8 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -27,21 +27,13 @@ import java.util.UUID;
  * Implementation của {@link ReportWorkerService} xuất báo cáo Excel bất đồng bộ và upload lên S3.
  */
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class ReportWorkerServiceImpl implements ReportWorkerService {
-
-    private static final Logger log = LoggerFactory.getLogger(ReportWorkerServiceImpl.class);
 
     private final BackgroundTaskRepository taskRepository;
     private final OrderRepository orderRepository;
     private final StorageService storageService;
-
-    public ReportWorkerServiceImpl(BackgroundTaskRepository taskRepository,
-                                   OrderRepository orderRepository,
-                                   StorageService storageService) {
-        this.taskRepository = taskRepository;
-        this.orderRepository = orderRepository;
-        this.storageService = storageService;
-    }
 
     @Override
     @Async("reportTaskExecutor")
