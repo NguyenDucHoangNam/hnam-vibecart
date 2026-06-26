@@ -58,78 +58,46 @@ export default function ChatPage() {
     startDirectChat,
     fetchConversations
   } = useChat();
-
-  // Navigation / UI States
   const [activeSidebarTab, setActiveSidebarTab] = useState<"all" | "direct" | "group">("all");
   const [searchConvQuery, setSearchConvQuery] = useState("");
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [newChatType, setNewChatType] = useState<"DIRECT" | "GROUP">("DIRECT");
   const [groupName, setGroupName] = useState("");
-  
-  // Followings / Contacts list state for new chat
   const [contacts, setContacts] = useState<FollowResponse[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [contactSearchQuery, setContactSearchQuery] = useState("");
-
-  // Input state
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // File Upload states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Commerce Modals
   const [isShareProductOpen, setIsShareProductOpen] = useState(false);
   const [isShareOrderOpen, setIsShareOrderOpen] = useState(false);
-  
-  // Products list to attach
   const [shopProducts, setShopProducts] = useState<Product[]>([]);
   const [isLoadingShopProducts, setIsLoadingShopProducts] = useState(false);
   const [productSearch, setProductSearch] = useState("");
-  
-  // Orders list to attach
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [isLoadingMyOrders, setIsLoadingMyOrders] = useState(false);
-
-  // Lightbox
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
-
-  // Emoji Picker
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-
-  // Group Info Panel
   const [showGroupInfo, setShowGroupInfo] = useState(false);
-
-  // Scroll references
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatScrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Transition
   const [isPending, startTransition] = useTransition();
-
-  // Common emoji grid (native)
   const EMOJI_LIST = [
     "😀", "😂", "😍", "🥰", "😎", "🤩", "😢", "😡", "🤔", "🙏",
     "👍", "👎", "❤️", "🔥", "✨", "🎉", "💯", "👏", "🤝", "💪",
     "📦", "🛒", "💰", "🏷️", "⭐", "🌟", "💬", "📸", "🎁", "🚀"
   ];
-
-  // ═══════════════════════════════════════════════════════════════
-  // 1. URL QUERY HANDLING (startDirectChatUserId & shareProductId/shareOrderId)
-  // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     const targetUserId = searchParams.get("startDirectChatUserId");
     if (targetUserId) {
-      // Clear search param and start direct chat
       const handleStart = async () => {
         try {
           const roomId = await startDirectChat(targetUserId);
-          // Redirect to remove query params
           router.replace(ROUTES.MESSAGES + `?convId=${roomId}`);
         } catch {
           router.replace(ROUTES.MESSAGES);
@@ -147,19 +115,11 @@ export default function ChatPage() {
       }
     }
   }, [searchParams, conversations, activeConversation, startDirectChat, setActiveConversation, router]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 1b. CLEANUP ACTIVE CONVERSATION ON UNMOUNT
-  // ═══════════════════════════════════════════════════════════════
   useEffect(() => {
     return () => {
       setActiveConversation(null);
     };
   }, [setActiveConversation]);
-
-  // ═══════════════════════════════════════════════════════════════
-  // 2. SCROLL TO BOTTOM ON NEW MESSAGE
-  // ═══════════════════════════════════════════════════════════════
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
@@ -169,15 +129,10 @@ export default function ChatPage() {
       scrollToBottom("auto");
     }
   }, [messages, messagesPage]);
-
-  // Handle scrolling up to fetch older pages
   const handleScroll = () => {
     if (!chatScrollContainerRef.current || isLoadingMessages || !hasMoreMessages) return;
-    
-    // Check if user scrolled near the top of messages stream
     const { scrollTop } = chatScrollContainerRef.current;
     if (scrollTop < 40) {
-      // Save height before load to preserve scroll position
       const previousScrollHeight = chatScrollContainerRef.current.scrollHeight;
       
       loadMoreMessages().then(() => {
@@ -190,10 +145,6 @@ export default function ChatPage() {
       });
     }
   };
-
-  // ═══════════════════════════════════════════════════════════════
-  // 3. SEND MESSAGE & TYPING Heartbeats
-  // ═══════════════════════════════════════════════════════════════
   const handleSendTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -201,13 +152,9 @@ export default function ChatPage() {
     sendMessage(inputText.trim(), "TEXT");
     setInputText("");
     setIsEmojiPickerOpen(false);
-    
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    
-    // Stop typing immediately
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     sendTypingState(false);
     setIsTyping(false);
@@ -215,8 +162,6 @@ export default function ChatPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
-
-    // Auto-resize textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 96) + 'px';
@@ -232,12 +177,8 @@ export default function ChatPage() {
     typingTimeoutRef.current = setTimeout(() => {
       sendTypingState(false);
       setIsTyping(false);
-    }, 2000); // 2 giây dừng gõ thì tắt typing
+    }, 2000);
   };
-
-  // ═══════════════════════════════════════════════════════════════
-  // 4. ATTACHMENT UPLOAD FLOW
-  // ═══════════════════════════════════════════════════════════════
   const handleFileUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -245,8 +186,6 @@ export default function ChatPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate size (20MB)
     if (file.size > 20 * 1024 * 1024) {
       toast.warning("File quá lớn", "Dung lượng tệp đính kèm không được vượt quá 20MB.");
       return;
@@ -256,22 +195,17 @@ export default function ChatPage() {
     setUploadPercent(0);
 
     try {
-      // 1. Get presigned URL
       const req: PresignedUrlRequest = {
         fileName: file.name,
         fileSize: file.size,
         contentType: file.type
       };
       const presigned = await chatService.getPresignedUrl(req);
-      
-      // 2. Upload file via PUT
       await chatService.uploadAttachmentFile(
         presigned.uploadUrl,
         file,
         (percent) => setUploadPercent(percent)
       );
-
-      // 3. Send message with type IMAGE or DOCUMENT
       const isImg = file.type.startsWith("image/");
       sendMessage(presigned.fileUrl, isImg ? "IMAGE" : "DOCUMENT");
       toast.success("Tải tệp lên thành công");
@@ -284,10 +218,6 @@ export default function ChatPage() {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
-
-  // ═══════════════════════════════════════════════════════════════
-  // 5. NEW CHAT / CONTACTS SYSTEM
-  // ═══════════════════════════════════════════════════════════════
   const openNewChatModal = async () => {
     setIsNewChatOpen(true);
     setSelectedContactIds([]);
@@ -297,7 +227,6 @@ export default function ChatPage() {
     if (!user) return;
     setIsLoadingContacts(true);
     try {
-      // Fetch user's following as contacts
       const followingList = await userService.getFollowing(user.id, 0, 50);
       setContacts(followingList.content || []);
     } catch (err) {
@@ -346,10 +275,6 @@ export default function ChatPage() {
       }
     });
   };
-
-  // ═══════════════════════════════════════════════════════════════
-  // 6. E-COMMERCE PRODUCTS & ORDERS SHARING PANELS
-  // ═══════════════════════════════════════════════════════════════
   const openShareProductPanel = async () => {
     setIsShareProductOpen(true);
     setIsLoadingShopProducts(true);
@@ -400,19 +325,10 @@ export default function ChatPage() {
     setIsShareOrderOpen(false);
     toast.success("Đã gửi thẻ đơn hàng");
   };
-
-  // ═══════════════════════════════════════════════════════════════
-  // 7. RENDER FILTERS & HELPER
-  // ═══════════════════════════════════════════════════════════════
   const filteredConversations = conversations.filter(c => {
-    // Tab filter
     if (activeSidebarTab === "direct" && c.type !== "DIRECT") return false;
     if (activeSidebarTab === "group" && c.type !== "GROUP") return false;
-
-    // Search query filter
     if (!searchConvQuery.trim()) return true;
-    
-    // Resolve conversation display name
     const resolvedName = c.type === "DIRECT" 
       ? c.members.find(m => m.id !== user?.id)?.fullName || c.name || "User"
       : c.name || "Group Chat";
@@ -452,20 +368,13 @@ export default function ChatPage() {
 
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300 relative flex h-[calc(100vh-80px)] overflow-hidden">
-      
-      {/* Background Blurs */}
       <div className="absolute top-[10%] left-[5%] w-80 h-80 bg-brand-100/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[15%] right-[5%] w-96 h-96 bg-brand-200/5 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl w-full mx-auto relative z-10 flex flex-1 overflow-hidden border-x border-zinc-200/60 dark:border-zinc-800/60">
-        
-        {/* =========================================================================
-            LEFT COLUMN: SIDEBAR CONVERSATIONS LIST
-            ========================================================================= */}
         <aside className={`w-full md:w-80 flex flex-col bg-white dark:bg-zinc-900 shrink-0 border-r border-zinc-200/60 dark:border-zinc-800/60 transition-transform duration-300 ${
           activeConversation ? "hidden md:flex" : "flex"
         }`}>
-          {/* Sidebar Header & Search */}
           <div className="p-4 space-y-3.5 border-b border-zinc-100 dark:border-zinc-800/40">
             <div className="flex justify-between items-center">
               <h1 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -481,8 +390,6 @@ export default function ChatPage() {
                 <Plus className="h-4.5 w-4.5" />
               </button>
             </div>
-
-            {/* Search Input */}
             <div className="relative">
               <input
                 type="text"
@@ -494,8 +401,6 @@ export default function ChatPage() {
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
             </div>
           </div>
-
-          {/* Sidebar Tabs Filter */}
           <div className="px-4 py-2 border-b border-zinc-50 dark:border-zinc-800/20 flex gap-1 overflow-x-auto shrink-0">
             {[
               { id: "all", label: "Tất cả" },
@@ -515,8 +420,6 @@ export default function ChatPage() {
               </button>
             ))}
           </div>
-
-          {/* Conversations Scroll stream */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
             {isLoadingConversations ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
@@ -552,7 +455,6 @@ export default function ChatPage() {
                         : "border border-transparent hover:bg-zinc-50 dark:hover:bg-zinc-950"
                     }`}
                   >
-                    {/* Avatar with Presence indicator */}
                     <div className="relative shrink-0">
                       {convAvatar ? (
                         <img 
@@ -570,8 +472,6 @@ export default function ChatPage() {
                         <span className="absolute bottom-0 right-0 h-3 w-3 bg-emerald-500 border-2 border-white rounded-full" />
                       )}
                     </div>
-
-                    {/* Chat details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-0.5">
                         <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate group-hover:text-brand-600 transition-colors">
@@ -615,19 +515,13 @@ export default function ChatPage() {
             )}
           </div>
         </aside>
-
-        {/* =========================================================================
-            RIGHT COLUMN: CONVERSATION AREA (Active or placeholder)
-            ========================================================================= */}
         <main className={`flex-1 flex flex-col bg-white dark:bg-zinc-900 transition-colors ${
           activeConversation ? "flex" : "hidden md:flex"
         }`}>
           {activeConversation ? (
             <>
-              {/* 1. Chat Header */}
               <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/40 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
-                  {/* Mobile Back Button */}
                   <button 
                     onClick={() => setActiveConversation(null)}
                     className="md:hidden p-1.5 border rounded-xl hover:bg-zinc-50 text-zinc-500 shrink-0"
@@ -672,8 +566,6 @@ export default function ChatPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Attachment Tools buttons */}
                 <div className="flex gap-1 shrink-0">
                   <button
                     onClick={openShareProductPanel}
@@ -704,30 +596,23 @@ export default function ChatPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Reconnecting Banner */}
               {!isConnected && (
                 <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2 text-amber-700 text-[10px] font-bold shrink-0 animate-pulse">
                   <WifiOff className="h-3.5 w-3.5" />
                   Đang kết nối lại... Tin nhắn sẽ được gửi khi kết nối được khôi phục.
                 </div>
               )}
-
-              {/* 2. Messages stream list */}
               <div className="flex-1 flex overflow-hidden">
               <div 
                 ref={chatScrollContainerRef}
                 onScroll={handleScroll}
                 className={`flex-1 overflow-y-auto p-4 space-y-4 flex flex-col custom-scrollbar bg-zinc-50/50 dark:bg-zinc-950/20 ${showGroupInfo ? 'mr-0' : ''}`}
               >
-                {/* Load More indicator at top */}
                 {isLoadingMessages && messages.length > 0 && (
                   <div className="flex justify-center py-2">
                     <Loader2 className="h-4 w-4 text-brand-500 animate-spin" />
                   </div>
                 )}
-
-                {/* Typing status list inline */}
                 {typingUsers.length > 0 && (
                   <div className="flex gap-2.5 items-start">
                     <div className="h-7 w-7 rounded-full bg-zinc-100 flex items-center justify-center shrink-0 border">
@@ -760,8 +645,6 @@ export default function ChatPage() {
                   [...messages].reverse().map((msg, idx, arr) => {
                     const isMe = msg.senderId === user?.id;
                     const sender = activeConversation.members.find(m => m.id === msg.senderId);
-                    
-                    // Group receipts
                     const seenByOthers = msg.readBy?.filter(r => r.userId !== user?.id) || [];
                     const isLastMessage = idx === arr.length - 1;
 
@@ -772,7 +655,6 @@ export default function ChatPage() {
                           isMe ? "self-end flex-row-reverse" : "self-start"
                         }`}
                       >
-                        {/* Avatar of sender */}
                         {!isMe && (
                           <div className="relative shrink-0">
                             {sender?.avatarUrl ? (
@@ -790,14 +672,11 @@ export default function ChatPage() {
                         )}
 
                         <div className="flex flex-col space-y-1">
-                          {/* Bubble content */}
                           <div className={`p-3.5 rounded-[1.5rem] shadow-sm relative group/bubble ${
                             isMe 
                               ? "bg-brand-500 text-white rounded-tr-none" 
                               : "bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-150 border border-zinc-200/50 dark:border-zinc-700/50 rounded-tl-none"
                           }`}>
-                            
-                            {/* 1. RENDER IMAGE TYPE */}
                             {msg.type === "IMAGE" && msg.content && (
                               <div 
                                 className="rounded-xl overflow-hidden cursor-pointer max-w-xs border aspect-auto"
@@ -806,8 +685,6 @@ export default function ChatPage() {
                                 <img src={msg.content} alt="Attachment" className="max-h-60 object-contain hover:opacity-90 transition-opacity" />
                               </div>
                             )}
-
-                            {/* 2. RENDER STRUCTURED PRODUCT CARD */}
                             {msg.type === "PRODUCT" && msg.attachmentMetadata?.cardId && (
                               <div className="bg-zinc-50 border border-zinc-100 dark:bg-zinc-900 rounded-2xl p-3 max-w-[260px] flex flex-col gap-2.5">
                                 <span className="text-[8px] font-black text-brand-600 uppercase tracking-widest flex items-center gap-1">
@@ -831,8 +708,6 @@ export default function ChatPage() {
                                 </Link>
                               </div>
                             )}
-
-                            {/* 3. RENDER STRUCTURED ORDER CARD */}
                             {msg.type === "ORDER" && msg.attachmentMetadata?.cardId && (
                               <div className="bg-zinc-50 border border-zinc-100 dark:bg-zinc-900 rounded-2xl p-3 max-w-[260px] flex flex-col gap-2.5">
                                 <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
@@ -856,8 +731,6 @@ export default function ChatPage() {
                                 </Link>
                               </div>
                             )}
-
-                            {/* 4. RENDER VIDEO TYPE */}
                             {msg.type === "VIDEO" && msg.content && (
                               <div className="rounded-xl overflow-hidden max-w-xs border">
                                 <video 
@@ -870,8 +743,6 @@ export default function ChatPage() {
                                 </video>
                               </div>
                             )}
-
-                            {/* 5. RENDER DOCUMENT ATTACHMENT */}
                             {msg.type === "DOCUMENT" && (
                               <a 
                                 href={msg.content} 
@@ -892,16 +763,12 @@ export default function ChatPage() {
                                 </div>
                               </a>
                             )}
-
-                            {/* 6. RENDER STANDARD TEXT (excludes all structured types) */}
                             {msg.type !== "IMAGE" && msg.type !== "VIDEO" && msg.type !== "DOCUMENT" && msg.type !== "PRODUCT" && msg.type !== "ORDER" && (
                               <p className="text-xs leading-relaxed font-light break-words whitespace-pre-wrap">
                                 {msg.content}
                               </p>
                             )}
                           </div>
-
-                          {/* Timestamp & read receipt details */}
                           <div className={`flex items-center gap-1.5 text-[9px] text-zinc-400 font-light ${
                             isMe ? "justify-end" : "justify-start"
                           }`}>
@@ -921,12 +788,8 @@ export default function ChatPage() {
                     );
                   })
                 )}
-
-                {/* Scroll Anchor at bottom */}
                 <div ref={messagesEndRef} className="h-[2px] shrink-0" />
               </div>
-
-              {/* Group Info Side Panel */}
               {showGroupInfo && activeConversation && (
                 <div className="w-64 border-l border-zinc-100 dark:border-zinc-800/40 bg-white dark:bg-zinc-900 p-4 overflow-y-auto shrink-0 custom-scrollbar">
                   <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-4">Thông tin phòng chat</h4>
@@ -972,10 +835,7 @@ export default function ChatPage() {
                 </div>
               )}
               </div>
-
-              {/* 3. Input bar area */}
               <div className="p-4 border-t border-zinc-100 dark:border-zinc-800/40 shrink-0 bg-white dark:bg-zinc-900">
-                {/* Upload attachment indicator */}
                 {isUploading && (
                   <div className="mb-3 bg-zinc-50 border p-3 rounded-xl flex items-center gap-3 text-xs text-zinc-600 animate-pulse">
                     <Loader2 className="h-4 w-4 animate-spin text-brand-500" />
@@ -984,7 +844,6 @@ export default function ChatPage() {
                 )}
 
                 <form onSubmit={handleSendTextSubmit} className="flex gap-2.5 items-end">
-                  {/* File attach button trigger */}
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1000,8 +859,6 @@ export default function ChatPage() {
                   >
                     <Paperclip className="h-4.5 w-4.5" />
                   </button>
-
-                  {/* Emoji picker toggle */}
                   <div className="relative">
                     <button
                       type="button"
@@ -1015,8 +872,6 @@ export default function ChatPage() {
                     >
                       <Smile className="h-4.5 w-4.5" />
                     </button>
-
-                    {/* Emoji grid popup */}
                     {isEmojiPickerOpen && (
                       <div className="absolute bottom-12 left-0 w-64 bg-white dark:bg-zinc-800 border rounded-2xl shadow-xl p-3 z-20 animate-toast-in">
                         <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Biểu tượng cảm xúc</div>
@@ -1038,8 +893,6 @@ export default function ChatPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Textarea auto-resize style */}
                   <textarea
                     ref={textareaRef}
                     rows={1}
@@ -1054,8 +907,6 @@ export default function ChatPage() {
                     }}
                     className="flex-1 max-h-24 p-3 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs focus:outline-none focus:bg-white resize-none custom-scrollbar dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-200 dark:focus:bg-zinc-800"
                   />
-
-                  {/* Send CTA */}
                   <button
                     type="submit"
                     disabled={!inputText.trim() || isUploading}
@@ -1067,7 +918,6 @@ export default function ChatPage() {
               </div>
             </>
           ) : (
-            /* PLACEHOLDER: NO CHAT OPENED */
             <div className="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-50/50 dark:bg-zinc-950/20 text-center">
               <div className="h-16 w-16 bg-white dark:bg-zinc-900 border rounded-2xl flex items-center justify-center text-zinc-300 dark:text-zinc-650 mx-auto shadow-sm mb-4 animate-bounce">
                 <MessageSquare className="h-8 w-8 text-brand-500" />
@@ -1088,10 +938,6 @@ export default function ChatPage() {
         </main>
 
       </div>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MODAL: NEW CHAT / CONTACT SELECTOR (Direct vs Group)
-          ═══════════════════════════════════════════════════════════════ */}
       {isNewChatOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsNewChatOpen(false)} />
@@ -1108,8 +954,6 @@ export default function ChatPage() {
               <Users className="h-5 w-5 text-brand-500" />
               Tạo cuộc trò chuyện mới
             </h3>
-
-            {/* Type selector tab */}
             <div className="grid grid-cols-2 gap-2 bg-zinc-50 border p-1 rounded-xl mb-4.5">
               <button
                 onClick={() => { setNewChatType("DIRECT"); setSelectedContactIds([]); }}
@@ -1132,8 +976,6 @@ export default function ChatPage() {
                 Nhóm chat (Group)
               </button>
             </div>
-
-            {/* Group details if selected */}
             {newChatType === "GROUP" && (
               <div className="mb-4 space-y-1.5">
                 <label className="block text-[10px] font-bold text-zinc-700 uppercase tracking-wider">Tên nhóm chat *</label>
@@ -1147,8 +989,6 @@ export default function ChatPage() {
                 />
               </div>
             )}
-
-            {/* Contacts list search */}
             <div className="space-y-4">
               <div className="font-bold text-[10px] text-zinc-400 uppercase tracking-wider">Danh bạ của bạn (Người bạn theo dõi)</div>
               
@@ -1188,8 +1028,6 @@ export default function ChatPage() {
                             <div className="text-[9px] text-zinc-400">@{contact.username}</div>
                           </div>
                         </div>
-
-                        {/* Selection check */}
                         <div className={`h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 ${
                           isSelected ? "bg-brand-500 border-brand-500 text-white" : "border-zinc-300 bg-white"
                         }`}>
@@ -1201,8 +1039,6 @@ export default function ChatPage() {
                 </div>
               )}
             </div>
-
-            {/* CTAs */}
             <div className="flex gap-3 mt-6 pt-4 border-t">
               <button
                 type="button"
@@ -1223,10 +1059,6 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MODAL: SHARE PRODUCT ATTACHMENT CARD SELECTOR
-          ═══════════════════════════════════════════════════════════════ */}
       {isShareProductOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsShareProductOpen(false)} />
@@ -1243,8 +1075,6 @@ export default function ChatPage() {
               <Tag className="h-5 w-5 text-brand-500" />
               Chọn sản phẩm để gửi vào chat
             </h3>
-
-            {/* Search filter */}
             <div className="flex gap-2 mb-4">
               <input
                 type="text"
@@ -1260,8 +1090,6 @@ export default function ChatPage() {
                 Tìm
               </button>
             </div>
-
-            {/* Products listing */}
             {isLoadingShopProducts ? (
               <div className="flex justify-center py-6">
                 <Loader2 className="h-5 w-5 text-brand-500 animate-spin" />
@@ -1293,10 +1121,6 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MODAL: SHARE ORDER ATTACHMENT CARD SELECTOR
-          ═══════════════════════════════════════════════════════════════ */}
       {isShareOrderOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsShareOrderOpen(false)} />
@@ -1313,8 +1137,6 @@ export default function ChatPage() {
               <ShoppingBag className="h-5 w-5 text-emerald-500" />
               Chọn đơn hàng để gửi vào chat
             </h3>
-
-            {/* Orders list */}
             {isLoadingMyOrders ? (
               <div className="flex justify-center py-6">
                 <Loader2 className="h-5 w-5 text-brand-500 animate-spin" />
@@ -1352,10 +1174,6 @@ export default function ChatPage() {
           </div>
         </div>
       )}
-
-      {/* ═══════════════════════════════════════════════════════════════
-          LIGHTBOX IMAGES ZOOM VIEWER OVERLAY
-          ═══════════════════════════════════════════════════════════════ */}
       {zoomImageUrl && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
           <button 

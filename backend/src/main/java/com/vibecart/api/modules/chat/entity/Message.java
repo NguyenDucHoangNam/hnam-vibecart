@@ -9,10 +9,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.Instant;
 import java.util.List;
-
-/**
- * Thực thể MongoDB đại diện cho một tin nhắn trong phòng chat.
- */
 @Document(collection = "messages")
 @CompoundIndex(name = "conv_created_idx", def = "{'conversationId': 1, 'createdAt': -1}")
 @Getter
@@ -47,10 +43,6 @@ public class Message {
     @Builder.Default
     @Field("created_at")
     private Instant createdAt = Instant.now();
-
-    /**
-     * Thông tin chi tiết của tệp đính kèm đi kèm tin nhắn (hình ảnh, video, sản phẩm, đơn hàng...).
-     */
     @Getter
     @Setter
     @Builder
@@ -72,10 +64,6 @@ public class Message {
         @Field("card_id")
         private String cardId;
     }
-
-    /**
-     * Bản ghi thời gian đã đọc tin nhắn của từng thành viên trong cuộc trò chuyện.
-     */
     @Getter
     @Setter
     @Builder

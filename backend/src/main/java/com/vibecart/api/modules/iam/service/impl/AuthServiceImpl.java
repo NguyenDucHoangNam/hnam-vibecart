@@ -31,11 +31,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link AuthService} xử lý đăng ký, đăng nhập, OAuth2, OTP,
- * token, quản lý tài khoản.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -230,8 +225,7 @@ public class AuthServiceImpl implements AuthService {
         switch (user.getStatus()) {
             case "PENDING_VERIFICATION" -> throw new AppException(ErrorCode.ACCOUNT_PENDING_VERIFICATION);
             case "BANNED" -> throw new AppException(ErrorCode.ACCOUNT_BANNED);
-            case "ACTIVE", "PENDING_DELETION" -> {
-                /* OK — Frontend sẽ kiểm tra status trong response để điều hướng */ }
+            case "ACTIVE", "PENDING_DELETION" -> { }
             default -> throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
         }
 
@@ -484,12 +478,6 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Password reset completed for user: {}. All sessions purged.", user.getUsername());
     }
-
-
-
-    /**
-     * Generate 6-digit OTP, store in Redis, and set cooldown.
-     */
     private String generateAndStoreOtp(String email) {
         String cooldownKey = KEY_OTP_COOLDOWN + email;
         if (Boolean.TRUE.equals(redisTemplate.hasKey(cooldownKey))) {
@@ -509,20 +497,12 @@ public class AuthServiceImpl implements AuthService {
         log.info("OTP generated for {}: {}", email, otp);
         return otp;
     }
-
-    /**
-     * Validate email domain is not in disposable blocklist.
-     */
     private void validateNotDisposableEmail(String email) {
         String domain = email.substring(email.indexOf("@") + 1);
         if (DISPOSABLE_DOMAINS.contains(domain)) {
             throw new AppException(ErrorCode.DISPOSABLE_EMAIL_NOT_ALLOWED);
         }
     }
-
-    /**
-     * Publish OTP registration/resend event to Kafka.
-     */
     private void publishOtpEvent(String email, String otp) {
         String eventId = UUID.randomUUID().toString();
         String subject = "[VibeCart] Mã xác thực OTP kích hoạt tài khoản";
@@ -551,10 +531,6 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
     }
-
-    /**
-     * Increment login attempts in Redis and lock out if necessary.
-     */
     private void incrementLoginAttempts(String identifier) {
         String attemptsKey = KEY_LOGIN_ATTEMPTS + identifier;
         String lockoutKey = KEY_LOGIN_LOCKOUT + identifier;
@@ -570,10 +546,6 @@ public class AuthServiceImpl implements AuthService {
             log.warn("Account locked out due to multiple failed login attempts: {}", identifier);
         }
     }
-
-    /**
-     * Process Google/Facebook OAuth2 user authentication.
-     */
     private AuthResponse processOAuthUser(String provider, String oauthId, String email, String name, String picture) {
         email = email.trim().toLowerCase();
 
@@ -586,7 +558,6 @@ public class AuthServiceImpl implements AuthService {
                         if ("PENDING_VERIFICATION".equals(u.getStatus())) {
                             log.info("Hard deleting clashing unverified user before OAuth2 mapping: {}", u.getEmail());
                             userRepository.hardDeleteUserByUserId(u.getId());
-                            // Clean up OTP state in Redis
                             redisTemplate.delete(KEY_REGISTRATION_OTP + normalizedEmail);
                             redisTemplate.delete(KEY_OTP_COOLDOWN + normalizedEmail);
                             redisTemplate.delete(KEY_OTP_ATTEMPTS + normalizedEmail);
@@ -632,10 +603,6 @@ public class AuthServiceImpl implements AuthService {
 
         return generateAuthResponse(user);
     }
-
-    /**
-     * Generate access token, refresh token and session info for AuthResponse.
-     */
     private AuthResponse generateAuthResponse(User user) {
         String rolesStr = user.getRole().getName();
 
@@ -666,10 +633,6 @@ public class AuthServiceImpl implements AuthService {
                 .user(userMapper.toUserResponse(user))
                 .build();
     }
-
-    /**
-     * Purge all active sessions for a user from Redis.
-     */
     private void purgeAllSessions(String username) {
         String sessionKey = KEY_USER_SESSIONS + username;
         Set<String> tokens = redisTemplate.opsForSet().members(sessionKey);

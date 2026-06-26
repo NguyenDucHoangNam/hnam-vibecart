@@ -22,8 +22,6 @@ function VerifyOtpContent() {
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Extract email from URL
   const email = searchParams.get("email") || "";
 
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
@@ -55,50 +53,35 @@ function VerifyOtpContent() {
       setIsLoading(false);
     }
   };
-
-  // References to the input elements for auto-focusing
   const inputRefs = useRef<HTMLInputElement[]>([]);
-
-  // 60-second countdown for resending instructions
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [countdown]);
-
-  // Set focus on first input box on mount
   useEffect(() => {
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
   }, []);
-
-  // Handle single character input
   const handleChange = (element: HTMLInputElement, index: number) => {
-    const value = element.value.replace(/[^0-9]/g, ""); // Allow only numbers
+    const value = element.value.replace(/[^0-9]/g, "");
     
     const newOtp = [...otp];
-    newOtp[index] = value.substring(value.length - 1); // Get last typed character
+    newOtp[index] = value.substring(value.length - 1);
     setOtp(newOtp);
-
-    // Auto-focus next input box
     if (value && index < 5 && inputRefs.current[index + 1]) {
       inputRefs.current[index + 1].focus();
     }
   };
-
-  // Handle backspace delete
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace") {
       if (!otp[index] && index > 0 && inputRefs.current[index - 1]) {
-        // If current box is empty, go back and focus previous
         inputRefs.current[index - 1].focus();
       }
     }
   };
-
-  // Handle copy-paste of full 6-digit OTP code
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pasteData = e.clipboardData.getData("text").replace(/[^0-9]/g, "").substring(0, 6);
@@ -106,8 +89,6 @@ function VerifyOtpContent() {
     if (pasteData.length === 6) {
       const newOtp = pasteData.split("");
       setOtp(newOtp);
-      
-      // Focus on the last input field after pasting
       if (inputRefs.current[5]) {
         inputRefs.current[5].focus();
       }
@@ -138,8 +119,6 @@ function VerifyOtpContent() {
     } catch (err: unknown) {
       console.error("OTP Verification Error:", err);
       const apiErr = err as ApiErrorType;
-      
-      // Parse specific backend codes for brute-force mitigation
       const errorCode = apiErr.data?.code;
       let errorMsg = apiErr.data?.message || apiErr.message || "Xác thực mã OTP thất bại.";
       
@@ -156,10 +135,7 @@ function VerifyOtpContent() {
 
   return (
     <div className="w-full max-w-md">
-      {/* Container Card */}
       <div className="bg-white/80 backdrop-blur-xl border border-brand-100/40 rounded-2xl p-6 sm:p-8 shadow-xl shadow-brand-500/5 transition-all duration-300">
-        
-        {/* Header Icon & Titles */}
         <div className="text-center mb-6">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 mb-4 shadow-sm border border-brand-100/40">
             <KeyRound className="h-6 w-6" />
@@ -173,18 +149,13 @@ function VerifyOtpContent() {
             <span className="font-semibold text-brand-700 break-all">{email || "email_cua_ban@example.com"}</span>
           </p>
         </div>
-
-        {/* General Error Display */}
         {error && (
           <div className="mb-6 p-4 bg-rose-50 border border-rose-200/50 rounded-xl flex items-start space-x-3 text-rose-700 text-sm leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
             <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
-
-        {/* Form Entry */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 6 Digit Box Container */}
           <div className="flex justify-between gap-2 max-w-xs mx-auto">
             {otp.map((digit, idx) => (
               <input
@@ -205,8 +176,6 @@ function VerifyOtpContent() {
               />
             ))}
           </div>
-
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading || otp.join("").length < 6}
@@ -222,8 +191,6 @@ function VerifyOtpContent() {
             )}
           </button>
         </form>
-
-        {/* Cooldown Timer Instruction */}
         <div className="mt-8 text-center text-sm text-zinc-400">
           {countdown > 0 ? (
             <p>

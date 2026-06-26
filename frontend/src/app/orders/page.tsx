@@ -33,16 +33,12 @@ const STATUS_TABS = [
 
 export default function MyOrdersPage() {
   const toast = useToast();
-
-  // States
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState("");
   const [page, setPage] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingAction, setIsProcessingAction] = useState<Record<string, boolean>>({});
-
-  // Load orders
   const loadOrders = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -55,14 +51,11 @@ export default function MyOrdersPage() {
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, page]);
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
-
-  // Cancel order shopper side
   const handleCancelOrder = async (orderId: string, orderCode: string) => {
     if (!window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng "${orderCode}" không?`)) {
       return;
@@ -82,8 +75,6 @@ export default function MyOrdersPage() {
   };
 
   const totalPages = Math.ceil(totalElements / 10);
-
-  // Status mapping to color
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -118,8 +109,6 @@ export default function MyOrdersPage() {
       <div className="absolute bottom-[20%] right-[5%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-4xl w-full mx-auto relative z-10">
-        
-        {/* HEADER */}
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
             <ShoppingBag className="h-8 w-8 text-brand-500" />
@@ -129,8 +118,6 @@ export default function MyOrdersPage() {
             Theo dõi trạng thái giao vận và thanh toán các đơn hàng con được phân tách tự động của bạn.
           </p>
         </div>
-
-        {/* STATUS TABS PANEL */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl p-2 mb-6 flex overflow-x-auto gap-1 shadow-sm no-scrollbar">
           {STATUS_TABS.map((tab) => (
             <button
@@ -149,8 +136,6 @@ export default function MyOrdersPage() {
             </button>
           ))}
         </div>
-
-        {/* ORDERS LIST */}
         {isLoading ? (
           <div className="space-y-6">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -181,7 +166,6 @@ export default function MyOrdersPage() {
                   key={order.orderId}
                   className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm overflow-hidden flex flex-col hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200"
                 >
-                  {/* Card Top Details */}
                   <div className="bg-zinc-50/50 dark:bg-zinc-950/20 px-6 py-4 border-b border-zinc-200/60 dark:border-zinc-800/50 flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-black text-brand-600 tracking-wider">
@@ -203,8 +187,6 @@ export default function MyOrdersPage() {
                       {getStatusLabel(order.status)}
                     </span>
                   </div>
-
-                  {/* Creator and Product Items summaries */}
                   <div className="p-6 flex flex-col gap-4 border-b border-zinc-100 dark:border-zinc-800/60">
                     <div className="flex items-center gap-2 text-xs font-bold text-zinc-850 dark:text-zinc-200">
                       <Store className="h-4.5 w-4.5 text-brand-500" />
@@ -226,8 +208,6 @@ export default function MyOrdersPage() {
                       ))}
                     </div>
                   </div>
-
-                  {/* Bottom details and CTAs */}
                   <div className="px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-50/20 dark:bg-zinc-950/10">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold">Tổng tiền thanh toán</span>
@@ -237,7 +217,6 @@ export default function MyOrdersPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
-                      {/* Cancel pending order button */}
                       {isPending && (
                         <button
                           disabled={isProcessing}
@@ -247,8 +226,6 @@ export default function MyOrdersPage() {
                           Hủy đơn
                         </button>
                       )}
-
-                      {/* PayOS checkout button */}
                       {isPending && order.paymentUrl && (
                         <a
                           href={order.paymentUrl}
@@ -275,8 +252,6 @@ export default function MyOrdersPage() {
             })}
           </div>
         )}
-
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2.5 mt-10">
             <button

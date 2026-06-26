@@ -8,10 +8,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-/**
- * Kho lưu trữ (Repository) quản lý dữ liệu MongoDB cho thực thể Conversation.
- */
 @Repository
 public interface ConversationRepository extends MongoRepository<Conversation, String> {
 

@@ -14,10 +14,6 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
-
-/**
- * Service tích hợp cổng thanh toán PayOS: tạo link, xác thực webhook.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -25,11 +21,6 @@ public class PayOSService {
 
     private final PayOSProperties payOSProperties;
     private final RestTemplate restTemplate = new RestTemplate();
-
-    /**
-     * Create a payment link via PayOS API.
-     * This method is called OUTSIDE of the database transaction.
-     */
     @SuppressWarnings("unchecked")
     public String createPaymentLink(long orderCode, long amount, String description) {
         log.info("Creating PayOS payment link for orderCode: {}, amount: {}", orderCode, amount);
@@ -86,10 +77,6 @@ public class PayOSService {
             throw new AppException(ErrorCode.PAYMENT_GATEWAY_ERROR);
         }
     }
-
-    /**
-     * Verify webhook signature from PayOS using HMAC-SHA256.
-     */
     public boolean verifyWebhookSignature(Map<String, Object> data, String receivedSignature) {
         try {
 
@@ -118,10 +105,6 @@ public class PayOSService {
             return false;
         }
     }
-
-    /**
-     * HMAC-SHA256 hash function.
-     */
     private String hmacSHA256(String key, String data) throws Exception {
         Mac hmac = Mac.getInstance("HmacSHA256");
         SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");

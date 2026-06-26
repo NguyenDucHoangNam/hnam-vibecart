@@ -47,10 +47,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link ProductService} quản lý sản phẩm, biến thể, tồn kho.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

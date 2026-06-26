@@ -21,10 +21,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-/**
- * Lớp triển khai các dịch vụ nghiệp vụ liên quan đến tệp tin media.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -42,10 +38,6 @@ public class MediaServiceImpl implements MediaService {
     private static final long MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
     private static final int PRESIGNED_URL_EXPIRATION_MINUTES = 15;
-
-    /**
-     * Tải tệp tin đơn lẻ lên bộ lưu trữ và ghi nhận metadata.
-     */
     @Override
     public MediaUploadResponse uploadFile(MultipartFile file, String folder, String username) {
         validateFile(file);
@@ -76,10 +68,6 @@ public class MediaServiceImpl implements MediaService {
             throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
         }
     }
-
-    /**
-     * Tải nhiều tệp tin đồng thời và rollback các tệp tin đã tải lên S3 nếu xảy ra lỗi.
-     */
     @Override
     public List<MediaUploadResponse> uploadFiles(List<MultipartFile> files, String folder, String username) {
         if (files.size() > 10) {
@@ -131,10 +119,6 @@ public class MediaServiceImpl implements MediaService {
         log.info("Batch upload by {}: {} files to folder {}", username, files.size(), folder);
         return results;
     }
-
-    /**
-     * Tạo Pre-signed URL cho phép tải trực tiếp từ Client và lưu metadata dạng PENDING.
-     */
     @Override
     public PresignedUrlResponse generatePresignedUrl(String contentType, long fileSize, String folder,
             String username) {
@@ -170,10 +154,6 @@ public class MediaServiceImpl implements MediaService {
 
         return new PresignedUrlResponse(uploadUrl, key, publicUrl, PRESIGNED_URL_EXPIRATION_MINUTES);
     }
-
-    /**
-     * Kiểm tra quyền sở hữu (hoặc admin) và tiến hành xóa tệp tin trên S3 cùng metadata trong DB.
-     */
     @Override
     public void deleteFile(String key, String username,
             Collection<? extends GrantedAuthority> authorities) {
@@ -200,10 +180,6 @@ public class MediaServiceImpl implements MediaService {
             storageService.deleteFile(key);
         }
     }
-
-    /**
-     * Xác nhận tệp tin tải lên trực tiếp từ Client thành công, cập nhật trạng thái VERIFIED.
-     */
     @Override
     public void confirmUpload(String key, String username) {
         log.info("Confirm upload requested for key: {} by user: {}", key, username);
@@ -239,10 +215,6 @@ public class MediaServiceImpl implements MediaService {
         mediaMetadataRepository.save(metadata);
         log.info("Successfully confirmed and verified upload for key: {}", key);
     }
-
-    /**
-     * Xác thực thông tin kích thước và định dạng tệp tin media.
-     */
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
             throw new AppException(ErrorCode.INVALID_INPUT);
@@ -260,18 +232,10 @@ public class MediaServiceImpl implements MediaService {
             throw new AppException(ErrorCode.FILE_TOO_LARGE);
         }
     }
-
-    /**
-     * Kiểm tra định dạng tệp tin có được chấp nhận hay không.
-     */
     private boolean isAllowedType(String contentType) {
         return contentType != null
                 && (ALLOWED_IMAGE_TYPES.contains(contentType) || ALLOWED_VIDEO_TYPES.contains(contentType));
     }
-
-    /**
-     * Tạo đường dẫn khóa (S3 Key) duy nhất và bảo mật dựa vào Content-Type.
-     */
     private String generateKey(String folder, String contentType) {
         String extension = getExtension(contentType);
         ZonedDateTime now = ZonedDateTime.now();
@@ -282,10 +246,6 @@ public class MediaServiceImpl implements MediaService {
                 UUID.randomUUID(),
                 extension);
     }
-
-    /**
-     * Chuyển đổi Content-Type sang phần mở rộng tệp tin tương ứng.
-     */
     private String getExtension(String contentType) {
         return switch (contentType) {
             case "image/jpeg" -> "jpg";

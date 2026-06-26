@@ -22,8 +22,6 @@ import { useToast } from "@/context/ToastContext";
 import { Forbidden } from "@/components/common/Forbidden";
 import { productService } from "@/services/product.service";
 import { ROUTES } from "@/constants/routes";
-
-// Define strict Backend-matching Product interface
 interface AdminProduct {
   id: string;
   name: string;
@@ -31,7 +29,7 @@ interface AdminProduct {
   price: number;
   discountPrice: number;
   status: "ACTIVE" | "INACTIVE";
-  quantity: number; // Inventory quantity from inventories table
+  quantity: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,8 +38,6 @@ export default function AdminProductsPage() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const toast = useToast();
   const router = useRouter();
-
-  // State Management
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [page, setPage] = useState(0);
@@ -49,41 +45,30 @@ export default function AdminProductsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDataLoading, setIsDataLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
-
-  // Modals visibility state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-
-  // Selected product states for edit/adjust/delete actions
   const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
-
-  // Form states
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     discountPrice: "0",
     status: "ACTIVE" as "ACTIVE" | "INACTIVE",
-    initialStock: "0" // Only used for create
+    initialStock: "0"
   });
 
   const [adjustData, setAdjustData] = useState({
     adjustment: "",
     reason: ""
   });
-
-  // Authorization Route Guard checking
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Vui lòng đăng nhập để truy cập trang quản trị.");
       router.push(ROUTES.LOGIN);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAuthLoading, router]);
-
-  // Fetch Products from Backend API
   const fetchProducts = React.useCallback(async () => {
     setIsDataLoading(true);
     try {
@@ -92,8 +77,6 @@ export default function AdminProductsPage() {
         page,
         size
       });
-      
-      // Cast the response contents to match our AdminProduct schema
       const mappedContent: AdminProduct[] = (response.content || []).map((p: any) => ({
         id: p.id,
         name: p.name,
@@ -114,7 +97,6 @@ export default function AdminProductsPage() {
     } finally {
       setIsDataLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size, searchQuery]);
 
   useEffect(() => {
@@ -122,15 +104,11 @@ export default function AdminProductsPage() {
       fetchProducts();
     }
   }, [page, searchQuery, isAuthenticated, user, fetchProducts]);
-
-  // Trigger search on debounce / submit
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(0);
     fetchProducts();
   };
-
-  // Open creation modal
   const openCreateModal = () => {
     setFormData({
       name: "",
@@ -142,8 +120,6 @@ export default function AdminProductsPage() {
     });
     setIsCreateOpen(true);
   };
-
-  // Open edit modal
   const openEditModal = (product: AdminProduct) => {
     setSelectedProduct(product);
     setFormData({
@@ -152,12 +128,10 @@ export default function AdminProductsPage() {
       price: product.price.toString(),
       discountPrice: product.discountPrice.toString(),
       status: product.status,
-      initialStock: product.quantity.toString() // Ignored in PUT but filled for reference
+      initialStock: product.quantity.toString()
     });
     setIsEditOpen(true);
   };
-
-  // Open inventory adjust modal
   const openAdjustModal = (product: AdminProduct) => {
     setSelectedProduct(product);
     setAdjustData({
@@ -166,14 +140,10 @@ export default function AdminProductsPage() {
     });
     setIsAdjustOpen(true);
   };
-
-  // Open delete confirmation modal
   const openDeleteModal = (product: AdminProduct) => {
     setSelectedProduct(product);
     setIsDeleteOpen(true);
   };
-
-  // Handle product creation
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.price) {
@@ -189,11 +159,8 @@ export default function AdminProductsPage() {
           price: Number(formData.price),
           discountPrice: Number(formData.discountPrice),
           status: formData.status,
-          // Sending inventory properties to match full product creation payload
           quantity: Number(formData.initialStock)
         };
-
-        // Call Service
         await productService.createProduct(payload as any);
         toast.success("Tạo thành công", `Sản phẩm "${formData.name}" đã được tạo.`);
         setIsCreateOpen(false);
@@ -205,8 +172,6 @@ export default function AdminProductsPage() {
       }
     });
   };
-
-  // Handle product update
   const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
@@ -224,8 +189,6 @@ export default function AdminProductsPage() {
           discountPrice: Number(formData.discountPrice),
           status: formData.status
         };
-
-        // Call Service
         await productService.updateProduct(selectedProduct.id, payload as any);
         toast.success("Cập nhật thành công", `Sản phẩm "${formData.name}" đã được cập nhật.`);
         setIsEditOpen(false);
@@ -236,8 +199,6 @@ export default function AdminProductsPage() {
       }
     });
   };
-
-  // Handle inventory adjustment
   const handleAdjustInventory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
@@ -246,8 +207,6 @@ export default function AdminProductsPage() {
       toast.warning("Nhập số lượng", "Vui lòng nhập số lượng tăng (+) hoặc giảm (-) hợp lệ.");
       return;
     }
-
-    // Guard negative inventory check at client level
     if (selectedProduct.quantity + adjustmentQty < 0) {
       toast.warning("Lỗi tồn kho", "Số lượng điều chỉnh giảm vượt quá tồn kho hiện có.");
       return;
@@ -255,7 +214,6 @@ export default function AdminProductsPage() {
 
     startTransition(async () => {
       try {
-        // Call newly added Service method
         await productService.adjustInventory(
           selectedProduct.id, 
           adjustmentQty, 
@@ -273,8 +231,6 @@ export default function AdminProductsPage() {
       }
     });
   };
-
-  // Handle product deletion
   const handleDeleteProduct = async () => {
     if (!selectedProduct) return;
 
@@ -283,8 +239,6 @@ export default function AdminProductsPage() {
         await productService.deleteProduct(selectedProduct.id);
         toast.success("Xóa thành công", `Đã xóa sản phẩm "${selectedProduct.name}" khỏi hệ thống.`);
         setIsDeleteOpen(false);
-        
-        // Handle page alignment
         if (products.length === 1 && page > 0) {
           setPage(prev => prev - 1);
         } else {
@@ -296,8 +250,6 @@ export default function AdminProductsPage() {
       }
     });
   };
-
-  // Auth loading state
   if (isAuthLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] bg-zinc-50 transition-colors duration-300">
@@ -306,8 +258,6 @@ export default function AdminProductsPage() {
       </div>
     );
   }
-
-  // Double security guard - render Forbidden component if user has no role ROLE_ADMIN
   if (!isAuthenticated || !user?.roles?.includes("ROLE_ADMIN")) {
     return <Forbidden />;
   }
@@ -316,15 +266,10 @@ export default function AdminProductsPage() {
 
   return (
     <div className="flex-1 flex flex-col bg-zinc-50 px-6 py-10 transition-colors duration-300 relative">
-      {/* Floating background blobs */}
       <div className="absolute top-[5%] right-[10%] w-72 h-72 bg-brand-100/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[10%] left-[5%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl w-full mx-auto relative z-10 flex-1 flex flex-col">
-        
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* DASHBOARD HEADER */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 flex items-center gap-2.5">
@@ -344,10 +289,6 @@ export default function AdminProductsPage() {
             Thêm sản phẩm
           </button>
         </div>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SEARCH & CONTROLS TOOLBAR */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
         <div className="bg-white backdrop-blur-sm rounded-2xl border border-zinc-200/60 p-4 mb-6 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
           <form onSubmit={handleSearchSubmit} className="relative w-full sm:max-w-sm">
             <input
@@ -368,10 +309,6 @@ export default function AdminProductsPage() {
             Làm mới
           </button>
         </div>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* DATA TABLE */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
         <div className="bg-white backdrop-blur-sm rounded-2xl border border-zinc-200/60 shadow-sm overflow-hidden flex-1 flex flex-col min-h-[400px]">
           <div className="overflow-x-auto flex-1">
             <table className="w-full border-collapse text-left">
@@ -414,7 +351,6 @@ export default function AdminProductsPage() {
                       key={product.id}
                       className="hover:bg-zinc-50/50 transition-colors duration-150 group"
                     >
-                      {/* Product Name & Description */}
                       <td className="px-6 py-4.5 max-w-xs">
                         <div className="font-bold text-zinc-950 truncate" title={product.name}>
                           {product.name}
@@ -423,8 +359,6 @@ export default function AdminProductsPage() {
                           {product.description || "Chưa cập nhật mô tả..."}
                         </div>
                       </td>
-
-                      {/* Prices */}
                       <td className="px-6 py-4.5">
                         {product.discountPrice > 0 ? (
                           <div className="flex flex-col">
@@ -441,8 +375,6 @@ export default function AdminProductsPage() {
                           </span>
                         )}
                       </td>
-
-                      {/* Stock Quantity */}
                       <td className="px-6 py-4.5">
                         <div className="flex items-center gap-1.5">
                           <span className={`inline-block h-2 w-2 rounded-full ${
@@ -456,8 +388,6 @@ export default function AdminProductsPage() {
                           <span className="text-zinc-400 text-xs font-light">cái</span>
                         </div>
                       </td>
-
-                      {/* Status */}
                       <td className="px-6 py-4.5">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
                           product.status === "ACTIVE"
@@ -467,8 +397,6 @@ export default function AdminProductsPage() {
                           {product.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
                         </span>
                       </td>
-
-                      {/* Actions */}
                       <td className="px-6 py-4.5 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
@@ -500,10 +428,6 @@ export default function AdminProductsPage() {
               </tbody>
             </table>
           </div>
-
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* PAGINATION PANEL */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
           {totalPages > 1 && (
             <div className="border-t border-zinc-200/80 px-6 py-4.5 flex items-center justify-between bg-zinc-50/30 ">
               <span className="text-xs text-zinc-400 font-light">
@@ -530,10 +454,6 @@ export default function AdminProductsPage() {
           )}
         </div>
       </div>
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL: CREATE PRODUCT */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => setIsCreateOpen(false)} />
@@ -649,10 +569,6 @@ export default function AdminProductsPage() {
           </div>
         </div>
       )}
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL: EDIT PRODUCT */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {isEditOpen && selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => setIsEditOpen(false)} />
@@ -754,10 +670,6 @@ export default function AdminProductsPage() {
           </div>
         </div>
       )}
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL: ADJUST INVENTORY */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {isAdjustOpen && selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => setIsAdjustOpen(false)} />
@@ -831,10 +743,6 @@ export default function AdminProductsPage() {
           </div>
         </div>
       )}
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL: CONFIRM DELETE */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {isDeleteOpen && selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => setIsDeleteOpen(false)} />

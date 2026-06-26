@@ -58,19 +58,13 @@ interface PaginatedUsers {
 export default function AdminUsersPage() {
   const { user: currentUser, isAuthenticated, isLoading: authLoading } = useAuth();
   const toast = useToast();
-
-  // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize] = useState(8);
-
-  // Data states
   const [usersPage, setUsersPage] = useState<PaginatedUsers | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
-
-  // Modal states
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState("ACTIVE");
@@ -79,8 +73,6 @@ export default function AdminUsersPage() {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [updatingRoles, setUpdatingRoles] = useState<string[]>([]);
   const [isUpdatingRolesSubmit, setIsUpdatingRolesSubmit] = useState(false);
-
-  // Fetch users from API
   const fetchUsers = useCallback(async () => {
     setIsLoadingData(true);
     try {
@@ -106,10 +98,7 @@ export default function AdminUsersPage() {
       setIsLoadingData(false);
     }
   }, [searchTerm, statusFilter, roleFilter, currentPage, pageSize, toast]);
-
-  // Trigger search with debounce or state updates
   useEffect(() => {
-    // Reset to page 0 on filter change
     setCurrentPage(0);
   }, [searchTerm, statusFilter, roleFilter]);
 
@@ -118,8 +107,6 @@ export default function AdminUsersPage() {
       fetchUsers();
     }
   }, [isAuthenticated, currentUser, fetchUsers, currentPage]);
-
-  // Handle open status modal
   const openStatusModal = (user: UserResponse) => {
     if (user.username === currentUser?.username) {
       toast.warning("Hạn chế bảo mật", "Bạn không thể tự thay đổi trạng thái của chính mình.");
@@ -129,8 +116,6 @@ export default function AdminUsersPage() {
     setUpdatingStatus(user.status);
     setIsStatusModalOpen(true);
   };
-
-  // Handle submit status update
   const handleStatusSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
@@ -158,8 +143,6 @@ export default function AdminUsersPage() {
       setIsUpdatingStatusSubmit(false);
     }
   };
-
-  // Handle open role modal
   const openRoleModal = (user: UserResponse) => {
     if (user.username === currentUser?.username) {
       toast.warning("Hạn chế bảo mật", "Bạn không thể tự thay đổi vai trò của chính mình.");
@@ -169,13 +152,9 @@ export default function AdminUsersPage() {
     setUpdatingRoles([...user.roles]);
     setIsRoleModalOpen(true);
   };
-
-  // Change selected role (only 1 role allowed)
   const handleRoleChange = (roleName: string) => {
     setUpdatingRoles([roleName]);
   };
-
-  // Handle submit role update
   const handleRoleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
@@ -203,8 +182,6 @@ export default function AdminUsersPage() {
       setIsUpdatingRolesSubmit(false);
     }
   };
-
-  // Format date helper
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -217,8 +194,6 @@ export default function AdminUsersPage() {
       return dateStr;
     }
   };
-
-  // Role Badge component
   const RenderRoleBadge = ({ roles }: { roles: string[] }) => {
     return (
       <div className="flex flex-wrap gap-1">
@@ -247,8 +222,6 @@ export default function AdminUsersPage() {
       </div>
     );
   };
-
-  // Status Badge component
   const RenderStatusBadge = ({ status }: { status: string }) => {
     let styles = "bg-zinc-100 text-zinc-600 border-zinc-200";
     let label = status;
@@ -276,8 +249,6 @@ export default function AdminUsersPage() {
       </span>
     );
   };
-
-  // 1. Auth states & Guards
   if (authLoading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">
@@ -297,8 +268,6 @@ export default function AdminUsersPage() {
   return (
     <div className="flex-1 w-full bg-zinc-50/50 py-10 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Modern Premium Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-200/60 pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -317,8 +286,6 @@ export default function AdminUsersPage() {
             Hệ thống Quản trị Viên
           </div>
         </div>
-
-        {/* 3 Premium Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 shadow-xs flex items-center justify-between hover:shadow-md transition-all duration-300">
             <div className="space-y-1">
@@ -356,12 +323,9 @@ export default function AdminUsersPage() {
             </div>
           </div>
         </div>
-
-        {/* Filter Section */}
         <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 shadow-2xs space-y-4">
           
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search Input */}
             <div className="relative w-full md:max-w-md group">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400 group-focus-within:text-emerald-500">
                 <Search className="w-4 h-4 transition-colors" />
@@ -374,8 +338,6 @@ export default function AdminUsersPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
               />
             </div>
-
-            {/* Quick Dropdown Role Filters */}
             <div className="flex items-center gap-3 w-full md:w-auto self-start md:self-center">
               <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider hidden sm:inline flex-shrink-0">Lọc vai trò:</span>
               <div className="relative w-full sm:w-48">
@@ -392,8 +354,6 @@ export default function AdminUsersPage() {
               </div>
             </div>
           </div>
-
-          {/* Quick Filter Tabs for Status */}
           <div className="flex flex-wrap gap-2 border-t border-zinc-100 pt-3">
             {[
               { code: "ALL", label: "Tất cả" },
@@ -417,8 +377,6 @@ export default function AdminUsersPage() {
           </div>
 
         </div>
-
-        {/* User Table Grid Container */}
         <div className="bg-white border border-zinc-200/60 rounded-2xl shadow-xs overflow-hidden">
           
           <div className="overflow-x-auto w-full">
@@ -459,7 +417,6 @@ export default function AdminUsersPage() {
                         key={userItem.id} 
                         className={`hover:bg-zinc-50/50 transition-colors ${isSelf ? "bg-emerald-50/15" : ""}`}
                       >
-                        {/* Account Info */}
                         <td className="py-4.5 px-6">
                           <div className="flex items-center gap-3">
                             {userItem.avatarUrl ? (
@@ -486,8 +443,6 @@ export default function AdminUsersPage() {
                             </div>
                           </div>
                         </td>
-
-                        {/* Email */}
                         <td className="py-4.5 px-6 text-sm text-zinc-600 max-w-[120px] sm:max-w-xs truncate">
                           <div className="flex items-center gap-1.5">
                             <Mail className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
@@ -497,29 +452,20 @@ export default function AdminUsersPage() {
                             {userItem.oauthProvider}
                           </span>
                         </td>
-
-                        {/* Roles */}
                         <td className="py-4.5 px-6">
                           <RenderRoleBadge roles={userItem.roles} />
                         </td>
-
-                        {/* Created At */}
                         <td className="py-4.5 px-6 text-xs text-zinc-500 font-semibold">
                           <div className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-zinc-400" />
                             <span>{userItem.createdAt ? formatDate(userItem.createdAt) : "Chưa rõ"}</span>
                           </div>
                         </td>
-
-                        {/* Status */}
                         <td className="py-4.5 px-6">
                           <RenderStatusBadge status={userItem.status} />
                         </td>
-
-                        {/* Actions */}
                         <td className="py-4.5 px-6 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {/* Role Update Button */}
                             <button
                               onClick={() => openRoleModal(userItem)}
                               disabled={isSelf}
@@ -530,8 +476,6 @@ export default function AdminUsersPage() {
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
-
-                            {/* Status Update Button */}
                             <button
                               onClick={() => openStatusModal(userItem)}
                               disabled={isSelf}
@@ -555,8 +499,6 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Table Footer / Pagination */}
           {usersPage && usersPage.totalPages > 1 && (
             <div className="bg-zinc-50/50 px-6 py-4.5 border-t border-zinc-100 flex items-center justify-between">
               <span className="text-xs font-bold text-zinc-500">
@@ -585,8 +527,6 @@ export default function AdminUsersPage() {
         </div>
 
       </div>
-
-      {/* 1. MODAL: THAY ĐỔI TRẠNG THÁI */}
       {isStatusModalOpen && selectedUser && (
         <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden scale-in-95 duration-200">
@@ -671,8 +611,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
-
-      {/* 2. MODAL: PHÂN QUYỀN (THAY ĐỔI VAI TRÒ) */}
       {isRoleModalOpen && selectedUser && (
         <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden scale-in-95 duration-200">
@@ -725,7 +663,7 @@ export default function AdminUsersPage() {
                         <input
                           type="radio"
                           checked={isChecked}
-                          onChange={() => {}} // Controlled manually by label click
+                          onChange={() => {}}
                           className="h-4.5 w-4.5 border-zinc-300 text-emerald-600 focus:ring-emerald-500/20 mt-0.5 pointer-events-none accent-emerald-600"
                         />
                         <div className="flex flex-col gap-0.5">

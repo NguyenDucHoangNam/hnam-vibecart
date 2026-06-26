@@ -20,10 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-/**
- * Filter xác thực yêu cầu bằng cách kiểm tra tính hợp lệ của JWT Token từ request.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -31,10 +27,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
     private final StringRedisTemplate redisTemplate;
-
-    /**
-     * Thực hiện kiểm tra JWT token, xác thực quyền truy cập và đưa thông tin vào Security Context.
-     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -75,10 +67,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
-    /**
-     * Lấy token JWT từ header 'Authorization' (tiền tố 'Bearer ').
-     */
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {

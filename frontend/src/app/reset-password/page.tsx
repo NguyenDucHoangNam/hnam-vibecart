@@ -19,8 +19,6 @@ interface ApiErrorType {
 function ResetPasswordContent() {
   const toast = useToast();
   const searchParams = useSearchParams();
-
-  // Extract reset token from URL
   const token = searchParams.get("token") || "";
 
   const [newPassword, setNewPassword] = useState("");
@@ -32,8 +30,6 @@ function ResetPasswordContent() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // Client-side password validation
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -67,7 +63,6 @@ function ResetPasswordContent() {
     setIsLoading(true);
 
     try {
-      // Calling /api/v1/auth/reset-password
       await api.post(ENDPOINTS.AUTH.RESET_PASSWORD, {
         token: token,
         newPassword: newPassword,
@@ -88,11 +83,9 @@ function ResetPasswordContent() {
 
   return (
     <div className="w-full max-w-sm">
-      {/* Container Card */}
       <div className="bg-white/80 backdrop-blur-xl border border-brand-100/40 rounded-2xl p-6 shadow-xl shadow-brand-500/5 transition-all duration-300">
         
         {!token ? (
-          /* Missing/Invalid Token State */
           <div className="text-center py-4">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 mb-4 border border-rose-100">
               <ShieldAlert className="h-6 w-6" />
@@ -109,7 +102,6 @@ function ResetPasswordContent() {
             </Link>
           </div>
         ) : !isSuccess ? (
-          /* Password Reset Form */
           <>
             <div className="text-center mb-6">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 mb-4 shadow-sm border border-brand-100/40">
@@ -122,18 +114,13 @@ function ResetPasswordContent() {
                 Thiết lập mật khẩu mới cho tài khoản của bạn
               </p>
             </div>
-
-            {/* General Error Display */}
             {error && (
               <div className="mb-5 p-3 bg-rose-50 border border-rose-200/50 rounded-xl flex items-start space-x-3 text-rose-700 text-sm leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
                 <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
-
-            {/* Form Fields */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* New Password */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
                   Mật khẩu mới
@@ -164,8 +151,6 @@ function ResetPasswordContent() {
                   <p className="text-[11px] text-rose-500 mt-1 pl-1 leading-normal">{fieldErrors.newPassword}</p>
                 )}
               </div>
-
-              {/* Confirm Password */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
                   Xác nhận mật khẩu
@@ -196,8 +181,6 @@ function ResetPasswordContent() {
                   <p className="text-[11px] text-rose-500 mt-1 pl-1 leading-normal">{fieldErrors.confirmPassword}</p>
                 )}
               </div>
-
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -215,7 +198,6 @@ function ResetPasswordContent() {
             </form>
           </>
         ) : (
-          /* Reset Password Success State */
           <div className="text-center py-4 animate-in fade-in zoom-in-95 duration-300">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 mb-6 shadow-sm border border-emerald-100/50">
               <CheckCircle2 className="h-8 w-8" />
@@ -234,8 +216,6 @@ function ResetPasswordContent() {
               </Link>
           </div>
         )}
-
-        {/* Bottom Back Nav */}
         {!isSuccess && (
           <div className="mt-6 text-center text-sm border-t border-brand-100/40 pt-4">
             <Link

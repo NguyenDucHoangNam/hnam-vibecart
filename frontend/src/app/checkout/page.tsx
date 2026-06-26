@@ -33,13 +33,9 @@ export default function CheckoutPage() {
   const router = useRouter();
   const toast = useToast();
   const { fetchCart } = useCart();
-
-  // Load checkout snapshot
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
   const [isPlacing, setIsPlacing] = useState(false);
   const [checkoutSuccessData, setCheckoutSuccessData] = useState<CheckoutResponse | null>(null);
-
-  // Form states
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
@@ -59,8 +55,6 @@ export default function CheckoutPage() {
   if (checkoutItems.length === 0 && !checkoutSuccessData) {
     return null;
   }
-
-  // Group snapshot items by Creator for visualization
   const groupedCheckout = checkoutItems.reduce<Record<string, { creatorName: string; items: CartItem[] }>>(
     (acc, item) => {
       const cId = item.creatorId || "unknown";
@@ -75,24 +69,18 @@ export default function CheckoutPage() {
     },
     {}
   );
-
-  // Compute overall financial summaries
   const totalGrossAmount = checkoutItems.reduce((acc, item) => acc + item.originalPrice * item.quantity, 0);
   const totalDiscountAmount = checkoutItems.reduce(
     (acc, item) => acc + (item.discountPrice > 0 ? (item.originalPrice - item.discountPrice) * item.quantity : 0),
     0
   );
   const finalBillingAmount = totalGrossAmount - totalDiscountAmount;
-
-  // Submit place order
   const handlePlaceOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recipientName.trim() || !recipientPhone.trim() || !shippingAddress.trim()) {
       toast.warning("Thiếu thông tin", "Vui lòng nhập đầy đủ thông tin nhận hàng.");
       return;
     }
-
-    // Validate Vietnamese phone number (10 digits starting with 0)
     const phoneRegex = /^0\d{9}$/;
     if (!phoneRegex.test(recipientPhone.trim())) {
       toast.warning("Số điện thoại không hợp lệ", "Vui lòng nhập số điện thoại Việt Nam hợp lệ (10 số, bắt đầu bằng 0).");
@@ -101,11 +89,8 @@ export default function CheckoutPage() {
 
     setIsPlacing(true);
     try {
-      // 1. Generate client-side Idempotency Key
       const randomId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const idempotencyKey = `chk-${Date.now()}-${randomId}`;
-
-      // 2. Prepare payload
       const payload: PlaceOrderPayload = {
         items: checkoutItems.map((i) => ({
           variantId: i.variantId,
@@ -117,15 +102,9 @@ export default function CheckoutPage() {
         customerNote: customerNote.trim() || undefined,
         voucherCode: voucherCode.trim() || undefined,
       };
-
-      // 3. Post to API
       const result = await orderService.placeOrder(payload, idempotencyKey);
-      
-      // 4. Update states & clean snapshot
       setCheckoutSuccessData(result);
       sessionStorage.removeItem("checkout_items");
-      
-      // 5. Force reload Cart context to reflect items deletion
       await fetchCart();
 
       toast.success("Đặt hàng thành công", "Đơn hàng đã được tách và khởi tạo thành công.");
@@ -136,10 +115,6 @@ export default function CheckoutPage() {
       setIsPlacing(false);
     }
   };
-
-  // =========================================================================
-  // SUCCESS VIEW: SHOW CREATOR PAYMENT DASHBOARD
-  // =========================================================================
   if (checkoutSuccessData) {
     return (
       <div className="flex-1 bg-zinc-50 dark:bg-zinc-950 px-4 sm:px-6 lg:px-8 py-10 transition-colors duration-300 relative flex items-center justify-center min-h-[85vh]">
@@ -159,8 +134,6 @@ export default function CheckoutPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2.5 font-light leading-relaxed max-w-md mx-auto">
             Hệ thống **VibeCart** đã tự động **phân tách giỏ hàng** của bạn thành các đơn hàng con tương ứng với từng kho hàng vật lý của các Creators:
           </p>
-
-          {/* Sub-orders listing with QR payment options */}
           <div className="mt-8 space-y-4 text-left">
             {checkoutSuccessData.subOrders?.map((order) => (
               <div 
@@ -207,8 +180,6 @@ export default function CheckoutPage() {
               Hệ thống áp dụng giới hạn thời gian thanh toán là **15 phút**. Nếu quá thời gian trên chưa quét mã QR, các đơn hàng con sẽ tự động bị hủy và giải phóng tồn kho vật lý. Bạn có thể thanh toán các đơn hàng con độc lập.
             </span>
           </div>
-
-          {/* CTA Footer */}
           <div className="mt-8 flex flex-col sm:flex-row gap-3.5 justify-center">
             <Link
               href={ROUTES.ORDERS}
@@ -228,18 +199,12 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
-  // =========================================================================
-  // STANDARD CHECKOUT FORM VIEW
-  // =========================================================================
   return (
     <div className="flex-1 bg-zinc-50 dark:bg-zinc-950 px-4 sm:px-6 lg:px-8 py-10 transition-colors duration-300 relative">
       <div className="absolute top-[10%] left-[5%] w-80 h-80 bg-brand-100/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[5%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl w-full mx-auto relative z-10">
-        
-        {/* Back Link */}
         <Link 
           href={ROUTES.CART}
           className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold mb-8 group"
@@ -247,8 +212,6 @@ export default function CheckoutPage() {
           <ChevronLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
           Quay lại Giỏ hàng
         </Link>
-
-        {/* HEADER */}
         <div className="mb-10 text-center max-w-xl mx-auto">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1 text-xs font-semibold text-brand-700 mb-4">
             <Lock className="h-3.5 w-3.5 text-brand-500" />
@@ -261,21 +224,13 @@ export default function CheckoutPage() {
             Vui lòng cung cấp chính xác thông tin nhận hàng và kiểm tra cách phân tách các đơn hàng con.
           </p>
         </div>
-
-        {/* CONTENT GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT PANEL: FORM & SPLIT DIAGRAM */}
           <div className="lg:col-span-7 space-y-6">
-            
-            {/* 1. SHIPPING ADDRESS FORM */}
             <form onSubmit={handlePlaceOrderSubmit} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 sm:p-8 shadow-sm space-y-5">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-brand-500" />
                 Thông tin người nhận
               </h3>
-
-              {/* Recipient Name */}
               <div>
                 <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 uppercase tracking-wider">Họ và Tên người nhận *</label>
                 <div className="relative">
@@ -290,8 +245,6 @@ export default function CheckoutPage() {
                   <User className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-400" />
                 </div>
               </div>
-
-              {/* Recipient Phone */}
               <div>
                 <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 uppercase tracking-wider">Số điện thoại *</label>
                 <div className="relative">
@@ -306,8 +259,6 @@ export default function CheckoutPage() {
                   <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-400" />
                 </div>
               </div>
-
-              {/* Shipping Address */}
               <div>
                 <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 uppercase tracking-wider">Địa chỉ giao hàng *</label>
                 <div className="relative">
@@ -322,8 +273,6 @@ export default function CheckoutPage() {
                   <MapPin className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-400" />
                 </div>
               </div>
-
-              {/* Customer Note */}
               <div>
                 <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 uppercase tracking-wider">Ghi chú cho đơn hàng</label>
                 <div className="relative">
@@ -336,12 +285,8 @@ export default function CheckoutPage() {
                   />
                 </div>
               </div>
-
-              {/* Form submit hidden or active on sidebar */}
               <button type="submit" className="hidden" id="checkout-form-submit" />
             </form>
-
-            {/* 1.5. VOUCHER CODE INPUT */}
             <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 sm:p-8 shadow-sm">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 mb-5 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-brand-500" />
@@ -369,8 +314,6 @@ export default function CheckoutPage() {
                 Mã voucher sẽ được xác thực và áp dụng tự động khi bạn xác nhận đặt hàng.
               </p>
             </div>
-
-            {/* 2. SPLIT-ORDER VISUALIZATION DIAGRAM */}
             <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 sm:p-8 shadow-sm">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 mb-5 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-brand-500" />
@@ -380,8 +323,6 @@ export default function CheckoutPage() {
               <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed font-light mb-6">
                 Vì mô hình VibeCart hỗ trợ nhiều nhà bán hàng (Creators) có kho vật lý riêng biệt, giỏ hàng của bạn sẽ được tự động gom nhóm theo từng Creator và tách thành các hóa đơn con tương ứng để tiện cho Creators xử lý:
               </p>
-
-              {/* Flowchart nodes */}
               <div className="space-y-4">
                 {Object.entries(groupedCheckout).map(([cId, group], index) => {
                   const grpOriginal = group.items.reduce((acc, item) => acc + item.originalPrice * item.quantity, 0);
@@ -393,7 +334,6 @@ export default function CheckoutPage() {
                       key={cId}
                       className="relative pl-6 border-l-2 border-dashed border-brand-200 dark:border-brand-900/60 pb-2"
                     >
-                      {/* Floating node badge */}
                       <span className="absolute -left-[9.5px] top-0 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-brand-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
                         {index + 1}
                       </span>
@@ -408,8 +348,6 @@ export default function CheckoutPage() {
                             {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(grpFinal)}
                           </span>
                         </div>
-
-                        {/* List items in this sub-order */}
                         <div className="space-y-2">
                           {group.items.map((item) => (
                             <div key={item.variantId} className="flex justify-between items-center text-[10px] text-zinc-400 dark:text-zinc-500 font-light">
@@ -430,15 +368,11 @@ export default function CheckoutPage() {
             </div>
 
           </div>
-
-          {/* RIGHT PANEL: BILLING SUMMARY & PAY BUTTON */}
           <div className="lg:col-span-5 bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 shadow-sm sticky top-24">
             <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 mb-5 flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-brand-500" />
               Tổng quát Hóa đơn đặt hàng
             </h3>
-
-            {/* List all items to buy */}
             <div className="space-y-4 mb-6 max-h-48 overflow-y-auto pr-1 custom-scrollbar pb-3 border-b border-zinc-100 dark:border-zinc-800/80">
               {checkoutItems.map((item) => (
                 <div key={item.variantId} className="flex gap-3 items-center">
@@ -458,8 +392,6 @@ export default function CheckoutPage() {
                 </div>
               ))}
             </div>
-
-            {/* Price Calculations */}
             <div className="space-y-4 pb-5 border-b border-zinc-100 dark:border-zinc-800/80">
               <div className="flex justify-between items-center text-xs text-zinc-500 dark:text-zinc-400 font-light">
                 <span>Tổng giá trị hàng gốc:</span>
@@ -491,8 +423,6 @@ export default function CheckoutPage() {
                 </span>
               </div>
             </div>
-
-            {/* Idempotent Check Tag */}
             <div className="mt-6 text-[10px] text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-950/30 border border-zinc-100 dark:border-zinc-800/40 p-3 rounded-xl leading-relaxed font-light">
               <div className="flex gap-2 items-center">
                 <ShieldCheck className="h-4 w-4 text-brand-500 shrink-0" />
@@ -501,8 +431,6 @@ export default function CheckoutPage() {
                 </span>
               </div>
             </div>
-
-            {/* Submit Button Triggering Form */}
             <button
               onClick={() => {
                 const btn = document.getElementById("checkout-form-submit");

@@ -17,7 +17,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const clientRef = useRef<Client | null>(null);
   const subscriptionsRef = useRef<Map<string, any>>(new Map());
 
-  // Use refs to make sure connect doesn't recreate when options changes (preventing infinite disconnect/reconnect loop)
   const onConnectRef = useRef(options.onConnect);
   const onDisconnectRef = useRef(options.onDisconnect);
   const onErrorRef = useRef(options.onError);
@@ -44,7 +43,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     
     const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
     
-    // Construct Stomp client
     const stompClient = new Client({
       brokerURL: WS_BASE_URL,
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
@@ -89,7 +87,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   }, []);
 
   useEffect(() => {
-    // Only connect if user is authenticated
     if (user) {
       connect();
     } else {
@@ -101,7 +98,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
   }, [user, connect, disconnect]);
 
-  // Subscribe to a topic
   const subscribe = useCallback(
     <T>(destination: string, callback: (message: T) => void) => {
       try {
@@ -110,7 +106,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           return null;
         }
 
-        // Avoid duplicate subscriptions — return unsubscribe function for existing one
         if (subscriptionsRef.current.has(destination)) {
           const existingSub = subscriptionsRef.current.get(destination);
           return () => {
@@ -149,8 +144,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     },
     []
   );
-
-  // Send a message
   const send = useCallback(
     (destination: string, body: any) => {
       try {

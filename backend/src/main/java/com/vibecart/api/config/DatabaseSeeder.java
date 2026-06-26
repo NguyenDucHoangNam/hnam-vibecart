@@ -13,10 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
-
-/**
- * Lớp khởi tạo dữ liệu mẫu (Seeder) cho Cơ sở dữ liệu khi khởi chạy ứng dụng.
- */
 @Component
 @RequiredArgsConstructor
 public class DatabaseSeeder implements CommandLineRunner {
@@ -28,10 +24,6 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final CategoryRepository categoryRepository;
-
-    /**
-     * Kích hoạt tiến trình khởi tạo dữ liệu mẫu nếu được bật trong cấu hình.
-     */
     @Override
     @Transactional
     public void run(String... args) throws Exception {
@@ -71,10 +63,6 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         log.info("Database seeding process completed successfully.");
     }
-
-    /**
-     * Khởi tạo cấu trúc cây danh mục sản phẩm mẫu.
-     */
     private void seedCategories() {
         if (categoryRepository.findBySlug("thoi-trang").isPresent()) {
             log.info("Categories already exist in database. Skipping category seeding.");
@@ -98,14 +86,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         getOrCreateCategory("Cáp sạc", "cap-sac", phones, 2);
         getOrCreateCategory("Tai nghe", "tai-nghe", phones, 3);
 
-        // Seed default "Khác" category for miscellaneous items
         Category otherCategory = getOrCreateCategory("Khác", "khac", null, 999);
         getOrCreateCategory("Sản phẩm khác", "san-pham-khac", otherCategory, 1);
     }
-
-    /**
-     * Lấy danh mục hiện tại hoặc tạo mới nếu chưa tồn tại.
-     */
     private Category getOrCreateCategory(String name, String slug, Category parent, Integer sortOrder) {
         return categoryRepository.findBySlug(slug)
                 .orElseGet(() -> {
@@ -119,10 +102,6 @@ public class DatabaseSeeder implements CommandLineRunner {
                     return categoryRepository.save(category);
                 });
     }
-
-    /**
-     * Lấy vai trò (Role) hiện tại hoặc tạo mới nếu chưa có.
-     */
     private Role getOrCreateRole(String roleName, String roleDisplayName) {
         return roleRepository.findByName(roleName)
                 .orElseGet(() -> {
@@ -134,10 +113,6 @@ public class DatabaseSeeder implements CommandLineRunner {
                     return roleRepository.save(role);
                 });
     }
-
-    /**
-     * Khởi tạo tài khoản người dùng mẫu theo phân vai trò chỉ định.
-     */
     private void seedUser(DatabaseSeedingProperties.UserSeed seedData, String roleName, String roleDisplayName) {
         if (seedData == null || seedData.getUsername() == null) {
             log.warn("Seeding data is missing or incomplete for role {}", roleName);

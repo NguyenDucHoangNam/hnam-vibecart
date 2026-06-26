@@ -2,8 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
-
-// ─── Types ───────────────────────────────────────────────────────────
 export type ToastType = "success" | "error" | "warning" | "info";
 
 export interface Toast {
@@ -11,7 +9,7 @@ export interface Toast {
   type: ToastType;
   title: string;
   message?: string;
-  duration?: number; // ms, default 4000
+  duration?: number;
 }
 
 interface ToastContextType {
@@ -23,11 +21,7 @@ interface ToastContextType {
   warning: (title: string, message?: string) => void;
   info: (title: string, message?: string) => void;
 }
-
-// ─── Context ─────────────────────────────────────────────────────────
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
-
-// ─── Single Toast Item ──────────────────────────────────────────────
 const toastConfig = {
   success: {
     icon: CheckCircle,
@@ -162,8 +156,6 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
           <X className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Progress bar */}
       <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5 dark:bg-white/5">
         <div
           className={`h-full ${config.progress} transition-none rounded-full opacity-60`}
@@ -173,8 +165,6 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     </div>
   );
 }
-
-// ─── Toast Container ────────────────────────────────────────────────
 function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   if (toasts.length === 0) return null;
 
@@ -188,8 +178,6 @@ function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
     </div>
   );
 }
-
-// ─── Provider ───────────────────────────────────────────────────────
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -226,8 +214,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     </ToastContext.Provider>
   );
 }
-
-// ─── Hook ───────────────────────────────────────────────────────────
 export function useToast() {
   const context = useContext(ToastContext);
   if (context === undefined) {

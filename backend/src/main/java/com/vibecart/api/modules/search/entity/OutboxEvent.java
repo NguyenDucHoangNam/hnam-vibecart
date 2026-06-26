@@ -13,19 +13,19 @@ import lombok.*;
 public class OutboxEvent extends BaseEntity {
 
     @Column(name = "aggregate_type", nullable = false, length = 50)
-    private String aggregateType; // e.g. "PRODUCT"
+    private String aggregateType;
 
     @Column(name = "aggregate_id", nullable = false, length = 36)
-    private String aggregateId; // Product SPU ID
+    private String aggregateId;
 
     @Column(name = "event_type", nullable = false, length = 50)
-    private String eventType; // "PRODUCT_CREATED", "PRODUCT_UPDATED", "PRODUCT_DELETED"
+    private String eventType;
 
     @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
-    private String payload; // JSON representation of the sync event
+    private String payload;
 
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "PENDING"; // PENDING, PROCESSED, FAILED
+    private String status = "PENDING";
 
     public OutboxEvent() {}
 

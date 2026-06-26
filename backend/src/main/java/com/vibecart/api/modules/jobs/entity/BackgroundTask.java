@@ -14,7 +14,7 @@ public class BackgroundTask extends BaseEntity {
     private String userId;
 
     @Column(name = "task_type", nullable = false, length = 50)
-    private String taskType; // e.g. "EXCEL_EXPORT"
+    private String taskType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

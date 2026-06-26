@@ -15,11 +15,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-
-/**
- * Controller xử lý các yêu cầu tải lên và quản lý tệp tin media (hình ảnh,
- * video) lên S3/MinIO.
- */
 @RestController
 @RequestMapping("/api/v1/media")
 @RequiredArgsConstructor
@@ -27,10 +22,6 @@ import java.util.List;
 public class MediaController {
 
         private final MediaService mediaService;
-
-        /**
-         * Tải lên một tệp tin đơn lẻ từ phía Server (Server-side upload).
-         */
         @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<ApiResponse<MediaUploadResponse>> uploadFile(
                         @RequestParam("file") MultipartFile file,
@@ -45,10 +36,6 @@ public class MediaController {
                                                 .result(response)
                                                 .build());
         }
-
-        /**
-         * Tải lên đồng thời danh sách nhiều tệp tin (Batch upload).
-         */
         @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<ApiResponse<List<MediaUploadResponse>>> uploadFiles(
                         @RequestParam("files") List<MultipartFile> files,
@@ -63,11 +50,6 @@ public class MediaController {
                                                 .result(results)
                                                 .build());
         }
-
-        /**
-         * Tạo Pre-signed URL cho phép Client tự tải trực tiếp tệp tin lên S3
-         * (Client-side upload).
-         */
         @PostMapping("/presigned-url")
         public ResponseEntity<ApiResponse<PresignedUrlResponse>> getPresignedUrl(
                         @RequestParam("fileName") String fileName,
@@ -85,10 +67,6 @@ public class MediaController {
                                                 .result(response)
                                                 .build());
         }
-
-        /**
-         * Xóa tệp tin media khỏi S3 storage và database metadata.
-         */
         @DeleteMapping
         public ResponseEntity<ApiResponse<Void>> deleteFile(@RequestParam("key") String key) {
                 mediaService.deleteFile(
@@ -102,10 +80,6 @@ public class MediaController {
                                                 .message("Đã xóa file thành công")
                                                 .build());
         }
-
-        /**
-         * Xác thực tệp tin sau khi client tải lên thành công qua Pre-signed URL.
-         */
         @PostMapping("/confirm")
         public ResponseEntity<ApiResponse<Void>> confirmUpload(@RequestParam("key") String key) {
                 mediaService.confirmUpload(key, SecurityUtils.getCurrentUsername());

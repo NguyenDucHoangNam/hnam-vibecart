@@ -4,10 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-/**
- * Scheduler tự động hủy các đơn hàng quá hạn thanh toán.
- */
 @Component
 public class OrderTimeoutScheduler {
 
@@ -18,12 +14,6 @@ public class OrderTimeoutScheduler {
     public OrderTimeoutScheduler(OrderService orderService) {
         this.orderService = orderService;
     }
-
-    /**
-     * Runs every 1 minute to check for expired pending orders.
-     * Orders older than 15 minutes with status PENDING will be auto-cancelled
-     * and their inventory will be restored.
-     */
     @Scheduled(cron = "0 */1 * * * *")
     public void cancelExpiredOrders() {
         log.debug("Running order timeout check...");

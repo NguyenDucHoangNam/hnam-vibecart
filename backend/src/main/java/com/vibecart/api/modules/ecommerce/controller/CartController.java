@@ -14,10 +14,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
-/**
- * Controller quản lý giỏ hàng của người dùng.
- */
 @RestController
 @RequestMapping("/api/v1/cart")
 @RequiredArgsConstructor

@@ -6,34 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
-
-/**
- * Cấu hình giới hạn tần suất yêu cầu (Rate Limiter) cho hệ thống API.
- */
 @Configuration
 @ConfigurationProperties(prefix = "app.rate-limiter")
 @Getter
 @Setter
 public class RateLimiterProperties {
-
-    /**
-     * Bật hoặc tắt chức năng Rate Limiter.
-     */
     private boolean enabled = true;
-
-    /**
-     * Cấu hình giới hạn tần suất chung cho toàn bộ hệ thống (Global).
-     */
     private BucketConfig global = new BucketConfig(100, 100, 60);
-
-    /**
-     * Cấu hình giới hạn tần suất riêng cho các endpoint nhạy cảm (Sensitive).
-     */
     private SensitiveBucketConfig sensitive = new SensitiveBucketConfig();
-
-    /**
-     * Cấu hình chi tiết của Token Bucket.
-     */
     @Getter
     @Setter
     public static class BucketConfig {
@@ -50,10 +30,6 @@ public class RateLimiterProperties {
             this.refillDurationSeconds = refillDurationSeconds;
         }
     }
-
-    /**
-     * Cấu hình danh sách endpoint nhạy cảm cần áp dụng tần suất riêng.
-     */
     @Getter
     @Setter
     public static class SensitiveBucketConfig extends BucketConfig {

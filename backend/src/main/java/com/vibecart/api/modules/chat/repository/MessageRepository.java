@@ -5,10 +5,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
-
-/**
- * Kho lưu trữ (Repository) quản lý dữ liệu MongoDB cho thực thể Message.
- */
 @Repository
 public interface MessageRepository extends MongoRepository<Message, String> {
 

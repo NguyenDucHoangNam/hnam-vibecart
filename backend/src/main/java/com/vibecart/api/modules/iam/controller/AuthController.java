@@ -14,10 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-
-/**
- * Controller xử lý xác thực, đăng ký, đăng nhập, quản lý tài khoản người dùng.
- */
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -26,10 +22,6 @@ public class AuthController {
 
         private final AuthService authService;
         private final UserService userService;
-
-        /**
-         * Đăng ký tài khoản mới.
-         */
         @PostMapping("/register")
         public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
                 log.info("API request to register user: {}", request.getUsername());
@@ -43,10 +35,6 @@ public class AuthController {
 
                 return ResponseEntity.status(HttpStatus.CREATED).body(response);
         }
-
-        /**
-         * Gửi lại mã OTP xác thực qua email.
-         */
         public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
                 log.info("API request to resend OTP for email: {}", request.getEmail());
                 authService.resendOtp(request);
@@ -58,10 +46,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Xác thực mã OTP để kích hoạt tài khoản.
-         */
         @PostMapping("/verify-otp")
         public ResponseEntity<ApiResponse<AuthResponse>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
                 log.info("API request to verify OTP for email: {}", request.getEmail());
@@ -75,10 +59,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Đăng nhập bằng tài khoản nội bộ.
-         */
         @PostMapping("/login")
         public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
                 log.info("API request to login user: {}", request.getUsernameOrEmail());
@@ -92,10 +72,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Đăng nhập bằng tài khoản Google.
-         */
         @PostMapping("/oauth2/google")
         public ResponseEntity<ApiResponse<AuthResponse>> loginGoogle(@Valid @RequestBody OAuth2Request request) {
                 log.info("API request for Google social login");
@@ -109,10 +85,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Đăng nhập bằng tài khoản Facebook.
-         */
         @PostMapping("/oauth2/facebook")
         public ResponseEntity<ApiResponse<AuthResponse>> loginFacebook(@Valid @RequestBody OAuth2Request request) {
                 log.info("API request for Facebook social login");
@@ -126,10 +98,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Gia hạn access token bằng refresh token.
-         */
         @PostMapping("/refresh")
         public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshRequest request) {
                 log.info("API request to refresh JWT access token");
@@ -143,10 +111,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Đăng xuất và vô hiệu hóa token.
-         */
         @PostMapping("/logout")
         public ResponseEntity<ApiResponse<Void>> logout(
                         @Valid @RequestBody RefreshRequest request,
@@ -169,10 +133,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Lấy thông tin cá nhân của người dùng đang đăng nhập.
-         */
         @GetMapping("/me")
         public ResponseEntity<ApiResponse<UserResponse>> getMyProfile() {
                 log.info("API request to fetch current user profile");
@@ -187,10 +147,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Đổi mật khẩu tài khoản.
-         */
         @PostMapping("/change-password")
         public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
                 log.info("API request to change password");
@@ -204,10 +160,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Cập nhật hồ sơ cá nhân.
-         */
         @PutMapping("/profile")
         public ResponseEntity<ApiResponse<AuthResponse>> updateProfile(
                         @Valid @RequestBody UpdateProfileRequest request) {
@@ -223,10 +175,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Gửi link khôi phục mật khẩu qua email.
-         */
         @PostMapping("/forgot-password")
         public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
                 log.info("API request for forgot password");
@@ -240,10 +188,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Đặt lại mật khẩu bằng token khôi phục.
-         */
         @PostMapping("/reset-password")
         public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
                 log.info("API request to reset password");
@@ -256,10 +200,6 @@ public class AuthController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Yêu cầu xóa tài khoản (soft delete, đóng băng 30 ngày).
-         */
         @DeleteMapping("/account")
         public ResponseEntity<ApiResponse<Void>> deleteAccount() {
                 log.info("API request to delete account");

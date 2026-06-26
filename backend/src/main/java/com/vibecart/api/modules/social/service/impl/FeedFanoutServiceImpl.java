@@ -15,14 +15,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-/**
- * Lớp triển khai của {@link FeedFanoutService} quản lý cập nhật timeline bằng Redis.
- * <p>
- * Lưu trữ danh sách bài viết dưới dạng Redis List (dạng Cache Timeline).
- * Tất cả các thao tác cập nhật (fan-out, backfill, cleanup) được xử lý bất đồng bộ (sử dụng {@link Async})
- * để đảm bảo tối ưu hóa thời gian phản hồi cho các luồng xử lý chính.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,10 +28,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
     static final int MAX_TIMELINE_SIZE = 500;
     static final long TIMELINE_TTL_DAYS = 30;
     private static final int BACKFILL_SIZE = 20;
-
-    /**
-     * Fan-out bài viết mới tới tất cả người theo dõi (followers) và bản thân người tạo.
-     */
     @Override
     @Async("feedFanoutExecutor")
     public void fanoutNewPost(String creatorId, String postId) {
@@ -58,10 +46,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
             log.error("Fan-out failed for post {} from creator {}: {}", postId, creatorId, e.getMessage(), e);
         }
     }
-
-    /**
-     * Xóa bài viết khỏi timeline của người theo dõi và người tạo khi bài viết bị xóa.
-     */
     @Override
     @Async("feedFanoutExecutor")
     public void removeDeletedPost(String creatorId, String postId) {
@@ -80,10 +64,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
             log.error("Remove failed for deleted post {}: {}", postId, e.getMessage(), e);
         }
     }
-
-    /**
-     * Đưa các bài viết gần đây của người được follow vào timeline của người follow.
-     */
     @Override
     @Async("feedFanoutExecutor")
     public void onFollow(String followerId, String followingId) {
@@ -113,10 +93,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
             log.error("Backfill failed on follow: follower={}, following={}: {}", followerId, followingId, e.getMessage(), e);
         }
     }
-
-    /**
-     * Dọn dẹp timeline của người theo dõi sau khi unfollow.
-     */
     @Override
     @Async("feedFanoutExecutor")
     public void onUnfollow(String followerId, String followingId) {
@@ -145,10 +121,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
             log.error("Cleanup failed on unfollow: follower={}, following={}: {}", followerId, followingId, e.getMessage(), e);
         }
     }
-
-    /**
-     * Nạp dữ liệu (warm-up) timeline từ DB lên Redis khi cache bị trống.
-     */
     @Override
     @Async("feedFanoutExecutor")
     public void warmUpTimeline(String userId) {

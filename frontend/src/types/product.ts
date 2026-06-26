@@ -30,7 +30,6 @@ export interface Product {
   variants: ProductVariant[];
   createdAt: string;
   updatedAt: string;
-  // Compatibility fields for other modules
   imageUrl?: string;
   price?: number;
   category?: string;

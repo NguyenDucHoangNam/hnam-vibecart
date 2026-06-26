@@ -20,10 +20,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-
-/**
- * Controller quản lý sản phẩm: CRUD, tìm kiếm, tồn kho.
- */
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
@@ -75,7 +71,7 @@ public class ProductController {
                 case "priceAsc" -> "price_asc";
                 case "priceDesc" -> "price_desc";
                 case "createdAt" -> "newest";
-                case "name" -> "relevance"; // fallback
+                case "name" -> "relevance";
                 default -> activeSort;
             };
         }

@@ -8,10 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
-/**
- * Controller tiếp nhận webhook callback từ PayOS sau khi thanh toán.
- */
 @RestController
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
@@ -21,11 +17,6 @@ public class PaymentWebhookController {
 
     private final PayOSService payOSService;
     private final OrderService orderService;
-
-    /**
-     * Receive webhook callback from PayOS after successful payment.
-     * This endpoint is PUBLIC (no JWT required) - secured via HMAC signature verification.
-     */
     @PostMapping("/payos/webhook")
     @SuppressWarnings("unchecked")
     public ResponseEntity<Map<String, Object>> handleWebhook(@RequestBody Map<String, Object> payload) {

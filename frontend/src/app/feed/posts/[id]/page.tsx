@@ -37,29 +37,20 @@ export default function PostDetailPage() {
   const { user, isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const toast = useToast();
-
-  // State
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [rootCommentText, setRootCommentText] = useState("");
-
-  // Tagged products list
   const [products, setProducts] = useState<Product[]>([]);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
-
-  // Load chi tiết bài viết & comments
   const loadPostDetails = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Lấy chi tiết bài viết
       const postData = await postService.getPostById(postId);
       setPost(postData);
-
-      // 2. Lấy danh sách bình luận (Backend gom hierarchical trong replies)
-      const commentsRes = await postService.getComments(postId, 0, 100); // Lấy tối đa 100 comments hàng đầu
+      const commentsRes = await postService.getComments(postId, 0, 100);
       if (commentsRes && commentsRes.content) {
         setComments(commentsRes.content);
       }
@@ -75,8 +66,6 @@ export default function PostDetailPage() {
   useEffect(() => {
     loadPostDetails();
   }, [loadPostDetails]);
-
-  // Load chi tiết các sản phẩm gắn kèm
   useEffect(() => {
     if (!post || !post.taggedProductIds || post.taggedProductIds.length === 0) return;
     
@@ -101,8 +90,6 @@ export default function PostDetailPage() {
 
     fetchProducts();
   }, [post]);
-
-  // Tương tác Like/Unlike (Optimistic)
   const handleLikeToggle = async () => {
     if (!isAuthenticated || !post) {
       toast.warning("Yêu cầu đăng nhập", "Vui lòng đăng nhập để thích bài viết.");
@@ -121,7 +108,6 @@ export default function PostDetailPage() {
     try {
       await postService.toggleLike(postId);
     } catch (err: any) {
-      // Rollback
       setPost(prev => {
         if (!prev) return null;
         return {
@@ -133,16 +119,12 @@ export default function PostDetailPage() {
       toast.error("Lỗi tương tác", "Không thể cập nhật lượt thích.");
     }
   };
-
-  // Sao chép link chia sẻ
   const handleShare = () => {
     if (!post) return;
     const postUrl = window.location.href;
     navigator.clipboard.writeText(postUrl);
     toast.success("Đã sao chép liên kết", "Gửi link này cho bạn bè để chia sẻ bài viết!");
   };
-
-  // Thêm nhanh vào giỏ hàng — mở popup chọn phân loại
   const handleAddProductToCart = (product: Product) => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
@@ -164,11 +146,8 @@ export default function PostDetailPage() {
       await addToCart(variant, product, 1);
       setVariantPickerProduct(null);
     } catch (err) {
-      // Errors are already handled and toasted inside CartContext
     }
   };
-
-  // Thêm bình luận gốc (Level 1)
   const handleAddRootComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
@@ -180,12 +159,8 @@ export default function PostDetailPage() {
     setSubmittingComment(true);
     try {
       const newComment = await postService.addComment(postId, rootCommentText.trim());
-      
-      // Thêm vào danh sách trên UI
       setComments(prev => [newComment, ...prev]);
       setRootCommentText("");
-      
-      // Tăng comment count của post
       setPost(prev => {
         if (!prev) return null;
         return { ...prev, commentCount: prev.commentCount + 1 };
@@ -198,13 +173,9 @@ export default function PostDetailPage() {
       setSubmittingComment(false);
     }
   };
-
-  // Thêm bình luận con (Nested reply)
   const handleAddReply = async (parentId: string, content: string) => {
     try {
       const newReply = await postService.addComment(postId, content, parentId);
-      
-      // Thêm reply vào đúng cây bình luận trên UI
       const insertReply = (list: Comment[]): Comment[] => {
         return list.map(item => {
           if (item.id === parentId) {
@@ -223,8 +194,6 @@ export default function PostDetailPage() {
       };
 
       setComments(prev => insertReply(prev));
-      
-      // Tăng comment count
       setPost(prev => {
         if (!prev) return null;
         return { ...prev, commentCount: prev.commentCount + 1 };
@@ -236,16 +205,12 @@ export default function PostDetailPage() {
       throw err;
     }
   };
-
-  // Xóa bình luận (Bản thân hoặc Tác giả bài viết / Admin)
   const handleDeleteComment = async (commentId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa bình luận này không?")) return;
 
     try {
       await postService.deleteComment(postId, commentId);
       toast.success("Đã xóa bình luận");
-
-      // Xóa bình luận khỏi UI
       const filterComments = (list: Comment[]): Comment[] => {
         return list
           .filter(item => item.id !== commentId)
@@ -261,8 +226,6 @@ export default function PostDetailPage() {
       };
 
       setComments(prev => filterComments(prev));
-
-      // Giảm comment count
       setPost(prev => {
         if (!prev) return null;
         return { ...prev, commentCount: Math.max(0, prev.commentCount - 1) };
@@ -271,8 +234,6 @@ export default function PostDetailPage() {
       toast.error("Lỗi xóa bình luận", err?.message || "Bạn không có quyền thực hiện tác vụ này.");
     }
   };
-
-  // Xóa bài viết
   const handleDeletePost = async () => {
     if (!post) return;
     if (!window.confirm("Bạn có chắc chắn muốn xóa vĩnh viễn bài đăng này không?")) return;
@@ -285,8 +246,6 @@ export default function PostDetailPage() {
       toast.error("Lỗi xóa bài đăng", err?.message || "Không có quyền xóa bài đăng.");
     }
   };
-
-  // Định dạng ngày đăng
   const formatPostTime = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString("vi-VN", { 
@@ -313,8 +272,6 @@ export default function PostDetailPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50/50 py-8 px-4 sm:px-6 lg:px-8">
-      
-      {/* Nút quay lại */}
       <div className="mx-auto max-w-6xl mb-6">
         <Link 
           href={ROUTES.FEED}
@@ -324,17 +281,9 @@ export default function PostDetailPage() {
           Quay lại Bảng tin
         </Link>
       </div>
-
-      {/* Container chính */}
       <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* ======================================================= */}
-        {/* CỘT TRÁI: CHI TIẾT BÀI ĐĂNG (7 cột) */}
-        {/* ======================================================= */}
         <div className="lg:col-span-7 flex flex-col gap-6">
           <div className="rounded-3xl border border-zinc-150/70 bg-white p-6 shadow-sm">
-            
-            {/* Header tác giả */}
             <div className="flex items-center justify-between gap-3 mb-5">
               <Link href={ROUTES.CREATOR_PROFILE(post.creatorId)} className="flex items-center gap-3 group">
                 {post.creatorAvatarUrl ? (
@@ -361,8 +310,6 @@ export default function PostDetailPage() {
                   </span>
                 </div>
               </Link>
-
-              {/* Nút Xóa bài viết (Chỉ hiện cho chính chủ bài viết hoặc Admin) */}
               {(user?.id === post.creatorId || user?.roles?.includes("ROLE_ADMIN")) && (
                 <button
                   onClick={handleDeletePost}
@@ -373,13 +320,9 @@ export default function PostDetailPage() {
                 </button>
               )}
             </div>
-
-            {/* Nội dung bài viết */}
             <p className="text-sm sm:text-base text-zinc-700 leading-relaxed whitespace-pre-line mb-6 font-light">
               {post.content}
             </p>
-
-            {/* Trình chiếu hình ảnh / Video */}
             {mediaList.length > 0 && (() => {
               const currentMedia = mediaList[activeImageIdx];
               const isVideo = currentMedia.match(/\.(mp4|webm|ogg|mov)$/i) || currentMedia.includes("video") || currentMedia.includes("mp4");
@@ -414,8 +357,6 @@ export default function PostDetailPage() {
                     >
                       <ChevronRight className="h-4.5 w-4.5" />
                     </button>
-
-                    {/* Dot Indicators */}
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
                       {mediaList.map((_, i) => (
                         <span 
@@ -429,8 +370,6 @@ export default function PostDetailPage() {
               </div>
               );
             })()}
-
-            {/* Các sản phẩm gắn kèm */}
             {products.length > 0 && (
               <div className="border border-brand-100/50 bg-brand-50/10 rounded-2xl p-5 mb-6">
                 <h3 className="text-xs font-extrabold text-brand-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
@@ -476,8 +415,6 @@ export default function PostDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Dòng tương tác bên dưới bài đăng */}
             <div className="flex items-center justify-between pt-4 border-t border-zinc-100 text-zinc-500">
               <button
                 onClick={handleLikeToggle}
@@ -507,19 +444,11 @@ export default function PostDetailPage() {
 
           </div>
         </div>
-
-        {/* ======================================================= */}
-        {/* CỘT PHẢI: HỆ THỐNG BÌNH LUẬN DẠNG CÂY (5 cột) */}
-        {/* ======================================================= */}
         <div className="lg:col-span-5 flex flex-col gap-6 sticky top-20">
           <div className="rounded-3xl border border-zinc-150/70 bg-white p-6 shadow-sm flex flex-col max-h-[85vh]">
-            
-            {/* Tiêu đề bình luận */}
             <h2 className="text-base font-extrabold text-zinc-800 pb-3.5 border-b border-zinc-100 tracking-wider">
               BÌNH LUẬN ({post.commentCount})
             </h2>
-
-            {/* Danh sách bình luận lồng nhau */}
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 flex flex-col gap-5">
               {comments.length === 0 ? (
                 <div className="text-center py-12 flex flex-col items-center">
@@ -545,8 +474,6 @@ export default function PostDetailPage() {
                 ))
               )}
             </div>
-
-            {/* Input bình luận gốc */}
             <div className="pt-4 border-t border-zinc-100">
               {isAuthenticated ? (
                 <form onSubmit={handleAddRootComment} className="flex gap-2">
@@ -584,8 +511,6 @@ export default function PostDetailPage() {
         </div>
 
       </div>
-
-      {/* MODAL CHỌN PHÂN LOẠI SẢN PHẨM */}
       {variantPickerProduct && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-up border border-zinc-100">
@@ -640,10 +565,6 @@ export default function PostDetailPage() {
     </div>
   );
 }
-
-// =====================================================================
-// COMPONENT CARD BÌNH LUẬN ĐỆ QUY (HỖ TRỢ TRẢ LỜI & THỤT LỀ TỐI ĐA 3 CẤP)
-// =====================================================================
 interface CommentCardProps {
   comment: Comment;
   postId: string;
@@ -670,14 +591,8 @@ function CommentCard({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
-
-  // Ràng buộc thụt lề: depth = 0 (cấp 1), depth = 1 (cấp 2), depth = 2+ (cấp 3)
   const displayDepth = Math.min(depth, 2);
-
-  // Kiểm tra quyền xóa (Của riêng mình, của tác giả bài đăng hoặc Admin)
   const canDelete = currentUserId === comment.userId || currentUserId === postAuthorId || isAdmin;
-
-  // Định dạng ngày của comment
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -709,7 +624,6 @@ function CommentCard({
       setReplyText("");
       setShowReplyInput(false);
     } catch {
-      // Đã ném lỗi ở lớp trên
     } finally {
       setSubmittingReply(false);
     }
@@ -720,18 +634,12 @@ function CommentCard({
       className="flex flex-col gap-2"
       style={{ marginLeft: `${displayDepth * 24}px` }}
     >
-      
-      {/* Khung chứa comment */}
       <div className="flex gap-2.5 items-start group">
-        
-        {/* Biểu tượng phân nhánh khi thụt lề */}
         {depth > 0 && (
           <div className="text-zinc-300 mt-1 flex-shrink-0">
             <CornerDownRight className="h-4 w-4" />
           </div>
         )}
-
-        {/* Avatar */}
         {comment.userAvatarUrl ? (
           <img 
             src={comment.userAvatarUrl} 
@@ -746,13 +654,9 @@ function CommentCard({
             {comment.username.charAt(0).toUpperCase()}
           </div>
         )}
-
-        {/* Chi tiết nội dung bình luận */}
         <div className="flex-1 min-w-0 bg-zinc-50 border border-zinc-100 rounded-2xl p-3">
           
           <div className="flex items-center justify-between gap-2 mb-0.5">
-            
-            {/* Tên & Tag */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-bold text-zinc-800">
                 @{comment.username}
@@ -763,23 +667,15 @@ function CommentCard({
                 </span>
               )}
             </div>
-
-            {/* Thời gian */}
             <span className="text-[9px] text-zinc-400 font-medium">
               {formatTime(comment.createdAt)}
             </span>
 
           </div>
-
-          {/* Nội dung chữ */}
           <p className="text-xs text-zinc-650 leading-relaxed font-light">
             {comment.content}
           </p>
-
-          {/* Dòng action nhỏ bên dưới bình luận */}
           <div className="flex items-center gap-3 mt-2 text-[10px] text-zinc-400 font-semibold border-t border-zinc-200/40 pt-1.5">
-            
-            {/* Phản hồi button */}
             <button
               onClick={handleReplyClick}
               className="flex items-center gap-1 hover:text-brand-600 transition-colors"
@@ -787,8 +683,6 @@ function CommentCard({
               <Reply className="h-3 w-3" />
               Phản hồi
             </button>
-
-            {/* Xóa button */}
             {canDelete && (
               <button
                 onClick={() => onDelete(comment.id)}
@@ -804,8 +698,6 @@ function CommentCard({
         </div>
 
       </div>
-
-      {/* Form reply nhỏ bên dưới khi click */}
       {showReplyInput && (
         <form 
           onSubmit={handleReplySubmit} 
@@ -839,8 +731,6 @@ function CommentCard({
           </button>
         </form>
       )}
-
-      {/* Render đệ quy các comment con (Replies) */}
       {comment.replies && comment.replies.length > 0 && (
         <div className="flex flex-col gap-2 mt-1">
           {comment.replies.map(reply => (

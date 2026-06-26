@@ -10,10 +10,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-
-/**
- * Consumer Kafka đồng bộ sản phẩm vào Elasticsearch.
- */
 @Component
 @RequiredArgsConstructor
 public class SearchSyncConsumer {
@@ -41,7 +37,7 @@ public class SearchSyncConsumer {
         } catch (Exception e) {
             log.error("Failed to process product sync event for product: {}",
                     event.getProductId(), e);
-            throw e; // Rethrow to trigger Kafka retry
+            throw e;
         }
     }
 

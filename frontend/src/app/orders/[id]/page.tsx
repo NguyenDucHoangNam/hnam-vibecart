@@ -33,13 +33,9 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const toast = useToast();
   const orderId = params.id as string;
-
-  // States
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
-
-  // Load order details
   const loadOrderDetails = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -51,14 +47,11 @@ export default function OrderDetailsPage() {
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   useEffect(() => {
     loadOrderDetails();
   }, [loadOrderDetails]);
-
-  // Cancel order handler
   const handleCancelOrder = async () => {
     if (!order) return;
     if (!window.confirm(`Bạn có chắc chắn muốn hủy đơn hàng "${order.orderCode}" không?`)) {
@@ -112,15 +105,13 @@ export default function OrderDetailsPage() {
   const isShipped = order.status === "SHIPPED";
   const isDelivered = order.status === "DELIVERED";
   const isCancelled = order.status === "CANCELLED";
-
-  // Countdown timer for PENDING orders (15 min timeout)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     if (!order || order.status !== "PENDING") return;
 
     const orderCreatedAt = new Date(order.createdAt).getTime();
-    const timeoutMs = 15 * 60 * 1000; // 15 minutes
+    const timeoutMs = 15 * 60 * 1000;
     const expiresAt = orderCreatedAt + timeoutMs;
 
     const updateTimer = () => {
@@ -139,8 +130,6 @@ export default function OrderDetailsPage() {
     const s = seconds % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
-
-  // Timeline configuration
   const timelineSteps = [
     { label: "Đặt đơn thành công", active: true, desc: "Đơn hàng đã được tách và giữ chỗ tồn kho khả dụng", icon: Clock },
     { label: "Đã thanh toán", active: isPaid || isShipped || isDelivered, desc: "Thanh toán QR PayOS thành công, kho vật lý đã bị trừ", icon: CreditCard },
@@ -154,8 +143,6 @@ export default function OrderDetailsPage() {
       <div className="absolute bottom-[20%] right-[5%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-5xl w-full mx-auto relative z-10">
-        
-        {/* Back Link */}
         <Link 
           href={ROUTES.ORDERS}
           className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white text-xs font-semibold mb-8 group"
@@ -163,14 +150,8 @@ export default function OrderDetailsPage() {
           <ChevronLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
           Lịch sử Đơn hàng
         </Link>
-
-        {/* DETAILS GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT PANEL: DETAILS AND TIMELINE */}
           <div className="lg:col-span-8 space-y-6">
-            
-            {/* 1. STATE LIFECYCLE TIMELINE (Only for non-cancelled orders) */}
             {!isCancelled ? (
               <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 sm:p-8 shadow-sm">
                 <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 mb-6 flex items-center gap-2">
@@ -183,7 +164,6 @@ export default function OrderDetailsPage() {
                     const Icon = step.icon;
                     return (
                       <div key={idx} className="relative pl-6">
-                        {/* Node circle */}
                         <div className={`absolute -left-[24.5px] top-0.5 flex h-5 w-5 items-center justify-center rounded-full border transition-all duration-300 ${
                           step.active
                             ? "bg-brand-500 border-brand-500 text-white shadow-sm shadow-brand-500/20"
@@ -210,7 +190,6 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
             ) : (
-              /* CANCELLED VIEW STATE ALERT */
               <div className="bg-red-50 dark:bg-red-950/20 rounded-[2rem] border border-red-100 dark:border-red-900/30 p-6 flex gap-4 items-center shadow-sm">
                 <XCircle className="h-12 w-12 text-red-500 shrink-0" />
                 <div className="flex flex-col">
@@ -221,8 +200,6 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
             )}
-
-            {/* PENDING COUNTDOWN TIMER */}
             {isPending && timeRemaining !== null && (
               <div className={`rounded-[2rem] border p-5 flex gap-4 items-center shadow-sm ${
                 timeRemaining <= 120
@@ -251,8 +228,6 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
             )}
-
-            {/* 2. RECIPIENT INFORMATION */}
             <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 sm:p-8 shadow-sm space-y-4">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-brand-500" />
@@ -286,8 +261,6 @@ export default function OrderDetailsPage() {
                 )}
               </div>
             </div>
-
-            {/* 3. ORDER ITEMS DETAILS LISTING */}
             <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 sm:p-8 shadow-sm">
               <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 mb-5 flex items-center gap-2">
                 <Store className="h-5 w-5 text-brand-500" />
@@ -337,8 +310,6 @@ export default function OrderDetailsPage() {
             </div>
 
           </div>
-
-          {/* RIGHT PANEL: FINANCIAL BILLING SUMMARY */}
           <div className="lg:col-span-4 bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/60 dark:border-zinc-800/60 p-6 shadow-sm sticky top-24 space-y-6">
             <div>
               <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b border-zinc-100 dark:border-zinc-800/80 mb-4 flex items-center gap-2">
@@ -378,8 +349,6 @@ export default function OrderDetailsPage() {
                 </div>
               </div>
             </div>
-
-            {/* CTAs: Pay or cancel */}
             {isPending && (
               <div className="flex flex-col gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
                 {order.paymentUrl && (

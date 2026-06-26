@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
-/**
- * Scheduler xử lý các sự kiện Outbox IAM chờ gửi thông báo qua Kafka.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

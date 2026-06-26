@@ -27,8 +27,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  // Load user profile on mount
   useEffect(() => {
     async function loadUser() {
       const token = localStorage.getItem("access_token");
@@ -42,8 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
       } catch (err) {
         console.error("Lỗi nạp thông tin cá nhân /me:", err);
-        // Chỉ xóa tokens khi server trả 401 Unauthorized (token hết hạn/không hợp lệ)
-        // Không xóa khi lỗi mạng, CORS, hoặc server error (500) để tránh logout nhầm
         const status = err instanceof Error && 'status' in err ? (err as { status: number }).status : undefined;
         if (status === 401) {
           console.warn("Token hết hạn hoặc không hợp lệ, đăng xuất.");
@@ -58,8 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     loadUser();
-
-    // Listen for logout events triggered by api-client (e.g., token refresh failed)
     const handleLogoutEvent = () => {
       setUser(null);
       router.push(ROUTES.LOGIN);
@@ -90,8 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (userData: RegisterRequest): Promise<User> => {
     try {
       const response = await api.post<User>(ENDPOINTS.AUTH.REGISTER, userData);
-      // Đăng ký thành công trả về thông tin User (status: PENDING_VERIFICATION)
-      // Không ghi token vì chưa qua xác thực OTP
       return response;
     } catch (error) {
       setUser(null);
@@ -153,7 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const refreshToken = localStorage.getItem("refresh_token");
       if (refreshToken) {
         await api.post(ENDPOINTS.AUTH.LOGOUT, { refreshToken: refreshToken }).catch(() => {
-          // Ignore logout api failure, proceed with local logout
         });
       }
     } finally {

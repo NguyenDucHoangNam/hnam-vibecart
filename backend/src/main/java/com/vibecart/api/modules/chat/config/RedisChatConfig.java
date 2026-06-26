@@ -24,17 +24,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.io.IOException;
-
-/**
- * Cấu hình Redis Pub/Sub phục vụ nhắn tin chat thời gian thực.
- */
 @Configuration
 @Slf4j
 public class RedisChatConfig {
-
-    /**
-     * Khởi tạo bộ chuyển đổi JSON ObjectMapper hỗ trợ định dạng Java Time.
-     */
     @Bean
     @ConditionalOnMissingBean
     public ObjectMapper objectMapper() {
@@ -43,10 +35,6 @@ public class RedisChatConfig {
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return mapper;
     }
-
-    /**
-     * Cấu hình RedisTemplate cho các sự kiện ChatEvent.
-     */
     @Bean
     public RedisTemplate<String, ChatEvent> chatRedisTemplate(RedisConnectionFactory connectionFactory, ObjectMapper objectMapper) {
         RedisTemplate<String, ChatEvent> template = new RedisTemplate<>();
@@ -59,10 +47,6 @@ public class RedisChatConfig {
         template.setHashValueSerializer(serializer);
         return template;
     }
-
-    /**
-     * Bộ lắng nghe tin nhắn Redis Container hỗ trợ đăng ký động.
-     */
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory) {
@@ -70,18 +54,10 @@ public class RedisChatConfig {
         container.setConnectionFactory(connectionFactory);
         return container;
     }
-
-    /**
-     * Đăng ký Adapter cho bộ lắng nghe tin nhắn Redis.
-     */
     @Bean
     public MessageListenerAdapter listenerAdapter(RedisMessageSubscriber subscriber) {
         return new MessageListenerAdapter(subscriber);
     }
-
-    /**
-     * Bộ xử lý và phân phối tin nhắn nhận được từ Redis Pub/Sub tới Client thông qua WebSocket.
-     */
     @Component
     @RequiredArgsConstructor
     public static class RedisMessageSubscriber implements MessageListener {

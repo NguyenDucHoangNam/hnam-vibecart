@@ -42,28 +42,20 @@ export default function CreatorDashboard() {
   const toast = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  // Active Tab: "products" | "inventory" | "fulfillment"
   const [activeTab, setActiveTab] = useState<"products" | "inventory" | "fulfillment">("products");
-
-  // State Management: Products
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [prodPage, setProdPage] = useState(0);
   const [isProdLoading, setIsProdLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Modals visibility state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-  // Form states: Create/Edit SPU with dynamic SKUs
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
     categoryId: "",
-    imageUrl: "", // Main SPU Thumbnail
+    imageUrl: "",
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const spuImageInputRef = React.useRef<HTMLInputElement>(null);
@@ -78,17 +70,13 @@ export default function CreatorDashboard() {
     price: string;
     discountPrice: string;
     initialQuantity: string;
-    isNew?: boolean; // true = newly added row (enable initialQuantity even in edit mode)
+    isNew?: boolean;
   }>>([{ skuCode: "", variantName: "", price: "", discountPrice: "0", initialQuantity: "0", isNew: true }]);
-
-  // State Management: Inventory History (Ledger)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistoryResponse[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [adjustQty, setAdjustQty] = useState("");
   const [adjustReason, setAdjustReason] = useState("Nhập kho bổ sung định kỳ");
-
-  // State Management: Fulfillment (Creator Orders)
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
   const [orderPage, setOrderPage] = useState(0);
@@ -96,8 +84,6 @@ export default function CreatorDashboard() {
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const [trackingNumbers, setTrackingNumbers] = useState<Record<string, string>>({});
   const [isFulfilling, setIsFulfilling] = useState<Record<string, boolean>>({});
-
-  // Route Guard checking
   useEffect(() => {
     if (!isAuthLoading) {
       if (!isAuthenticated) {
@@ -108,15 +94,11 @@ export default function CreatorDashboard() {
         router.push(ROUTES.HOME);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAuthLoading, router, user]);
-
-  // Load category list for dropdown
   useEffect(() => {
     async function fetchCats() {
       try {
         const data = await categoryService.getCategoriesTree();
-        // Flatten categories recursively to find leaves
         const leaves: Category[] = [];
         function traverse(cats: Category[]) {
           cats.forEach((c) => {
@@ -135,10 +117,6 @@ export default function CreatorDashboard() {
     }
     if (isAuthenticated) fetchCats();
   }, [isAuthenticated]);
-
-  // =========================================================================
-  // LOGIC: TAB PRODUCTS
-  // =========================================================================
   const fetchProducts = React.useCallback(async () => {
     if (!user) return;
     setIsProdLoading(true);
@@ -161,8 +139,6 @@ export default function CreatorDashboard() {
       fetchProducts();
     }
   }, [prodPage, searchQuery, isAuthenticated, activeTab, fetchProducts]);
-
-  // Handle Dynamic variant row changes
   const handleVariantFormChange = (index: number, field: string, val: string) => {
     const updated = [...variantForms];
     (updated[index] as any)[field] = val;
@@ -187,8 +163,6 @@ export default function CreatorDashboard() {
   const handleSpuImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Maximum 5MB file size limit validation check
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Tải ảnh thất bại", "Kích thước ảnh vượt quá giới hạn cho phép (5MB).");
       return;
@@ -255,8 +229,6 @@ export default function CreatorDashboard() {
   const handleRemoveGalleryImage = (index: number) => {
     setGalleryImages(prev => prev.filter((_, idx) => idx !== index));
   };
-
-  // Open SPU Add modal
   const openCreateModal = () => {
     setSelectedProduct(null);
     setProductForm({ name: "", description: "", categoryId: "", imageUrl: "" });
@@ -264,16 +236,12 @@ export default function CreatorDashboard() {
     setVariantForms([{ skuCode: "", variantName: "", price: "", discountPrice: "0", initialQuantity: "0" }]);
     setIsCreateOpen(true);
   };
-
-  // Submit Product SPU + SKUs creation
   const handleSaveProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productForm.name.trim() || !productForm.categoryId) {
       toast.warning("Thiếu thông tin", "Vui lòng điền tên SPU và chọn danh mục lá.");
       return;
     }
-
-    // Validate variants
     const invalidVar = variantForms.some((v) => !v.skuCode.trim() || !v.variantName.trim() || !v.price);
     if (invalidVar) {
       toast.warning("Biến thể thiếu thông tin", "Vui lòng nhập đầy đủ SKU code, tên biến thể và giá bán.");
@@ -301,19 +269,14 @@ export default function CreatorDashboard() {
             variantName: v.variantName.trim(),
             price: Number(v.price),
             discountPrice: Number(v.discountPrice || 0),
-            // For existing variants (isNew=false) in edit mode: send 0 (backend ignores it, preserves stock)
-            // For new variants added in edit mode (isNew=true): send actual value so backend can import stock
-            // For create mode: always use the entered value
             initialQuantity: (selectedProduct && !v.isNew) ? 0 : Number(v.initialQuantity || 0)
           }))
         };
 
         if (selectedProduct) {
-          // Edit/Update product
           await productService.updateProduct(selectedProduct.id, payload as any);
           toast.success("Cập nhật thành công", `Đã lưu cập nhật cho sản phẩm "${productForm.name}".`);
         } else {
-          // Create product
           await productService.createProduct(payload as any);
           toast.success("Tạo thành công", `Sản phẩm "${productForm.name}" đã được tạo với các biến thể.`);
         }
@@ -328,8 +291,6 @@ export default function CreatorDashboard() {
       }
     });
   };
-
-  // Delete product SPU (Soft Delete)
   const handleDeleteProduct = async (product: Product) => {
     if (!window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm SPU "${product.name}"? Tồn kho tương ứng sẽ bị ẩn.`)) {
       return;
@@ -344,10 +305,6 @@ export default function CreatorDashboard() {
       toast.error("Lỗi xóa", "Không thể xóa sản phẩm này khỏi hệ thống.");
     }
   };
-
-  // =========================================================================
-  // LOGIC: TAB INVENTORY LEDGER & HISTORY
-  // =========================================================================
   const fetchInventoryHistory = React.useCallback(async (varId: string) => {
     setIsHistoryLoading(true);
     try {
@@ -368,8 +325,6 @@ export default function CreatorDashboard() {
       fetchInventoryHistory(selectedVariant.id);
     }
   }, [selectedVariant, activeTab, fetchInventoryHistory]);
-
-  // Automatically sync selectedVariant data when products list updates
   useEffect(() => {
     if (selectedVariant && products.length > 0) {
       for (const p of products) {
@@ -380,10 +335,7 @@ export default function CreatorDashboard() {
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
-
-  // Adjust stock physically
   const handleAdjustInventorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedVariant) return;
@@ -402,16 +354,12 @@ export default function CreatorDashboard() {
       try {
         await productService.adjustInventory(selectedVariant.id, adjustment, adjustReason.trim());
         toast.success("Điều chỉnh kho thành công", `Tồn kho vật lý đã được ghi nhận cập nhật (${adjustment > 0 ? "+" : ""}${adjustment}).`);
-        
-        // Optimistic UI update for immediate response
         setSelectedVariant(prev => prev ? {
           ...prev,
           quantity: prev.quantity + adjustment,
           availableStock: prev.availableStock + adjustment
         } : null);
         setAdjustQty("");
-        
-        // Fetch latest products and history to fully sync database state
         fetchProducts();
         fetchInventoryHistory(selectedVariant.id);
       } catch (err: any) {
@@ -420,10 +368,6 @@ export default function CreatorDashboard() {
       }
     });
   };
-
-  // =========================================================================
-  // LOGIC: TAB FULFILLMENT (CREATOR ORDERS)
-  // =========================================================================
   const fetchCreatorOrders = React.useCallback(async () => {
     setIsOrdersLoading(true);
     try {
@@ -442,8 +386,6 @@ export default function CreatorDashboard() {
       fetchCreatorOrders();
     }
   }, [orderPage, activeOrderStatus, isAuthenticated, activeTab, fetchCreatorOrders]);
-
-  // Transition Order status: PAID -> SHIPPED with Tracking code
   const handleShipOrder = async (orderId: string, orderCode: string) => {
     const tracking = trackingNumbers[orderId] || "";
     if (!tracking.trim()) {
@@ -463,8 +405,6 @@ export default function CreatorDashboard() {
       setIsFulfilling(prev => ({ ...prev, [orderId]: false }));
     }
   };
-
-  // Transition Order status: SHIPPED -> DELIVERED
   const handleDeliverOrder = async (orderId: string, orderCode: string) => {
     if (!window.confirm(`Xác nhận hoàn tất giao thành công đơn hàng con "${orderCode}"?`)) {
       return;
@@ -502,8 +442,6 @@ export default function CreatorDashboard() {
       <div className="absolute bottom-[10%] left-[5%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl w-full mx-auto relative z-10 flex-1 flex flex-col">
-        
-        {/* TITLE HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 flex items-center gap-2.5">
@@ -525,8 +463,6 @@ export default function CreatorDashboard() {
             </button>
           )}
         </div>
-
-        {/* WORKSPACE NAVIGATION TABS */}
         <div className="bg-white border border-zinc-200/60 rounded-2xl p-2 mb-6 flex overflow-x-auto gap-1 shadow-sm shrink-0">
           <button
             onClick={() => setActiveTab("products")}
@@ -564,10 +500,6 @@ export default function CreatorDashboard() {
             Xử lý Đơn hàng & Giao nhận
           </button>
         </div>
-
-        {/* =========================================================================
-            TAB CONTENT: PRODUCTS
-            ========================================================================= */}
         {activeTab === "products" && (
           <div className="bg-white border border-zinc-200/60 rounded-3xl p-5 shadow-sm space-y-4">
             <div className="flex justify-between items-center pb-4 border-b border-zinc-100">
@@ -634,7 +566,6 @@ export default function CreatorDashboard() {
                           <td className="px-5 py-3.5 text-right space-x-1 shrink-0">
                             <button
                               onClick={() => {
-                                // Populate edit SPU
                                 setSelectedProduct(p);
                                 setProductForm({
                                   name: p.name,
@@ -652,7 +583,7 @@ export default function CreatorDashboard() {
                                   price: v.price.toString(),
                                   discountPrice: v.discountPrice.toString(),
                                   initialQuantity: v.quantity.toString(),
-                                  isNew: false, // Existing variant from DB — lock initialQuantity
+                                  isNew: false,
                                 })));
                                 setIsCreateOpen(true);
                               }}
@@ -676,14 +607,8 @@ export default function CreatorDashboard() {
             )}
           </div>
         )}
-
-        {/* =========================================================================
-            TAB CONTENT: INVENTORY HISTORY (LEDGER)
-            ========================================================================= */}
         {activeTab === "inventory" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* VARIANT SELECTOR SIDEBAR */}
             <aside className="lg:col-span-4 bg-white border border-zinc-200/60 rounded-3xl p-5 shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-1.5">
                 <Barcode className="h-4.5 w-4.5 text-brand-500" />
@@ -719,8 +644,6 @@ export default function CreatorDashboard() {
                 )}
               </div>
             </aside>
-
-            {/* ADJUSTMENT & LEDGER HISTORY VIEW */}
             <main className="lg:col-span-8 bg-white border border-zinc-200/60 rounded-3xl p-6 shadow-sm space-y-8">
               
               {!selectedVariant ? (
@@ -735,7 +658,6 @@ export default function CreatorDashboard() {
                 </div>
               ) : (
                 <>
-                  {/* Stock Metrics and physical adjust form */}
                   <div>
                     <h3 className="text-base font-bold text-zinc-900 dark:text-white pb-3 border-b mb-6">
                       Quản lý Tồn kho Phiên bản: <span className="text-brand-600 font-extrabold">{selectedVariant.variantName}</span>
@@ -774,8 +696,6 @@ export default function CreatorDashboard() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Adjust Form */}
                     <form onSubmit={handleAdjustInventorySubmit} className="bg-zinc-50/50 p-5 rounded-2xl border border-dashed flex flex-col sm:flex-row items-end gap-4">
                       <div className="flex-1 w-full space-y-1.5">
                         <label className="block text-[10px] font-bold text-zinc-700 uppercase tracking-wider">Số lượng điều chỉnh (+ / -)</label>
@@ -808,8 +728,6 @@ export default function CreatorDashboard() {
                       </button>
                     </form>
                   </div>
-
-                  {/* Ledger Table */}
                   <div className="space-y-4">
                     <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
                       <FileSpreadsheet className="h-4.5 w-4.5 text-brand-500" />
@@ -895,10 +813,6 @@ export default function CreatorDashboard() {
             </main>
           </div>
         )}
-
-        {/* =========================================================================
-            TAB CONTENT: FULFILLMENT (CREATOR ORDERS)
-            ========================================================================= */}
         {activeTab === "fulfillment" && (
           <div className="bg-white border border-zinc-200/60 rounded-3xl p-5 shadow-sm space-y-5">
             <div className="flex justify-between items-center pb-4 border-b border-zinc-100">
@@ -949,7 +863,6 @@ export default function CreatorDashboard() {
                       key={order.orderId}
                       className="bg-zinc-50 rounded-2xl border p-5 flex flex-col gap-4 text-xs"
                     >
-                      {/* Order metadata */}
                       <div className="flex flex-wrap items-center justify-between border-b pb-3.5 gap-2.5">
                         <div className="flex items-center gap-3">
                           <span className="font-black text-brand-600 tracking-wider">Đơn hàng: {order.orderCode}</span>
@@ -967,10 +880,7 @@ export default function CreatorDashboard() {
                           {orderStatusLabel}
                         </span>
                       </div>
-
-                      {/* Items and Recipient details */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-                        {/* List items bought */}
                         <div className="space-y-2">
                           <div className="font-bold text-zinc-800">Sản phẩm khách mua:</div>
                           {order.items?.map((item, idx) => (
@@ -984,8 +894,6 @@ export default function CreatorDashboard() {
                             <span className="text-brand-600">{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(order.finalAmount)}</span>
                           </div>
                         </div>
-
-                        {/* Recipient card */}
                         <div className="bg-white p-4 rounded-xl border space-y-2 text-zinc-500 font-light">
                           <div className="font-bold text-zinc-800">Địa chỉ giao nhận hàng:</div>
                           <div>Người nhận: <strong className="font-bold text-zinc-800">{order.recipientName}</strong></div>
@@ -994,8 +902,6 @@ export default function CreatorDashboard() {
                           {order.customerNote && <div className="text-[10px] text-zinc-400 italic">Khách ghi chú: {order.customerNote}</div>}
                         </div>
                       </div>
-
-                      {/* Fulfillment Actions panel */}
                       {(isPaid || isShipped) && (
                         <div className="bg-white p-4.5 rounded-xl border border-dashed flex flex-col sm:flex-row items-end gap-3.5 justify-end">
                           {isPaid && (
@@ -1043,10 +949,6 @@ export default function CreatorDashboard() {
         )}
 
       </div>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MODAL: ADD/EDIT PRODUCT (SPU WITH VARIANT SKUS)
-          ═══════════════════════════════════════════════════════════════ */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCreateOpen(false)} />
@@ -1065,7 +967,6 @@ export default function CreatorDashboard() {
             </h3>
 
             <form onSubmit={handleSaveProductSubmit} className="space-y-6">
-              {/* Basic SPU fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Tên sản phẩm chính *</label>
@@ -1094,8 +995,6 @@ export default function CreatorDashboard() {
                   </select>
                 </div>
               </div>
-
-              {/* Description */}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">Mô tả chi tiết sản phẩm</label>
                 <textarea
@@ -1106,8 +1005,6 @@ export default function CreatorDashboard() {
                   className="w-full p-4 rounded-xl bg-zinc-50 border text-xs focus:outline-none focus:border-brand-500 resize-none"
                 />
               </div>
-
-              {/* SPU Image File Upload */}
               <div className="space-y-2">
                 <label className="block text-[10px] font-bold text-zinc-700 dark:text-zinc-350 uppercase tracking-wider">Ảnh chính đại diện của sản phẩm (Thumbnail) *</label>
                 
@@ -1159,8 +1056,6 @@ export default function CreatorDashboard() {
                   </div>
                 )}
               </div>
-
-              {/* Product Gallery Images Multi-Upload */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="block text-[10px] font-bold text-zinc-700 uppercase tracking-wider">
@@ -1216,8 +1111,6 @@ export default function CreatorDashboard() {
                   )}
                 </div>
               </div>
-
-              {/* DYNAMIC VARIANT SKUS SECTION */}
               <div className="border-t pt-5 space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
@@ -1241,7 +1134,6 @@ export default function CreatorDashboard() {
                       key={idx} 
                       className="bg-zinc-50 p-4.5 rounded-2xl border border-zinc-200/60 relative grid grid-cols-1 sm:grid-cols-5 gap-3"
                     >
-                      {/* SKU Code */}
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">Mã phiên bản (SKU) *</label>
                         <input
@@ -1253,8 +1145,6 @@ export default function CreatorDashboard() {
                           className="w-full h-9 px-2 bg-white rounded-lg border text-xs focus:outline-none"
                         />
                       </div>
-
-                      {/* Variant Name */}
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">Tên phiên bản *</label>
                         <input
@@ -1266,8 +1156,6 @@ export default function CreatorDashboard() {
                           className="w-full h-9 px-2 bg-white rounded-lg border text-xs focus:outline-none"
                         />
                       </div>
-
-                      {/* Price */}
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">Giá bán lẻ (VND) *</label>
                         <input
@@ -1279,8 +1167,6 @@ export default function CreatorDashboard() {
                           className="w-full h-9 px-2 bg-white rounded-lg border text-xs focus:outline-none"
                         />
                       </div>
-
-                      {/* Discount Price */}
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">Giá khuyến mãi (VND)</label>
                         <input
@@ -1291,8 +1177,6 @@ export default function CreatorDashboard() {
                           className="w-full h-9 px-2 bg-white rounded-lg border text-xs focus:outline-none"
                         />
                       </div>
-
-                      {/* Initial quantity: editable when creating OR when adding a new SKU during edit */}
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">
                           {selectedProduct && !v.isNew ? "Tồn kho hiện tại" : "Số lượng ban đầu *"}
@@ -1300,14 +1184,12 @@ export default function CreatorDashboard() {
                         <input
                           type="number"
                           placeholder="0"
-                          disabled={!!selectedProduct && !v.isNew} // Disable for existing variants in edit mode
+                          disabled={!!selectedProduct && !v.isNew}
                           value={v.initialQuantity}
                           onChange={(e) => handleVariantFormChange(idx, "initialQuantity", e.target.value)}
                           className="w-full h-9 px-2 bg-white rounded-lg border text-xs focus:outline-none disabled:bg-zinc-100 disabled:opacity-60"
                         />
                       </div>
-
-                      {/* Remove row button */}
                       {variantForms.length > 1 && (
                         <button
                           type="button"
@@ -1321,8 +1203,6 @@ export default function CreatorDashboard() {
                   ))}
                 </div>
               </div>
-
-              {/* CTAs */}
               <div className="flex gap-4 pt-4 border-t">
                 <button
                   type="button"

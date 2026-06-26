@@ -23,16 +23,12 @@ export default function AdminDashboardHub() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const toast = useToast();
   const router = useRouter();
-
-  // Guard routing
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Vui lòng đăng nhập để truy cập trang quản trị.");
       router.push(ROUTES.LOGIN);
     }
   }, [isAuthenticated, isAuthLoading, router, toast]);
-
-  // Auth Loading
   if (isAuthLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] bg-zinc-50 transition-colors duration-300">
@@ -41,8 +37,6 @@ export default function AdminDashboardHub() {
       </div>
     );
   }
-
-  // Security Guard for Admin ROLE
   if (!isAuthenticated || !user?.roles?.includes("ROLE_ADMIN")) {
     return <Forbidden />;
   }
@@ -76,13 +70,10 @@ export default function AdminDashboardHub() {
 
   return (
     <div className="flex-1 flex flex-col bg-zinc-50 px-6 py-10 transition-colors duration-300 relative min-h-screen">
-      {/* Background visual graphics */}
       <div className="absolute top-[8%] right-[8%] w-80 h-80 bg-brand-100/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[10%] left-[8%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-5xl w-full mx-auto relative z-10 flex-1 flex flex-col space-y-8">
-        
-        {/* Header Block */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-200/60 pb-6">
           <div>
             <div className="flex items-center gap-3">
@@ -101,8 +92,6 @@ export default function AdminDashboardHub() {
             Hệ thống Hoạt động Ổn định
           </div>
         </div>
-
-        {/* Server Context / Stats Summary Panel */}
         <div className="bg-white border border-zinc-200/60 rounded-3xl p-5 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="flex items-center gap-3.5">
             <div className="p-3 bg-zinc-50 border border-zinc-100 rounded-2xl">
@@ -134,8 +123,6 @@ export default function AdminDashboardHub() {
             </div>
           </div>
         </div>
-
-        {/* Subsystems Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {adminModules.map((module) => {
             const IconComponent = module.icon;
@@ -146,19 +133,14 @@ export default function AdminDashboardHub() {
                 className={`bg-white border border-zinc-200/70 rounded-[2rem] p-6.5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group ${module.hoverColor} flex flex-col justify-between min-h-[250px]`}
               >
                 <div className="space-y-4">
-                  {/* Icon wrap */}
                   <div className={`p-3.5 rounded-2xl border w-fit ${module.color}`}>
                     <IconComponent className="h-6 w-6" />
                   </div>
-
-                  {/* Text */}
                   <div className="space-y-1.5">
                     <h3 className="text-lg font-extrabold text-zinc-900 group-hover:text-brand-600 transition-colors">{module.title}</h3>
                     <p className="text-xs text-zinc-400 font-light leading-relaxed">{module.desc}</p>
                   </div>
                 </div>
-
-                {/* Footer action link */}
                 <div className="flex items-center gap-1 text-xs font-bold text-zinc-700 mt-4 group-hover:text-brand-600 transition-colors">
                   <span>Truy cập quản trị</span>
                   <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />

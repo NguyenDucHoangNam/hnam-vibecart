@@ -9,7 +9,7 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderPaidEvent {
-    private String eventType; // ORDER_PAID
+    private String eventType;
     private ZonedDateTime timestamp;
     private String orderId;
     private String orderCode;

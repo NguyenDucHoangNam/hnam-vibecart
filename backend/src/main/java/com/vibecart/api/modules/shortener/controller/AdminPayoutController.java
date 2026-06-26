@@ -13,10 +13,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-/**
- * Controller quản trị xử lý các yêu cầu rút tiền hoa hồng từ phía Admin.
- */
 @RestController
 @RequestMapping("/api/v1/admin/payouts")
 @RequiredArgsConstructor
@@ -24,10 +20,6 @@ import java.util.List;
 public class AdminPayoutController {
 
         private final PayoutService payoutService;
-
-        /**
-         * Lấy danh sách các yêu cầu rút tiền theo trạng thái lọc.
-         */
         @GetMapping
         @PreAuthorize("hasRole('ADMIN')")
         public ResponseEntity<ApiResponse<List<PayoutResponse>>> getPayoutRequests(
@@ -46,10 +38,6 @@ public class AdminPayoutController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Phê duyệt hoặc từ chối yêu cầu rút tiền theo ID.
-         */
         @PutMapping("/{id}/approve")
         @PreAuthorize("hasRole('ADMIN')")
         public ResponseEntity<ApiResponse<PayoutResponse>> approvePayout(

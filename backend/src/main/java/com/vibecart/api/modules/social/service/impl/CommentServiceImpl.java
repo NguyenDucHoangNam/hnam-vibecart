@@ -27,10 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link CommentService} xử lý bình luận phân cấp đa tầng.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -41,12 +37,6 @@ public class CommentServiceImpl implements CommentService {
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
     private final ProfanityFilter profanityFilter;
-
-    /**
-     * Spec: "hỗ trợ phân cấp đa tầng, giới hạn hiển thị tối đa 3 cấp".
-     * Depth 0 = root, depth 1 = reply, depth 2 = sub-reply (cấp 3 cuối cùng).
-     * MAX_NESTING_DEPTH = 2 → cho phép lưu tối đa 3 cấp (0,1,2).
-     */
     private static final int MAX_NESTING_DEPTH = 2;
 
 
@@ -167,13 +157,6 @@ public class CommentServiceImpl implements CommentService {
         commentRepository.delete(comment);
         log.info("Comment {} deleted by {}", commentId, username);
     }
-
-
-
-    /**
-     * Tính depth (số cấp cha) của 1 comment.
-     * Root = depth 0, reply = depth 1, sub-reply = depth 2.
-     */
     private int calculateDepth(PostComment comment) {
         int depth = 0;
         PostComment current = comment;
@@ -183,11 +166,6 @@ public class CommentServiceImpl implements CommentService {
         }
         return depth;
     }
-
-    /**
-     * [BE-9] Build cây comment đệ quy từ pre-fetched grouped replies map.
-     * Không gọi thêm query nào.
-     */
     private CommentResponse toCommentResponseTree(PostComment comment, Map<String, List<PostComment>> repliesByParentId) {
         List<PostComment> directReplies = repliesByParentId.getOrDefault(comment.getId(), List.of());
 

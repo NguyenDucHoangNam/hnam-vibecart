@@ -25,7 +25,6 @@ export function Footer() {
     >
       <div className="mx-auto max-w-6xl relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-          {/* Col 1: Brand Info */}
           <div className="flex flex-col gap-4">
             <Link href={ROUTES.HOME} className="flex items-center gap-2.5 group">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-md shadow-brand-500/20">
@@ -38,7 +37,6 @@ export function Footer() {
             <p className="text-sm text-zinc-500 leading-relaxed max-w-xs">
               Nền tảng mua sắm kết hợp mạng xã hội thế hệ mới. Khám phá, kết nối và mua sắm sản phẩm bạn yêu thích.
             </p>
-            {/* Social Links */}
             <div className="flex gap-2 mt-1">
               {[InstagramIcon, TwitterIcon, GithubIcon].map((Icon, i) => (
                 <a
@@ -51,8 +49,6 @@ export function Footer() {
               ))}
             </div>
           </div>
-
-          {/* Col 2: Shop links */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-800 mb-4">Cửa hàng</h3>
             <ul className="flex flex-col gap-2.5 text-sm">
@@ -62,8 +58,6 @@ export function Footer() {
               <li><Link href={ROUTES.PRODUCTS} className="hover:text-brand-600 transition-colors">Danh mục sản phẩm</Link></li>
             </ul>
           </div>
-
-          {/* Col 3: Creators links */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-800 mb-4">Creators</h3>
             <ul className="flex flex-col gap-2.5 text-sm">
@@ -73,8 +67,6 @@ export function Footer() {
               <li><Link href={ROUTES.REGISTER} className="hover:text-brand-600 transition-colors">Trở thành Creator</Link></li>
             </ul>
           </div>
-
-          {/* Col 4: Platform details */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-zinc-700 mb-4">Công nghệ</h3>
             <ul className="flex flex-col gap-2.5 text-sm text-zinc-400">

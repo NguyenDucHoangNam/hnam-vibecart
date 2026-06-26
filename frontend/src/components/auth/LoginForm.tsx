@@ -18,8 +18,6 @@ interface ApiErrorType {
     message?: string;
   };
 }
-
-// Minimal types for Facebook SDK to avoid 'any'
 interface FBLoginResponse {
   authResponse?: {
     accessToken: string;
@@ -63,13 +61,10 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Environment variables checked at runtime
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   const facebookAppId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
 
   useEffect(() => {
-    // Bắt token trả về từ Facebook OAuth Redirect Flow (nằm ở hash fragment)
     const hash = window.location.hash;
     if (hash && hash.includes("access_token=")) {
       const params = new URLSearchParams(hash.substring(1));
@@ -77,7 +72,6 @@ export default function LoginForm() {
       const state = params.get("state");
 
       if (accessToken && state === "facebook_login") {
-        // Xóa hash trên URL để giữ thanh địa chỉ sạch sẽ
         window.history.replaceState(null, "", window.location.pathname);
         
         setError(null);
@@ -142,11 +136,7 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-sm">
-
-      {/* Container Card */}
       <div className="bg-white/80 backdrop-blur-xl border border-brand-100/40 rounded-2xl p-6 shadow-xl shadow-brand-500/5 transition-all duration-300">
-        
-        {/* Title Header */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-extrabold tracking-tight text-brand-800">
             Đăng nhập
@@ -155,18 +145,13 @@ export default function LoginForm() {
             Nhập tài khoản của bạn để tiếp tục
           </p>
         </div>
-
-        {/* General Error Display */}
         {error && (
           <div className="mb-6 p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 rounded-2xl flex items-start space-x-3 text-rose-700 dark:text-rose-300 text-sm leading-relaxed animate-fade-in">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
-
-        {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email / Username Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
               Tài khoản hoặc Email
@@ -186,8 +171,6 @@ export default function LoginForm() {
               />
             </div>
           </div>
-
-          {/* Password Input */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
@@ -221,8 +204,6 @@ export default function LoginForm() {
               </button>
             </div>
           </div>
-
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -238,16 +219,12 @@ export default function LoginForm() {
             )}
           </button>
         </form>
-
-        {/* Divider */}
         <div className="relative my-6 text-center">
           <hr className="border-brand-100/50" />
           <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm px-3 text-[10px] font-medium text-zinc-400 uppercase tracking-wider">
             Hoặc
           </span>
         </div>
-
-        {/* Social Authentication Buttons — single row */}
         <div className="grid grid-cols-2 gap-3 items-center">
           {googleClientId ? (
             <div className="w-full flex justify-center [&_iframe]:!w-full [&_iframe]:!min-w-full h-[40px] overflow-hidden">
@@ -302,8 +279,6 @@ export default function LoginForm() {
             <span>Facebook</span>
           </button>
         </div>
-
-        {/* Bottom Navigation */}
         <p className="mt-6 text-center text-sm text-zinc-400">
           Chưa có tài khoản?{" "}
           <Link href={ROUTES.REGISTER} className="font-semibold text-brand-500 hover:text-brand-600 transition-colors">

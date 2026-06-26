@@ -20,11 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
 import java.util.Set;
-
-/**
- * Implementation của {@link UserService} quản lý hồ sơ thông tin cá nhân của
- * người dùng.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -85,7 +80,6 @@ public class UserServiceImpl implements UserService {
 
         if (usernameChanged) {
             purgeAllSessions(oldUsername);
-            // Sẽ cần đăng nhập lại ở Client do đã thay đổi username và mất toàn bộ token
             return AuthResponse.builder()
                     .user(userResponse)
                     .build();

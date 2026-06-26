@@ -22,10 +22,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
-
-/**
- * Implementation của {@link ReportWorkerService} xuất báo cáo Excel bất đồng bộ và upload lên S3.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

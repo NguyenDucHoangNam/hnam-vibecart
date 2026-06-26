@@ -18,11 +18,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-/**
- * Lớp triển khai dịch vụ kiểm soát trạng thái trực tuyến (Presence) sử dụng
- * Redis.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,11 +31,6 @@ public class PresenceServiceImpl implements PresenceService {
     private static final String LAST_ACTIVE_KEY_PREFIX = "presence:last_active:";
     private static final String ACTIVE_USERS_SET = "presence:active_users";
     private static final long ONLINE_TTL_SECONDS = 40;
-
-    /**
-     * Cập nhật trạng thái trực tuyến của người dùng lên Redis với thời gian hết hạn
-     * (TTL).
-     */
     @Override
     public void setOnline(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
@@ -56,11 +46,6 @@ public class PresenceServiceImpl implements PresenceService {
             log.debug("Set user presence to ONLINE: username={}, userId={}", username, userId);
         });
     }
-
-    /**
-     * Cập nhật trạng thái ngoại tuyến của người dùng bằng cách xóa key trạng thái
-     * trong Redis.
-     */
     @Override
     public void setOffline(String username) {
         userRepository.findByUsername(username).ifPresent(user -> {
@@ -76,10 +61,6 @@ public class PresenceServiceImpl implements PresenceService {
             log.debug("Set user presence to OFFLINE: username={}, userId={}", username, userId);
         });
     }
-
-    /**
-     * Lấy thông tin trạng thái và thời gian hoạt động cuối cùng của người dùng.
-     */
     @Override
     public PresenceResponse getUserPresence(String userId) {
         String key = PRESENCE_KEY_PREFIX + userId;
@@ -110,11 +91,6 @@ public class PresenceServiceImpl implements PresenceService {
                 .lastActiveAt(lastActiveAt)
                 .build();
     }
-
-    /**
-     * Lấy danh sách tối đa 10 người dùng đang online mà người dùng hiện tại đang
-     * theo dõi.
-     */
     @Override
     public List<FollowResponse> getActiveUsers(String currentUsername) {
         log.info("Fetching all active/online users from Redis SET...");

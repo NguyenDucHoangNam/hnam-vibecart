@@ -9,19 +9,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
-
-/**
- * Cấu hình chia sẻ tài nguyên nguồn gốc chéo (CORS).
- */
 @Configuration(proxyBeanMethods = false)
 public class CorsConfig {
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}")
     private String[] allowedOrigins;
-
-    /**
-     * Cấu hình các thiết lập CORS cho toàn bộ ứng dụng.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

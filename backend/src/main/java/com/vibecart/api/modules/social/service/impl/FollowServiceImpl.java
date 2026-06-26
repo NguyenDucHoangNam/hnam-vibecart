@@ -23,10 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-/**
- * Implementation của {@link FollowService} xử lý follow/unfollow và thống kê.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -61,7 +57,6 @@ public class FollowServiceImpl implements FollowService {
             followRepository.deleteById(followId);
             log.info("User {} unfollowed {}", currentUsername, targetUser.getUsername());
 
-            // [FAN-OUT] Xóa bài viết của người bị unfollow khỏi timeline (async)
             feedFanoutService.onUnfollow(currentUser.getId(), targetUserId);
 
             return false;
@@ -74,7 +69,6 @@ public class FollowServiceImpl implements FollowService {
             followRepository.save(follow);
             log.info("User {} followed {}", currentUsername, targetUser.getUsername());
 
-            // [FAN-OUT] Backfill bài viết gần nhất của người được follow vào timeline (async)
             feedFanoutService.onFollow(currentUser.getId(), targetUserId);
 
             return true;
@@ -182,11 +176,6 @@ public class FollowServiceImpl implements FollowService {
                 .map(User::getId)
                 .orElse(null);
     }
-
-    /**
-     * [BE-2] Batch check: trả về Set<userId> mà currentUser đang follow
-     * từ danh sách targetIds. Chỉ 1 query thay vì N queries.
-     */
     private Set<String> batchCheckFollowed(String currentUserId, List<String> targetIds) {
         if (currentUserId == null || targetIds.isEmpty()) return Set.of();
         return new HashSet<>(followRepository.findFollowingIdsIn(currentUserId, targetIds));

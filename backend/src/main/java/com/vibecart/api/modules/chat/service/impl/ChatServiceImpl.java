@@ -38,11 +38,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-
-/**
- * Lớp triển khai các dịch vụ nghiệp vụ chat, quản lý phòng và tin nhắn sử dụng
- * MongoDB và Redis.
- */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -61,11 +56,6 @@ public class ChatServiceImpl implements ChatService {
     private static final long MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
     private static final Set<String> FORBIDDEN_EXTENSIONS = Set.of(".exe", ".bat", ".sh");
     private static final String CHANNEL_PREFIX = "chat:user:";
-
-    /**
-     * Tạo mới cuộc hội thoại (Direct/Group) hoặc trả về cuộc hội thoại Direct đã có
-     * sẵn.
-     */
     @Override
     public ConversationResponse createOrGetConversation(ConversationRequest request, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -118,11 +108,6 @@ public class ChatServiceImpl implements ChatService {
 
         return toConversationResponse(saved);
     }
-
-    /**
-     * Lấy tất cả các cuộc hội thoại của người dùng và sắp xếp theo thời gian cập
-     * nhật giảm dần.
-     */
     @Override
     public List<ConversationResponse> getConversationsForUser(String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -132,11 +117,6 @@ public class ChatServiceImpl implements ChatService {
                 .map(this::toConversationResponse)
                 .collect(Collectors.toList());
     }
-
-    /**
-     * Lấy tin nhắn trong cuộc hội thoại theo phân trang và đánh dấu phòng chat là
-     * đã đọc.
-     */
     @Override
     public PageResponse<MessageResponse> getMessages(String conversationId, int page, int size,
             String currentUsername) {
@@ -171,11 +151,6 @@ public class ChatServiceImpl implements ChatService {
                 .last(msgPage.isLast())
                 .build();
     }
-
-    /**
-     * Lưu tin nhắn mới vào database, cập nhật tin nhắn cuối và tăng số lượng tin
-     * nhắn chưa đọc của thành viên khác.
-     */
     @Override
     public MessageResponse saveAndBroadcastMessage(MessageRequest request, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -278,10 +253,6 @@ public class ChatServiceImpl implements ChatService {
 
         return response;
     }
-
-    /**
-     * Phát tán sự kiện đang gõ phím tới tất cả thành viên khác trong phòng chat.
-     */
     @Override
     public void broadcastTyping(TypingRequest request, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -316,10 +287,6 @@ public class ChatServiceImpl implements ChatService {
             log.error("Failed to serialize typing event for Redis", e);
         }
     }
-
-    /**
-     * Sinh Pre-signed URL để Client trực tiếp tải tệp đính kèm lên S3.
-     */
     @Override
     public PresignedUrlResponse generateAttachmentUploadUrl(PresignedUrlRequest request, String currentUsername) {
         if (request.getFileSize() > MAX_FILE_SIZE_BYTES) {
@@ -357,19 +324,10 @@ public class ChatServiceImpl implements ChatService {
                 .fileUrl(fileUrl)
                 .build();
     }
-
-    /**
-     * Tìm kiếm thông tin người dùng theo Username.
-     */
     private User findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
     }
-
-    /**
-     * Lấy danh sách Username mục tiêu của tất cả thành viên trong nhóm ngoại trừ
-     * người gửi.
-     */
     private List<String> getTargetUsernames(Set<String> memberIds, String senderId) {
         Set<String> targetIds = memberIds.stream()
                 .filter(id -> !id.equals(senderId))
@@ -382,11 +340,6 @@ public class ChatServiceImpl implements ChatService {
                 .map(User::getUsername)
                 .collect(Collectors.toList());
     }
-
-    /**
-     * Ánh xạ thông tin Conversation sang ConversationResponse kèm chi tiết thành
-     * viên và tin nhắn cuối.
-     */
     private ConversationResponse toConversationResponse(Conversation conversation) {
         ConversationResponse response = chatMapper.toConversationResponse(conversation);
 
@@ -424,11 +377,6 @@ public class ChatServiceImpl implements ChatService {
 
         return response;
     }
-
-    /**
-     * Phát tán sự kiện đã xem tin nhắn (READ_RECEIPT) tới các thành viên qua Redis
-     * Pub/Sub.
-     */
     private void broadcastReadReceipt(String conversationId, String readerId, List<String> targetUsernames) {
         try {
             Map<String, Object> receiptPayload = Map.of(
@@ -450,11 +398,6 @@ public class ChatServiceImpl implements ChatService {
             log.error("Failed to serialize read receipt payload", e);
         }
     }
-
-    /**
-     * Đánh dấu cuộc hội thoại là đã đọc: reset unreadCount, cập nhật danh sách
-     * readBy của tin nhắn và broadcast sự kiện seen.
-     */
     @Override
     public void markConversationAsRead(String conversationId, String currentUsername) {
         User currentUser = findUserByUsername(currentUsername);
@@ -505,10 +448,6 @@ public class ChatServiceImpl implements ChatService {
             broadcastReadReceipt(conversationId, currentUserId, targetUsernames);
         }
     }
-
-    /**
-     * Trích xuất S3 key từ đường dẫn URL đầy đủ.
-     */
     private String extractS3KeyFromUrl(String fileUrl) {
         if (fileUrl == null)
             return null;

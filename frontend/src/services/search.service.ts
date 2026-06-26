@@ -7,7 +7,7 @@ export interface SearchParams {
   categoryId?: string;
   minPrice?: number;
   maxPrice?: number;
-  sort?: string; // relevance, price_asc, price_desc, newest, popular
+  sort?: string;
   page?: number;
   size?: number;
 }
@@ -19,7 +19,6 @@ export interface UserSearchParams {
 }
 
 export const searchService = {
-  // 1. Tìm kiếm và phân trang kết quả sản phẩm từ Elasticsearch
   search: async (params: SearchParams) => {
     const queryParams: Record<string, string | number | boolean> = {};
     
@@ -38,7 +37,6 @@ export const searchService = {
     return res;
   },
 
-  // 1b. Tìm kiếm và phân trang kết quả thành viên từ Elasticsearch
   searchUsers: async (params: UserSearchParams) => {
     const queryParams: Record<string, string | number | boolean> = {};
     
@@ -52,7 +50,6 @@ export const searchService = {
     return res;
   },
 
-  // 2. Gợi ý từ khóa autocomplete thời gian thực
   getAutocomplete: async (prefix: string) => {
     if (!prefix.trim()) return [];
     const res = await api.get<string[]>(ENDPOINTS.SEARCH.AUTOCOMPLETE, {
@@ -61,7 +58,6 @@ export const searchService = {
     return res;
   },
 
-  // 2b. Gợi ý từ khóa thành viên autocomplete thời gian thực
   getUserAutocomplete: async (prefix: string) => {
     if (!prefix.trim()) return [];
     const res = await api.get<string[]>(ENDPOINTS.SEARCH.USERS_AUTOCOMPLETE, {
@@ -70,19 +66,16 @@ export const searchService = {
     return res;
   },
 
-  // 3. Lấy top các từ khóa xu hướng từ Redis
   getTrending: async () => {
     const res = await api.get<string[]>(ENDPOINTS.SEARCH.TRENDING);
     return res;
   },
 
-  // 4. Lấy lịch sử tìm kiếm cá nhân từ MongoDB
   getHistory: async () => {
     const res = await api.get<SearchHistoryResponse[]>(ENDPOINTS.SEARCH.HISTORY);
     return res;
   },
 
-  // 5. Xóa một từ khóa cụ thể trong lịch sử
   deleteHistoryKeyword: async (keyword: string) => {
     const res = await api.delete<void>(ENDPOINTS.SEARCH.HISTORY, {
       params: { keyword }
@@ -90,13 +83,11 @@ export const searchService = {
     return res;
   },
 
-  // 6. Xóa sạch lịch sử tìm kiếm
   clearHistory: async () => {
     const res = await api.delete<void>(ENDPOINTS.SEARCH.CLEAR_HISTORY);
     return res;
   },
 
-  // 7. Đồng bộ LocalStorage ngoại tuyến lên MongoDB
   mergeHistory: async (keywords: SearchMergeItem[]) => {
     const res = await api.post<void>(ENDPOINTS.SEARCH.MERGE_HISTORY, {
       keywords
@@ -104,7 +95,6 @@ export const searchService = {
     return res;
   },
 
-  // 8. Quản trị viên reindex thủ công chỉ mục
   reindexAll: async () => {
     const res = await api.post<void>(ENDPOINTS.SEARCH.SYNC);
     return res;

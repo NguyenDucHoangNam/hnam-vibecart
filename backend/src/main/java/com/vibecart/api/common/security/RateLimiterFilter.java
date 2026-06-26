@@ -23,10 +23,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-/**
- * Bộ lọc giới hạn tần suất yêu cầu (Rate Limiter Filter) sử dụng thuật toán Token Bucket (Bucket4j).
- */
 @Component
 @Slf4j
 public class RateLimiterFilter extends OncePerRequestFilter {
@@ -44,10 +40,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
-
-    /**
-     * Thực hiện kiểm tra giới hạn tần suất request (IP Global & endpoint nhạy cảm).
-     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -92,10 +84,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-
-    /**
-     * Trích xuất địa chỉ IP của client từ request (hỗ trợ reverse proxy).
-     */
     private String extractClientIp(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (StringUtils.hasText(xForwardedFor)) {
@@ -109,18 +97,10 @@ public class RateLimiterFilter extends OncePerRequestFilter {
 
         return request.getRemoteAddr();
     }
-
-    /**
-     * Kiểm tra xem đường dẫn request có thuộc danh sách endpoint nhạy cảm cần giới hạn chặt hơn không.
-     */
     private boolean isSensitivePath(String requestUri) {
         return properties.getSensitive().getPaths().stream()
                 .anyMatch(requestUri::startsWith);
     }
-
-    /**
-     * Tạo đối tượng Bucket4j cấu hình lượng token và thời gian hồi.
-     */
     private Bucket createBucket(RateLimiterProperties.BucketConfig config) {
         Bandwidth bandwidth = Bandwidth.builder()
                 .capacity(config.getCapacity())
@@ -130,10 +110,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
                 .addLimit(bandwidth)
                 .build();
     }
-
-    /**
-     * Trả về phản hồi HTTP 429 (Too Many Requests) định dạng JSON chuẩn.
-     */
     private void sendRateLimitResponse(HttpServletResponse response, long retryAfterSeconds, long remainingTokens)
             throws IOException {
 
@@ -152,10 +128,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
 
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
     }
-
-    /**
-     * Định kỳ dọn dẹp bộ nhớ lưu trữ bucket đã đầy token không còn hoạt động.
-     */
     @Scheduled(fixedRate = 600_000)
     public void cleanupExpiredBuckets() {
         long beforeGlobal = globalBuckets.size();

@@ -29,13 +29,9 @@ import { Forbidden } from "@/components/common/Forbidden";
 import { categoryService } from "@/services/category.service";
 import { Category } from "@/types";
 import { ROUTES } from "@/constants/routes";
-
-// Real-time Vietnamese-to-English Auto-Slug Generator
 const convertToSlug = (text: string): string => {
   if (!text) return "";
   let slug = text.toLowerCase();
-  
-  // Replace Vietnamese accents
   slug = slug.replace(/[áàảãạăắằẳẵặâấầẩẫậ]/g, "a");
   slug = slug.replace(/[éèẻẽẹêếềểễệ]/g, "e");
   slug = slug.replace(/[íìỉĩị]/g, "i");
@@ -43,8 +39,6 @@ const convertToSlug = (text: string): string => {
   slug = slug.replace(/[úùủũụưứừửữự]/g, "u");
   slug = slug.replace(/[ýỳỷỹỵ]/g, "y");
   slug = slug.replace(/đ/g, "d");
-  
-  // Remove special characters, strip spaces and replace with dashes
   slug = slug.replace(/[^a-z0-9\s-]/g, "");
   slug = slug.replace(/\s+/g, "-");
   slug = slug.replace(/-+/g, "-");
@@ -57,40 +51,28 @@ export default function AdminCategoriesPage() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const toast = useToast();
   const router = useRouter();
-
-  // State Management
   const [categoriesTree, setCategoriesTree] = useState<Category[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
-
-  // Panel details & Action States
   const [action, setAction] = useState<"idle" | "create" | "edit">("idle");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
-
-  // Form states
   const [formData, setFormData] = useState({
     name: "",
     parentId: "" as string | null
   });
-
-  // Guard routing & authorize admins
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Vui lòng đăng nhập để truy cập trang quản trị.");
       router.push(ROUTES.LOGIN);
     }
   }, [isAuthenticated, isAuthLoading, router, toast]);
-
-  // Fetch Category Tree
   const fetchCategories = useCallback(async () => {
     setIsDataLoading(true);
     try {
       const data = await categoryService.getCategoriesTree();
       setCategoriesTree(data || []);
-      
-      // Auto-expand root nodes on first fetch if they aren't configured
       if (Object.keys(expandedNodes).length === 0 && data) {
         const rootExpands: Record<string, boolean> = {};
         data.forEach((cat) => {
@@ -111,8 +93,6 @@ export default function AdminCategoriesPage() {
       fetchCategories();
     }
   }, [isAuthenticated, user, fetchCategories]);
-
-  // Toggle Collapse / Expand
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedNodes(prev => ({
@@ -120,13 +100,10 @@ export default function AdminCategoriesPage() {
       [id]: !prev[id]
     }));
   };
-
-  // Flattened categories for the parent select dropdown
   const flatCategoriesList = useMemo(() => {
     const list: { id: string; name: string }[] = [];
     const recurse = (cats: Category[], level = 0) => {
       cats.forEach(cat => {
-        // Render indent spacing for clarity
         const indent = "— ".repeat(level);
         list.push({ id: cat.id, name: `${indent}${cat.name}` });
         if (cat.children && cat.children.length > 0) {
@@ -137,11 +114,7 @@ export default function AdminCategoriesPage() {
     recurse(categoriesTree);
     return list;
   }, [categoriesTree]);
-
-  // Dynamic Slug Preview of current form Name input
   const slugPreview = useMemo(() => convertToSlug(formData.name), [formData.name]);
-
-  // Calculate Metrics
   const metrics = useMemo(() => {
     let total = 0;
     let parents = 0;
@@ -162,8 +135,6 @@ export default function AdminCategoriesPage() {
 
     return { total, parents, leaves };
   }, [categoriesTree]);
-
-  // Trigger Add Root Category
   const handleOpenCreateRoot = () => {
     setSelectedCategory(null);
     setAction("create");
@@ -172,8 +143,6 @@ export default function AdminCategoriesPage() {
       parentId: ""
     });
   };
-
-  // Trigger Add Child Category
   const handleOpenCreateChild = (parentCat: Category, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedCategory(parentCat);
@@ -183,8 +152,6 @@ export default function AdminCategoriesPage() {
       parentId: parentCat.id
     });
   };
-
-  // Trigger Edit Category
   const handleOpenEdit = (cat: Category, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedCategory(cat);
@@ -194,8 +161,6 @@ export default function AdminCategoriesPage() {
       parentId: cat.parentId || ""
     });
   };
-
-  // Submit creation / update
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -214,7 +179,6 @@ export default function AdminCategoriesPage() {
           await categoryService.createCategory(payload);
           toast.success("Tạo thành công", `Danh mục "${payload.name}" đã được khởi tạo.`);
         } else if (action === "edit" && selectedCategory) {
-          // Guard loop parent referencing
           if (payload.parentId === selectedCategory.id) {
             toast.error("Lỗi phân cấp", "Không thể gán danh mục cha trùng với chính nó.");
             return;
@@ -235,12 +199,8 @@ export default function AdminCategoriesPage() {
       }
     });
   };
-
-  // Safe Category Deletion Dialog confirmation
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-
-    // Client-side safety guards check
     if (deleteTarget.children && deleteTarget.children.length > 0) {
       toast.error("Không thể xóa", "Danh mục này hiện chứa các danh mục con. Hãy dọn dẹp hoặc chuyển danh mục con trước.");
       setDeleteTarget(null);
@@ -265,18 +225,13 @@ export default function AdminCategoriesPage() {
       }
     });
   };
-
-  // Dynamic category tree node renderer
   const renderTreeNode = (cat: Category, depth = 0) => {
     const isParent = cat.children && cat.children.length > 0;
     const isExpanded = expandedNodes[cat.id];
-    
-    // leaf criteria: No sub-categories AND has parent category (or depth > 0)
     const isLeaf = !isParent && (cat.parentId || depth > 0);
 
     return (
       <div key={cat.id} className="select-none transition-all">
-        {/* Node Box */}
         <div 
           onClick={() => {
             setSelectedCategory(cat);
@@ -291,7 +246,6 @@ export default function AdminCategoriesPage() {
           }`}
         >
           <div className="flex items-center gap-3 min-w-0">
-            {/* Collapse toggle button */}
             {isParent ? (
               <button 
                 onClick={(e) => toggleExpand(cat.id, e)}
@@ -306,8 +260,6 @@ export default function AdminCategoriesPage() {
             ) : (
               <span className="w-6 shrink-0" />
             )}
-
-            {/* Folder or Document Icon */}
             {isParent ? (
               isExpanded ? (
                 <FolderOpen className="h-5 w-5 text-brand-500 shrink-0" />
@@ -317,14 +269,10 @@ export default function AdminCategoriesPage() {
             ) : (
               <Layers className="h-5 w-5 text-zinc-400 shrink-0" />
             )}
-
-            {/* Title & URL preview */}
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm truncate leading-snug">{cat.name}</span>
               <span className="text-[11px] text-zinc-400 font-mono tracking-tight mt-0.5 truncate">/{cat.slug}</span>
             </div>
-
-            {/* Type badge */}
             <div className="hidden sm:inline-flex ml-2">
               {isLeaf ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100 ">
@@ -337,8 +285,6 @@ export default function AdminCategoriesPage() {
               )}
             </div>
           </div>
-
-          {/* Actions panel */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => handleOpenCreateChild(cat, e)}
@@ -366,8 +312,6 @@ export default function AdminCategoriesPage() {
             </button>
           </div>
         </div>
-
-        {/* Children Render recursion */}
         {isParent && isExpanded && (
           <div className="border-l-2 border-dashed border-zinc-200/70 ml-6 pl-4 transition-all duration-300 animate-in fade-in slide-in-from-top-1 duration-150">
             {cat.children!.map((child) => renderTreeNode(child, depth + 1))}
@@ -376,8 +320,6 @@ export default function AdminCategoriesPage() {
       </div>
     );
   };
-
-  // Auth Loading
   if (isAuthLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] bg-zinc-50 transition-colors duration-300">
@@ -386,23 +328,16 @@ export default function AdminCategoriesPage() {
       </div>
     );
   }
-
-  // Security Guard Check Role Admin
   if (!isAuthenticated || !user?.roles?.includes("ROLE_ADMIN")) {
     return <Forbidden />;
   }
 
   return (
     <div className="flex-1 flex flex-col bg-zinc-50 px-6 py-10 transition-colors duration-300 relative min-h-screen">
-      {/* Visual background blobs */}
       <div className="absolute top-[10%] right-[5%] w-80 h-80 bg-brand-100/10 rounded-full blur-[110px] pointer-events-none" />
       <div className="absolute bottom-[8%] left-[10%] w-96 h-96 bg-brand-200/10 rounded-full blur-[130px] pointer-events-none" />
 
       <div className="max-w-6xl w-full mx-auto relative z-10 flex-1 flex flex-col space-y-8">
-        
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* DASHBOARD HEADER */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-200/60 pb-6">
           <div>
             <div className="flex items-center gap-3">
@@ -421,10 +356,6 @@ export default function AdminCategoriesPage() {
             Hệ thống Quản trị Viên
           </div>
         </div>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* METRICS ROW */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <div className="bg-white border border-zinc-200/60 rounded-3xl p-5 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-300">
             <div className="space-y-1">
@@ -462,13 +393,7 @@ export default function AdminCategoriesPage() {
             </div>
           </div>
         </div>
-
-        {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* MAIN SPLIT GRID */}
-        {/* ═══════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          
-          {/* Left Column: Interactive Tree View */}
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-white rounded-3xl border border-zinc-200/70 p-5 sm:p-6 shadow-sm min-h-[450px] flex flex-col">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-zinc-150/70 pb-4.5 mb-6">
@@ -494,8 +419,6 @@ export default function AdminCategoriesPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Tree Renderer */}
               <div className="flex-1">
                 {isDataLoading && categoriesTree.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24">
@@ -520,8 +443,6 @@ export default function AdminCategoriesPage() {
               </div>
             </div>
           </div>
-
-          {/* Right Column: Form Panel Card */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-3xl border border-zinc-200/70 p-6 shadow-sm sticky top-24">
               
@@ -600,7 +521,6 @@ export default function AdminCategoriesPage() {
 
                 </div>
               ) : (
-                // Add / Edit Form
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-base font-extrabold text-zinc-900 flex items-center gap-2">
@@ -622,7 +542,6 @@ export default function AdminCategoriesPage() {
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4.5">
-                    {/* Name input */}
                     <div>
                       <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">Tên danh mục *</label>
                       <input
@@ -634,8 +553,6 @@ export default function AdminCategoriesPage() {
                         className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:bg-white text-zinc-950 transition-all duration-150"
                       />
                     </div>
-
-                    {/* Slug Auto Generator display banner */}
                     {formData.name && (
                       <div className="p-3.5 bg-brand-50/50 border border-brand-100 rounded-2xl text-xs space-y-1 animate-in fade-in duration-200">
                         <span className="text-[10px] font-extrabold text-brand-600 uppercase tracking-wider block">Auto-slug URL preview</span>
@@ -649,8 +566,6 @@ export default function AdminCategoriesPage() {
                         </span>
                       </div>
                     )}
-
-                    {/* Parent select dropdown */}
                     <div>
                       <label className="block text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">Danh mục cha</label>
                       <select
@@ -660,7 +575,6 @@ export default function AdminCategoriesPage() {
                       >
                         <option value="">Không có (Danh mục gốc - Root Category)</option>
                         {flatCategoriesList.map((cat) => {
-                          // Exclude current edited node from its own parent choice list
                           if (action === "edit" && selectedCategory && cat.id === selectedCategory.id) {
                             return null;
                           }
@@ -672,8 +586,6 @@ export default function AdminCategoriesPage() {
                         })}
                       </select>
                     </div>
-
-                    {/* Buttons row */}
                     <div className="flex gap-3 pt-3">
                       <button
                         type="button"
@@ -704,10 +616,6 @@ export default function AdminCategoriesPage() {
         </div>
 
       </div>
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL: SAFE CONFIRM DELETE */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm transition-opacity" onClick={() => setDeleteTarget(null)} />

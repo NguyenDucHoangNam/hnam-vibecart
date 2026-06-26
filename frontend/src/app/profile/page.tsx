@@ -32,11 +32,7 @@ export default function ProfilePage() {
   const { user, isAuthenticated, isLoading, updateUser, logout } = useAuth();
   const toast = useToast();
   const router = useRouter();
-
-  // Tab state: "info" | "security" | "danger"
   const [activeTab, setActiveTab] = useState<"info" | "security" | "danger">("info");
-
-  // Info Tab form state
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -49,15 +45,11 @@ export default function ProfilePage() {
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Password Change form state
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
-
-  // Deactivation confirmation modal state
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
 
@@ -70,8 +62,6 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate size (5MB maximum)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Tải ảnh thất bại", "Kích thước ảnh vượt quá giới hạn cho phép (5MB).");
       return;
@@ -83,7 +73,6 @@ export default function ProfilePage() {
     formData.append("folder", "avatars");
 
     try {
-      // POST /api/v1/media/upload
       const response = await api.post<{ url: string; key?: string; size?: number; contentType?: string }>("/media/upload", formData);
       setAvatarUrl(response.url);
       setUploadedMeta({
@@ -100,15 +89,11 @@ export default function ProfilePage() {
       setIsUploadingAvatar(false);
     }
   };
-
-  // Protect route
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace(ROUTES.LOGIN);
     }
   }, [isAuthenticated, isLoading, router]);
-
-  // Load user data into form fields once loaded
   useEffect(() => {
     if (user) {
       const timer = setTimeout(() => {
@@ -127,8 +112,6 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  // Determine highest role and dynamic styling
   const rolesList = user.roles || [];
   const isAdmin = rolesList.includes("ROLE_ADMIN");
   const isCreator = rolesList.includes("ROLE_CREATOR");
@@ -146,14 +129,11 @@ export default function ProfilePage() {
     ringClass = "border-indigo-400 ring-indigo-100 dark:ring-indigo-950 bg-indigo-50 shadow-[0_0_15px_rgba(99,102,241,0.2)]";
     roleBadgeClass = "bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-indigo-400 shadow-indigo-200/50";
   }
-
-  // Handle Info Submit
   const handleInfoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdatingInfo(true);
 
     try {
-      // PUT /api/v1/auth/profile
       const response = await api.put<AuthResponse>(
         ENDPOINTS.AUTH.UPDATE_PROFILE,
         {
@@ -162,14 +142,10 @@ export default function ProfilePage() {
           avatarUrl: avatarUrl.trim(),
         }
       );
-
-      // If username changed, new tokens are returned. Update local storage.
       if (response.accessToken && response.refreshToken) {
         localStorage.setItem("access_token", response.accessToken);
         localStorage.setItem("refresh_token", response.refreshToken);
       }
-
-      // Update local auth context user state
       updateUser(response.user);
 
       toast.success("Thành công", "Thông tin cá nhân đã được cập nhật thành công.");
@@ -181,8 +157,6 @@ export default function ProfilePage() {
       setIsUpdatingInfo(false);
     }
   };
-
-  // Validate Change Password form
   const validatePasswordForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -205,8 +179,6 @@ export default function ProfilePage() {
     setPasswordErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
-  // Handle Change Password Submit
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validatePasswordForm()) return;
@@ -214,7 +186,6 @@ export default function ProfilePage() {
     setIsChangingPassword(true);
 
     try {
-      // POST /api/v1/auth/change-password
       await api.post(ENDPOINTS.AUTH.CHANGE_PASSWORD, {
         oldPassword,
         newPassword,
@@ -222,8 +193,6 @@ export default function ProfilePage() {
       });
 
       toast.success("Thay đổi thành công", "Mật khẩu đã được thay đổi. Hệ thống sẽ tự động đăng xuất các phiên hoạt động.");
-
-      // Perform logout immediately as old tokens are invalidated
       setTimeout(() => {
         logout();
       }, 1500);
@@ -236,18 +205,13 @@ export default function ProfilePage() {
       setIsChangingPassword(false);
     }
   };
-
-  // Handle Deactivate Account
   const handleDeactivateConfirm = async () => {
     setIsDeactivating(true);
 
     try {
-      // DELETE /api/v1/auth/account
       await api.delete(ENDPOINTS.AUTH.DELETE_ACCOUNT);
 
       toast.success("Đóng băng tài khoản thành công", "Tài khoản của bạn đã được chuyển sang trạng thái chờ xóa. Hệ thống sẽ đăng xuất lập tức.");
-
-      // Logout and redirect
       setTimeout(() => {
         setShowDeactivateModal(false);
         logout();
@@ -264,12 +228,7 @@ export default function ProfilePage() {
   return (
     <div className="flex-1 w-full bg-zinc-50/50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
-
-
-        {/* Layout Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-
-          {/* Left Sidebar — Tabs navigation */}
           <div className="bg-white border border-brand-100/40 rounded-2xl p-2 shadow-sm flex flex-col gap-1 md:col-span-1">
             <button
               onClick={() => setActiveTab("info")}
@@ -292,11 +251,7 @@ export default function ProfilePage() {
               Bảo mật
             </button>
           </div>
-
-          {/* Right Area — Tab Content */}
           <div className="md:col-span-3">
-
-            {/* ══════════════════ TAB 1: PROFILE INFO ══════════════════ */}
             {activeTab === "info" && (
               <div className="bg-white border border-brand-100/40 rounded-2xl p-6 shadow-sm animate-in fade-in duration-200">
                 <div className="border-b border-brand-100/30 pb-4 mb-6">
@@ -304,19 +259,12 @@ export default function ProfilePage() {
                 </div>
 
                 <form onSubmit={handleInfoSubmit} className="space-y-6">
-                  {/* Top Profile Zone: Avatar & Deactivation Side-by-Side */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center pb-6 border-b border-zinc-100">
-
-                    {/* Left: Avatar with Role Rings and Upload Button */}
                     <div className="lg:col-span-2 flex flex-col sm:flex-row items-center gap-6 w-full">
-                      {/* Avatar with Role Rings and Badge */}
                       <div className="relative flex flex-col items-center select-none pt-4 pb-2 shrink-0">
-                        {/* Role Badge sitting perfectly centered on top/overlapping the avatar */}
                         <div className={`absolute -top-3.5 z-10 px-3 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold tracking-wider border shadow-md transition-all duration-300 ${roleBadgeClass}`}>
                           {roleName}
                         </div>
-
-                        {/* Outer Glow Ring & Avatar Circle Container */}
                         <div
                           onClick={!isUploadingAvatar ? handleAvatarClick : undefined}
                           className={`relative group h-24 w-24 sm:h-28 sm:w-28 rounded-full flex items-center justify-center border-4 overflow-hidden shadow-lg transition-all duration-300 ${ringClass} ${!isUploadingAvatar ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-wait'}`}
@@ -348,8 +296,6 @@ export default function ProfilePage() {
                           )}
                         </div>
                       </div>
-
-                      {/* Hidden Native File Input */}
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -388,8 +334,6 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* Right: Deactivation Zone (Vô hiệu hóa) adjacent to Avatar */}
                     <div className="lg:col-span-1 w-full flex justify-center lg:justify-end">
                       <div className="relative group/deactivate flex flex-col items-center justify-center w-full max-w-[240px] h-24 sm:h-28 p-5 bg-rose-50/25 border border-rose-100/60 rounded-2xl select-none hover:bg-rose-50/50 hover:border-rose-200 transition-all duration-300">
                         
@@ -401,8 +345,6 @@ export default function ProfilePage() {
                           <Trash2 className="h-4 w-4 text-rose-500 shrink-0" />
                           <span>Vô hiệu hóa tài khoản</span>
                         </button>
-
-                        {/* Popover showing deactivation details on Hover */}
                         <div className="absolute right-1/2 lg:right-0 translate-x-1/2 lg:translate-x-0 top-full mt-3 w-72 p-4 bg-zinc-900 text-zinc-100 text-xs rounded-2xl shadow-2xl border border-zinc-800 opacity-0 pointer-events-none group-hover/deactivate:opacity-100 group-hover/deactivate:pointer-events-auto transition-all duration-250 z-30 space-y-2">
                           <div className="flex items-center gap-1.5 font-extrabold text-rose-400 mb-1">
                             <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
@@ -420,10 +362,7 @@ export default function ProfilePage() {
                     </div>
 
                   </div>
-
-                  {/* Editable and Read-only Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    {/* Full Name */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block">Họ và tên</label>
                       <input
@@ -435,8 +374,6 @@ export default function ProfilePage() {
                         className="w-full px-4 py-2.5 bg-brand-50/30 border border-brand-100 rounded-xl text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-200/50 focus:border-brand-300 focus:bg-white transition-all duration-200"
                       />
                     </div>
-
-                    {/* Username */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block">Tên tài khoản</label>
                       <input
@@ -448,8 +385,6 @@ export default function ProfilePage() {
                         className="w-full px-4 py-2.5 bg-brand-50/30 border border-brand-100 rounded-xl text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-brand-200/50 focus:border-brand-300 focus:bg-white transition-all duration-200"
                       />
                     </div>
-
-                    {/* Email (Read-only) */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block flex items-center gap-1">
                         <span>Địa chỉ Email</span>
@@ -465,8 +400,6 @@ export default function ProfilePage() {
                         <Lock className="absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-300" />
                       </div>
                     </div>
-
-                    {/* Role / Type (Read-only) */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider block flex items-center gap-1">
                         <span>Vai trò tài khoản</span>
@@ -480,8 +413,6 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Save Button */}
                   <div className="flex justify-end pt-4 border-t border-zinc-100">
                     <button
                       type="submit"
@@ -501,8 +432,6 @@ export default function ProfilePage() {
                 </form>
               </div>
             )}
-
-            {/* ══════════════════ TAB 2: SECURITY ══════════════════ */}
             {activeTab === "security" && (
               <div className="bg-white border border-brand-100/40 rounded-2xl p-6 shadow-sm animate-in fade-in duration-200">
                 <div className="border-b border-brand-100/30 pb-4 mb-6">
@@ -511,7 +440,6 @@ export default function ProfilePage() {
                 </div>
 
                 {user.oauthProvider !== "LOCAL" && !user.hasPassword ? (
-                  /* Social accounts warning */
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start space-x-3 text-amber-700 text-sm leading-relaxed">
                     <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
                     <span>
@@ -519,10 +447,8 @@ export default function ProfilePage() {
                     </span>
                   </div>
                 ) : (
-                  /* Standard form */
                   <form onSubmit={handlePasswordSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      {/* Old Password */}
                       <div className="space-y-1.5 sm:col-span-2">
                         <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider block">Mật khẩu hiện tại</label>
                         <input
@@ -537,8 +463,6 @@ export default function ProfilePage() {
                           <p className="text-xs text-rose-500 mt-1">{passwordErrors.oldPassword}</p>
                         )}
                       </div>
-
-                      {/* New Password */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider block">Mật khẩu mới</label>
                         <input
@@ -553,8 +477,6 @@ export default function ProfilePage() {
                           <p className="text-xs text-rose-500 mt-1">{passwordErrors.newPassword}</p>
                         )}
                       </div>
-
-                      {/* Confirm Password */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider block">Xác nhận mật khẩu mới</label>
                         <input
@@ -570,8 +492,6 @@ export default function ProfilePage() {
                         )}
                       </div>
                     </div>
-
-                    {/* Submit Button */}
                     <div className="flex justify-end pt-4 border-t border-zinc-100">
                       <button
                         type="submit"
@@ -599,8 +519,6 @@ export default function ProfilePage() {
         </div>
 
       </div>
-
-      {/* ══════════════════ DEACTIVATION WARNING MODAL ══════════════════ */}
       {showDeactivateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm" onClick={() => !isDeactivating && setShowDeactivateModal(false)} />

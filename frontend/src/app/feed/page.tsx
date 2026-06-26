@@ -34,15 +34,11 @@ export default function FeedPage() {
   const { user, isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const toast = useToast();
-
-  // State bài viết
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-
-  // State tạo bài viết
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [content, setContent] = useState("");
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
@@ -56,20 +52,12 @@ export default function FeedPage() {
   const [allCreatorProducts, setAllCreatorProducts] = useState<Product[]>([]);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const productDropdownRef = useRef<HTMLDivElement>(null);
-
-  // State theo dõi và hoạt động
   const [followedCreators, setFollowedCreators] = useState<any[]>([]);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
   const [loadingActive, setLoadingActive] = useState(false);
-
-  // State theo dõi các Creator
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
-
-  // State chọn phân loại sản phẩm trước khi thêm giỏ hàng
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
-
-  // Load feed ban đầu
   const loadFeed = useCallback(async (pageNum = 0, isLoadMore = false) => {
     if (pageNum === 0) setLoading(true);
     else setLoadingMore(true);
@@ -77,10 +65,8 @@ export default function FeedPage() {
     try {
       let res: PageResponse<Post>;
       if (isAuthenticated) {
-        // Đăng nhập rồi thì lấy feed cá nhân hóa
         res = await postService.getFeed(pageNum, 10);
       } else {
-        // Chưa đăng nhập thì lấy danh sách bài viết công khai
         res = await postService.getPosts(pageNum, 10);
       }
 
@@ -104,17 +90,13 @@ export default function FeedPage() {
       setLoadingMore(false);
     }
   }, [isAuthenticated, toast]);
-
-  // [FE-8] Merged: Load danh sách following (sidebar + followingMap) trong 1 API call duy nhất
   const loadFollowData = useCallback(async () => {
     if (!isAuthenticated || !user?.id) return;
     setLoadingFollowed(true);
     try {
       const res = await userService.getFollowing(user.id, 0, 100);
       if (res && res.content) {
-        // Cập nhật sidebar
         setFollowedCreators(res.content.slice(0, 10));
-        // Cập nhật followingMap
         const map: Record<string, boolean> = {};
         res.content.forEach(item => {
           map[item.userId] = true;
@@ -130,8 +112,6 @@ export default function FeedPage() {
       setLoadingFollowed(false);
     }
   }, [isAuthenticated, user?.id]);
-
-  // Load danh sách người dùng đang hoạt động
   const loadActiveUsers = useCallback(async () => {
     if (!isAuthenticated) return;
     setLoadingActive(true);
@@ -149,18 +129,14 @@ export default function FeedPage() {
     loadFeed(0, false);
     loadFollowData();
   }, [loadFeed, loadFollowData]);
-
-  // [FE-3] Reload danh sách trực tuyến định kỳ — 60 giây (thay vì 10 giây quá agressive)
   useEffect(() => {
     if (!isAuthenticated) return;
     loadActiveUsers();
     const interval = setInterval(() => {
       loadActiveUsers();
-    }, 60000); // 60 giây tải lại danh sách một lần
+    }, 60000);
     return () => clearInterval(interval);
   }, [isAuthenticated, loadActiveUsers]);
-
-  // [FE-2] IntersectionObserver cho Infinite Scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!hasMore || loading) return;
@@ -178,8 +154,6 @@ export default function FeedPage() {
     if (el) observer.observe(el);
     return () => { if (el) observer.unobserve(el); };
   }, [hasMore, loading, loadingMore, page, loadFeed]);
-
-  // Load tất cả sản phẩm của Creator khi mở modal (để hiển thị ngay khi focus)
   const loadCreatorProducts = useCallback(async () => {
     if (!user?.id || allCreatorProducts.length > 0) return;
     setSearchingProducts(true);
@@ -196,11 +170,8 @@ export default function FeedPage() {
       setSearchingProducts(false);
     }
   }, [user?.id, allCreatorProducts.length]);
-
-  // Tìm kiếm / lọc sản phẩm để tag (client-side filter từ danh sách đã load)
   useEffect(() => {
     if (!productSearch.trim()) {
-      // Không gõ gì → hiện 5 sản phẩm đầu
       setSearchedProducts(allCreatorProducts.slice(0, 5));
       return;
     }
@@ -209,8 +180,6 @@ export default function FeedPage() {
     );
     setSearchedProducts(filtered.slice(0, 5));
   }, [productSearch, allCreatorProducts]);
-
-  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (productDropdownRef.current && !productDropdownRef.current.contains(e.target as Node)) {
@@ -220,15 +189,11 @@ export default function FeedPage() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  // Tương tác Like/Unlike (Optimistic UI)
   const handleLikeToggle = async (postId: string) => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để thực hiện tính năng này!");
       return;
     }
-
-    // Cập nhật giao diện lập tức (Optimistic Update)
     setPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return {
@@ -243,7 +208,6 @@ export default function FeedPage() {
     try {
       await postService.toggleLike(postId);
     } catch (err: any) {
-      // Rollback nếu API lỗi
       setPosts(prev => prev.map(p => {
         if (p.id === postId) {
           return {
@@ -257,8 +221,6 @@ export default function FeedPage() {
       toast.error("Lỗi tương tác", err?.message || "Không thể thực hiện thích bài viết");
     }
   };
-
-  // Tương tác Follow/Unfollow từ Bảng tin (Optimistic UI)
   const handleFollowToggle = async (creatorId: string) => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Vui lòng đăng nhập để theo dõi Creator!");
@@ -271,32 +233,24 @@ export default function FeedPage() {
     try {
       const isNowFollowing = await userService.toggleFollow(creatorId);
       setFollowingMap(prev => ({ ...prev, [creatorId]: isNowFollowing }));
-      
-      // Thông báo thành công
       if (isNowFollowing) {
         toast.success("Đã theo dõi", "Bạn sẽ nhận được các bài viết mới từ nhà sáng tạo này!");
       } else {
         toast.info("Đã hủy theo dõi", "Đã dừng nhận bài viết từ nhà sáng tạo này.");
       }
-
-      // Cập nhật lại danh sách đang theo dõi & hoạt động
       loadFollowData();
       loadActiveUsers();
-      loadFeed(0, false); // Tải lại bảng tin cá nhân hóa
+      loadFeed(0, false);
     } catch (err: any) {
       setFollowingMap(prev => ({ ...prev, [creatorId]: wasFollowing }));
       toast.error("Lỗi theo dõi", err?.message || "Không thể thực hiện tác vụ");
     }
   };
-
-  // Chia sẻ bài viết (Tạo link sao chép)
   const handleShare = (post: Post) => {
     const postUrl = `${window.location.origin}${ROUTES.POST_DETAILS(post.id)}`;
     navigator.clipboard.writeText(postUrl);
     toast.success("Đã sao chép liên kết", "Bạn có thể chia sẻ bài viết này cho bạn bè!");
   };
-
-  // Thêm nhanh vào giỏ hàng — mở popup chọn phân loại
   const handleAddProductToCart = (product: Product) => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng.");
@@ -306,12 +260,10 @@ export default function FeedPage() {
       toast.warning("Sản phẩm chưa có biến thể", "Không thể thêm sản phẩm này vào giỏ hàng.");
       return;
     }
-    // Nếu chỉ có 1 variant → thêm luôn
     if (product.variants.length === 1) {
       confirmAddToCart(product, product.variants[0]);
       return;
     }
-    // Nhiều variant → mở popup chọn
     setVariantPickerProduct(product);
   };
 
@@ -320,18 +272,11 @@ export default function FeedPage() {
       await addToCart(variant, product, 1);
       setVariantPickerProduct(null);
     } catch (err) {
-      // Errors are already handled and toasted inside CartContext
     }
   };
-
-
-
-  // Xử lý Xóa ảnh khỏi danh sách chuẩn bị
   const handleRemoveMedia = (index: number) => {
     setMediaUrls(mediaUrls.filter((_, i) => i !== index));
   };
-
-  // Xử lý Tải ảnh/video vật lý từ máy lên thông qua API
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -346,8 +291,6 @@ export default function FeedPage() {
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        
-        // Giới hạn tệp tin 20MB
         if (file.size > 20 * 1024 * 1024) {
           toast.error("Tệp quá lớn", `Tệp ${file.name} vượt quá giới hạn cho phép (20MB).`);
           continue;
@@ -356,8 +299,6 @@ export default function FeedPage() {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("folder", "posts");
-
-        // Gọi API tải tệp /api/v1/media/upload
         const response = await api.post<{ url: string }>("/media/upload", formData);
         uploadedUrls.push(response.url);
       }
@@ -376,8 +317,6 @@ export default function FeedPage() {
       }
     }
   };
-
-  // Xử lý Tag sản phẩm vào bài viết
   const handleTagProduct = (product: Product) => {
     if (taggedProducts.some(p => p.id === product.id)) {
       toast.warning("Sản phẩm đã được chọn", "Sản phẩm này đã được gắn thẻ.");
@@ -390,13 +329,9 @@ export default function FeedPage() {
     setTaggedProducts([...taggedProducts, product]);
     setProductSearch("");
   };
-
-  // Xử lý Bỏ tag sản phẩm
   const handleUntagProduct = (productId: string) => {
     setTaggedProducts(taggedProducts.filter(p => p.id !== productId));
   };
-
-  // Submit bài viết mới
   const handleSubmitPost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) {
@@ -413,16 +348,12 @@ export default function FeedPage() {
       });
 
       toast.success("Đăng bài thành công", "Bài viết của bạn đã được xuất bản lên VibeCart!");
-      
-      // Reset form
       setContent("");
       setMediaUrls([]);
       setTaggedProducts([]);
       setShowCreateModal(false);
       setAllCreatorProducts([]);
       setIsProductDropdownOpen(false);
-      
-      // Chèn bài viết mới lên đầu trang
       setPosts(prev => [newPost, ...prev]);
     } catch (err: any) {
       toast.error("Lỗi đăng bài", err?.message || "Không thể lưu bài viết mới.");
@@ -434,13 +365,7 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-zinc-50/50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* ======================================================= */}
-        {/* CỘT CHÍNH: KHUNG ĐĂNG BÀI & DÒNG THỜI GIAN (8 cột) */}
-        {/* ======================================================= */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          
-          {/* Nút đăng bài nhanh (Chỉ dành cho Creator) */}
           {user?.roles?.includes("ROLE_CREATOR") && (
             <div className="rounded-2xl border border-brand-100/60 bg-white p-5 shadow-sm hover:border-brand-200/80 transition-all duration-300">
               <div className="flex gap-4 items-center">
@@ -474,8 +399,6 @@ export default function FeedPage() {
               </div>
             </div>
           )}
-
-          {/* Dòng tiêu đề feed */}
           <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
             <h1 className="text-xl font-extrabold text-zinc-800 flex items-center gap-2">
               <Compass className="h-5 w-5 text-brand-500" />
@@ -485,8 +408,6 @@ export default function FeedPage() {
               {posts.length} bài viết
             </span>
           </div>
-
-          {/* Loading chính */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 className="h-10 w-10 text-brand-500 animate-spin" />
@@ -517,8 +438,6 @@ export default function FeedPage() {
                   onAddToCart={handleAddProductToCart}
                 />
               ))}
-
-              {/* [FE-2] Infinite Scroll Sentinel */}
               <div ref={loadMoreRef} className="w-full py-4 flex items-center justify-center">
                 {loadingMore && (
                   <div className="flex items-center gap-2 text-sm text-zinc-400 animate-pulse">
@@ -533,13 +452,7 @@ export default function FeedPage() {
             </div>
           )}
         </div>
-
-        {/* ======================================================= */}
-        {/* CỘT PHỤ (DESKTOP ONLY): GỢI Ý FOLLOW (4 cột) */}
-        {/* ======================================================= */}
         <div className="lg:col-span-4 hidden lg:flex flex-col gap-6 sticky top-20 h-fit">
-          
-          {/* Card 1: Những người bạn theo dõi */}
           {isAuthenticated && (
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-extrabold text-zinc-800 mb-4 tracking-wider uppercase flex items-center gap-2">
@@ -592,8 +505,6 @@ export default function FeedPage() {
               )}
             </div>
           )}
-
-          {/* Card 2: Những người đang hoạt động */}
           {isAuthenticated && (
             <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
               <h2 className="text-sm font-extrabold text-zinc-800 mb-4 tracking-wider uppercase flex items-center gap-2">
@@ -663,15 +574,9 @@ export default function FeedPage() {
 
         </div>
       </div>
-
-      {/* ======================================================= */}
-      {/* MODAL TẠO BÀI VIẾT MỚI (CREATOR ONLY) */}
-      {/* ======================================================= */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col animate-scale-up border border-zinc-100">
-            
-            {/* Header modal */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100">
               <h3 className="text-base font-extrabold text-zinc-800 flex items-center gap-2">
                 <Compass className="h-4.5 w-4.5 text-brand-500" />
@@ -684,11 +589,7 @@ export default function FeedPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            {/* Form */}
             <form onSubmit={handleSubmitPost} className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[75vh]">
-              
-              {/* Profile creator */}
               <div className="flex items-center gap-3">
                 {user?.avatarUrl ? (
                   <img 
@@ -708,8 +609,6 @@ export default function FeedPage() {
                   </span>
                 </div>
               </div>
-
-              {/* Text Area */}
               <div>
                 <textarea
                   value={content}
@@ -722,15 +621,11 @@ export default function FeedPage() {
                   {content.length}/5000 ký tự
                 </div>
               </div>
-
-              {/* Add Media (Upload + URL) */}
               <div className="flex flex-col gap-2.5">
                 <label className="text-xs font-bold text-zinc-700 flex items-center gap-1.5">
                   <ImageIcon className="h-3.5 w-3.5 text-zinc-400" />
                   Phương tiện đính kèm (Hình ảnh/Video, Tối đa 10)
                 </label>
-
-                {/* Dashed Drag & Drop upload area */}
                 <div 
                   onClick={() => !isUploadingMedia && mediaInputRef.current?.click()}
                   className={`border-2 border-dashed border-zinc-250/80 hover:border-brand-400 rounded-2xl p-4 text-center cursor-pointer transition-all duration-300 bg-zinc-50/50 hover:bg-brand-50/10 flex flex-col items-center justify-center gap-1.5 select-none ${
@@ -761,8 +656,6 @@ export default function FeedPage() {
                     </>
                   )}
                 </div>
-
-                {/* Smart Media List preview (supports images and videos) */}
                 {mediaUrls.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-1 bg-zinc-50/50 p-2 border border-zinc-100 rounded-xl">
                     {mediaUrls.map((url, idx) => {
@@ -809,8 +702,6 @@ export default function FeedPage() {
                   onChange={(e) => setProductSearch(e.target.value)}
                   className="w-full h-9 rounded-xl border border-zinc-200 px-3.5 text-xs outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-200/50"
                 />
-
-                {/* Search result dropdown */}
                 {isProductDropdownOpen && (
                   <div className="absolute top-[68px] left-0 w-full z-10 bg-white border border-zinc-100 rounded-xl shadow-lg max-h-48 overflow-y-auto p-1.5 flex flex-col gap-1">
                     {searchingProducts ? (
@@ -852,8 +743,6 @@ export default function FeedPage() {
                     )}
                   </div>
                 )}
-
-                {/* Selected Tagged Products List */}
                 {taggedProducts.length > 0 && (
                   <div className="flex flex-col gap-1.5 mt-1">
                     {taggedProducts.map(p => (
@@ -876,8 +765,6 @@ export default function FeedPage() {
                   </div>
                 )}
               </div>
-
-              {/* Submit */}
               <button
                 type="submit"
                 disabled={submittingPost}
@@ -899,8 +786,6 @@ export default function FeedPage() {
           </div>
         </div>
       )}
-
-      {/* MODAL CHỌN PHÂN LOẠI SẢN PHẨM */}
       {variantPickerProduct && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-scale-up border border-zinc-100">
@@ -956,10 +841,6 @@ export default function FeedPage() {
     </div>
   );
 }
-
-// =====================================================================
-// COMPONENT CARD BÀI VIẾT (Độc lập, có slider ảnh & carousel sản phẩm)
-// =====================================================================
 interface PostCardProps {
   post: Post;
   currentUserId?: string;
@@ -981,16 +862,11 @@ function PostCard({
   onShare,
   onAddToCart 
 }: PostCardProps) {
-  // Slider hình ảnh
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const mediaList = post.mediaUrls || [];
-
-  // Carousel sản phẩm gắn kèm
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const productCarouselRef = useRef<HTMLDivElement>(null);
-
-  // Tải chi tiết các sản phẩm gắn kèm nếu có taggedProductIds
   useEffect(() => {
     if (!post.taggedProductIds || post.taggedProductIds.length === 0) return;
     
@@ -1016,8 +892,6 @@ function PostCard({
 
     fetchProducts();
   }, [post.taggedProductIds]);
-
-  // Cuộn Carousel sản phẩm
   const scrollCarousel = (direction: "left" | "right") => {
     if (productCarouselRef.current) {
       const scrollAmt = 260;
@@ -1027,8 +901,6 @@ function PostCard({
       });
     }
   };
-
-  // Định dạng ngày đăng
   const formatPostTime = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -1044,8 +916,6 @@ function PostCard({
 
   return (
     <div className="rounded-2xl border border-zinc-150/70 bg-white p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
-      
-      {/* 1. Header: Avatar, Tên, Ngày, Nút Follow */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <Link href={ROUTES.CREATOR_PROFILE(post.creatorId)} className="flex items-center gap-3 group">
           {post.creatorAvatarUrl ? (
@@ -1071,8 +941,6 @@ function PostCard({
             </span>
           </div>
         </Link>
-
-        {/* Nút Follow ở bài viết (Chỉ hiện nếu không phải của mình) */}
         {isAuthenticated && post.creatorId !== currentUserId && (
           <button
             onClick={() => onFollowToggle(post.creatorId)}
@@ -1096,13 +964,9 @@ function PostCard({
           </button>
         )}
       </div>
-
-      {/* 2. Nội dung text */}
       <p className="text-sm text-zinc-700 leading-relaxed mb-4 whitespace-pre-line font-light">
         {post.content}
       </p>
-
-      {/* 3. Slider Hình ảnh / Video */}
       {mediaList.length > 0 && (() => {
         const currentMedia = mediaList[activeImageIdx];
         const isVideo = currentMedia.match(/\.(mp4|webm|ogg|mov)$/i) || currentMedia.includes("video") || currentMedia.includes("mp4");
@@ -1122,8 +986,6 @@ function PostCard({
               className="w-full h-full object-contain" 
             />
           )}
-          
-          {/* Nút điều hướng ảnh */}
           {mediaList.length > 1 && (
             <>
               <button
@@ -1138,8 +1000,6 @@ function PostCard({
               >
                 <ChevronRight className="h-4.5 w-4.5" />
               </button>
-              
-              {/* Dot Indicators */}
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">
                 {mediaList.map((_, i) => (
                   <span 
@@ -1153,8 +1013,6 @@ function PostCard({
         </div>
         );
       })()}
-
-      {/* 4. Carousel Sản phẩm gắn thẻ (Tagged Products) */}
       {post.taggedProductIds && post.taggedProductIds.length > 0 && (
         <div className="relative border border-brand-100/50 bg-brand-50/10 rounded-2xl p-4 mb-5">
           <div className="flex items-center justify-between gap-2 mb-3">
@@ -1232,11 +1090,7 @@ function PostCard({
           )}
         </div>
       )}
-
-      {/* 5. Khung tương tác (Like, Comment, Share) */}
       <div className="flex items-center justify-between pt-3.5 border-t border-zinc-100">
-        
-        {/* Nút Like (Optimistic UI) */}
         <button
           onClick={() => onLikeToggle(post.id)}
           className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-all ${
@@ -1248,8 +1102,6 @@ function PostCard({
           <Heart className={`h-4 w-4 transition-transform ${post.likedByMe ? "fill-rose-600 scale-110" : ""}`} />
           {post.likeCount} lượt thích
         </button>
-
-        {/* Nút Comment */}
         <Link
           href={ROUTES.POST_DETAILS(post.id)}
           className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-brand-500 px-3 py-1.5 rounded-full hover:bg-zinc-50 transition-all"
@@ -1257,8 +1109,6 @@ function PostCard({
           <MessageSquare className="h-4 w-4" />
           {post.commentCount} bình luận
         </Link>
-
-        {/* Nút Share */}
         <button
           onClick={() => onShare(post)}
           className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-brand-500 px-3 py-1.5 rounded-full hover:bg-zinc-50 transition-all"

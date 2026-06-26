@@ -3,10 +3,6 @@ package com.vibecart.api.modules.chat.event;
 import lombok.*;
 import java.io.Serializable;
 import java.util.List;
-
-/**
- * Đối tượng sự kiện Chat (ChatEvent) luân chuyển qua Redis Pub/Sub.
- */
 @Data
 @Builder
 @NoArgsConstructor

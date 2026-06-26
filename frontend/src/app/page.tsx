@@ -15,10 +15,6 @@ import { ROUTES } from "@/constants/routes";
 export default function Home() {
   return (
     <div className="flex flex-col w-full overflow-x-hidden">
-      
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 1. HERO — Minimalist radial gradient (trắng rìa → mint trung tâm) */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <section
         className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden"
         style={{
@@ -33,20 +29,15 @@ export default function Home() {
           `,
         }}
       >
-        {/* Floating soft orbs for depth */}
         <div className="absolute top-[15%] left-[10%] w-72 h-72 bg-brand-200/40 rounded-full blur-[100px] pointer-events-none animate-pulse" />
         <div className="absolute bottom-[10%] right-[12%] w-96 h-96 bg-brand-100/50 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-[40%] right-[25%] w-48 h-48 bg-brand-300/20 rounded-full blur-[80px] pointer-events-none" />
 
         <div className="relative z-10 mx-auto max-w-3xl px-6 text-center flex flex-col items-center">
-          
-          {/* Subtle badge */}
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 backdrop-blur-sm border border-brand-200/60 px-4 py-1.5 text-xs font-medium text-brand-700 mb-8 shadow-sm">
             <Leaf className="h-3.5 w-3.5 text-brand-500" />
             Nền tảng mua sắm xã hội thế hệ mới
           </div>
-
-          {/* Main heading — clean, elegant */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-zinc-900 leading-[1.1] mb-6">
             <span className="bg-gradient-to-r from-brand-700 via-brand-500 to-brand-400 bg-clip-text text-transparent">
               VibeCart
@@ -58,8 +49,6 @@ export default function Home() {
             <br className="hidden sm:block" />
             Mua sắm thông minh cùng cộng đồng.
           </p>
-
-          {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
             <Link 
               href={ROUTES.PRODUCTS}
@@ -77,10 +66,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 2. STATS — Floating pills on white */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <section className="w-full bg-white py-16">
         <div className="mx-auto max-w-5xl px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -105,10 +90,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 3. FEATURES — Clean cards with mint accents */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <section
         className="relative w-full py-24"
         style={{
@@ -187,10 +168,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 4. CTA — Glassmorphism card on gradient */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <section className="w-full bg-white py-20">
         <div className="mx-auto max-w-3xl px-6">
           <div

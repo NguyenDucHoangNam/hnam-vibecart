@@ -10,18 +10,13 @@ export function Forbidden() {
 
   return (
     <div className="flex-1 flex items-center justify-center min-h-[70vh] px-6 py-12 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300">
-      {/* Floating soft orbs for depth */}
       <div className="absolute top-[30%] left-[20%] w-64 h-64 bg-red-200/20 dark:bg-red-900/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[20%] w-80 h-80 bg-brand-200/20 dark:bg-brand-900/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md bg-white dark:bg-zinc-900/80 backdrop-blur-md rounded-[2rem] border border-zinc-200/80 dark:border-zinc-800/80 p-8 sm:p-10 shadow-2xl shadow-zinc-200/50 dark:shadow-none text-center">
-        
-        {/* Animated Icon Circle */}
         <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/50 text-red-500 dark:text-red-400 mb-6 ring-8 ring-red-100/50 dark:ring-red-950/20 animate-bounce">
           <ShieldAlert className="h-10 w-10" />
         </div>
-
-        {/* Heading */}
         <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white mb-3">
           403 Access Denied
         </h1>
@@ -29,13 +24,9 @@ export function Forbidden() {
         <h2 className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-4">
           Quyền truy cập bị từ chối
         </h2>
-
-        {/* Description */}
         <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed mb-8 font-light">
           Tài khoản của bạn không có quyền hạn **Quản trị viên (Admin)** để truy cập trang này. Vui lòng quay lại trang chủ hoặc đăng nhập bằng tài khoản được cấp quyền.
         </p>
-
-        {/* CTA Buttons */}
         <div className="flex flex-col gap-3">
           <Link
             href={ROUTES.HOME}

@@ -8,10 +8,6 @@ import org.springframework.data.domain.Pageable;
 
 import com.vibecart.api.modules.ecommerce.dto.response.InventoryHistoryResponse;
 import java.util.List;
-
-/**
- * Service quản lý sản phẩm: CRUD, biến thể, tồn kho.
- */
 public interface ProductService {
     ProductResponse create(ProductRequest request);
     ProductResponse getById(String id);

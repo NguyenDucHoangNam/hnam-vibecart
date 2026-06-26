@@ -15,10 +15,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-/**
- * Controller cho Admin kích hoạt chạy thủ công các Batch Job.
- */
 @RestController
 @RequestMapping("/api/v1/admin/jobs")
 public class AdminJobController {
@@ -40,7 +36,7 @@ public class AdminJobController {
 
         if (!"commissionSettlementJob".equals(jobName)) {
             log.warn("Attempted to trigger unrecognized batch job: {}", jobName);
-            throw new AppException(ErrorCode.INVALID_INPUT); // Unknown job name
+            throw new AppException(ErrorCode.INVALID_INPUT);
         }
 
         try {

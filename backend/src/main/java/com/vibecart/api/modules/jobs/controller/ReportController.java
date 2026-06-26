@@ -21,10 +21,6 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
-/**
- * Controller xữ lý kết xuất báo cáo và truy vấn trạng thái background task.
- */
 @RestController
 @RequestMapping("/api/v1/reports")
 public class ReportController {

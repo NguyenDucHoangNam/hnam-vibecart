@@ -20,10 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-
-/**
- * Implementation của {@link PayoutService} xử lý yêu cầu rút tiền hoa hồng.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -62,7 +58,7 @@ public class PayoutServiceImpl implements PayoutService {
                 if (availableBalance.compareTo(requestDto.getAmount()) < 0) {
                         log.warn("Creator {} has insufficient balance. Available: {} VND, Requested: {} VND",
                                         currentUsername, availableBalance, requestDto.getAmount());
-                        throw new AppException(ErrorCode.INVALID_INPUT); // Insufficient balance
+                        throw new AppException(ErrorCode.INVALID_INPUT);
                 }
 
                 PayoutRequest payoutRequest = PayoutRequest.builder()
@@ -117,12 +113,11 @@ public class PayoutServiceImpl implements PayoutService {
                                 approveRequest.getStatus());
 
                 PayoutRequest request = payoutRequestRepository.findById(requestId)
-                                .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT)); // Payout request not
-                                                                                               // found
+                                .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
                 if (!"PENDING".equals(request.getStatus())) {
                         log.warn("Payout request {} is already processed (Status: {})", requestId, request.getStatus());
-                        throw new AppException(ErrorCode.INVALID_INPUT); // Already processed
+                        throw new AppException(ErrorCode.INVALID_INPUT);
                 }
 
                 request.setStatus(approveRequest.getStatus().toUpperCase());

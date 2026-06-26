@@ -13,10 +13,6 @@ import java.util.Optional;
 public interface VoucherRepository extends JpaRepository<Voucher, String> {
 
     Optional<Voucher> findByCode(String code);
-
-    /**
-     * Atomic increment of used_count with limit check.
-     */
     @Modifying
     @Query("UPDATE Voucher v SET v.usedCount = v.usedCount + 1 WHERE v.id = :id AND v.usedCount < v.usageLimit")
     int incrementUsedCount(@Param("id") String id);

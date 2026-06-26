@@ -18,10 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-/**
- * Controller quản lý chương trình tiếp thị liên kết (affiliate) cho Creator.
- */
 @RestController
 @RequestMapping("/api/v1/affiliate")
 @RequiredArgsConstructor
@@ -31,10 +27,6 @@ public class AffiliateController {
     private final ShortLinkService shortLinkService;
     private final DashboardService dashboardService;
     private final PayoutService payoutService;
-
-    /**
-     * Tạo link tiếp thị liên kết mới cho sản phẩm.
-     */
     @PostMapping("/shortlinks")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<ShortlinkResponse>> createShortLink(
@@ -53,10 +45,6 @@ public class AffiliateController {
 
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * Lấy danh sách các link tiếp thị của Creator hiện tại.
-     */
     @GetMapping("/shortlinks")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<List<ShortlinkResponse>>> getMyShortLinks() {
@@ -74,10 +62,6 @@ public class AffiliateController {
 
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * Lấy thống kê dashboard của chương trình tiếp thị liên kết.
-     */
     @GetMapping("/dashboard")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics() {
@@ -95,10 +79,6 @@ public class AffiliateController {
 
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * Gửi yêu cầu rút tiền hoa hồng.
-     */
     @PostMapping("/payouts")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<PayoutResponse>> requestPayout(
@@ -117,10 +97,6 @@ public class AffiliateController {
 
         return ResponseEntity.ok(response);
     }
-
-    /**
-     * Lấy lịch sử các yêu cầu rút tiền của Creator hiện tại.
-     */
     @GetMapping("/payouts")
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<List<PayoutResponse>>> getMyPayoutRequests() {

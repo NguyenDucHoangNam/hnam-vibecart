@@ -26,7 +26,7 @@ export default function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("SHOPPER"); // Default is SHOPPER
+  const [role, setRole] = useState("SHOPPER");
   
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,8 +35,6 @@ export default function RegisterForm() {
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
-    
-    // 1. Full Name Validation (2 - 100 chars, letters and spaces only)
     const trimmedFullName = fullName.trim();
     if (!trimmedFullName) {
       errors.fullName = "Vui lòng nhập họ và tên";
@@ -47,8 +45,6 @@ export default function RegisterForm() {
     } else if (!/^[\p{L}\s]+$/u.test(trimmedFullName)) {
       errors.fullName = "Họ tên chỉ được phép chứa chữ cái và khoảng trắng";
     }
-
-    // 2. Username Validation (5 - 30 chars, alphanumeric . _ -, no system keywords)
     const trimmedUsername = username.trim();
     const normalizedUsername = trimmedUsername.toLowerCase();
     const systemKeywords = ["admin", "support", "system", "root", "vibecart"];
@@ -65,8 +61,6 @@ export default function RegisterForm() {
     } else if (containsSystemKeyword) {
       errors.username = "Tên đăng nhập không được phép chứa các từ khóa hệ thống (admin, support, system, root, vibecart)";
     }
-
-    // 3. Email Validation (Max 100, valid structure, no disposable domains)
     const trimmedEmail = email.trim();
     const normalizedEmail = trimmedEmail.toLowerCase();
     const disposableDomains = ["tempmail.com", "10minutemail.com", "yopmail.com", "mailinator.com", "guerrillamail.com", "throwaway.email"];
@@ -81,8 +75,6 @@ export default function RegisterForm() {
     } else if (emailDomain && disposableDomains.includes(emailDomain)) {
       errors.email = "Email rác/email tạm thời không được phép sử dụng đăng ký";
     }
-
-    // 4. Password Validation (8 - 100 chars, uppercase, lowercase, number, special char)
     if (!password) {
       errors.password = "Vui lòng nhập mật khẩu";
     } else if (password.length < 8) {
@@ -122,10 +114,7 @@ export default function RegisterForm() {
 
   return (
     <div className="w-full max-w-sm">
-      {/* Container Card */}
       <div className="bg-white/80 backdrop-blur-xl border border-brand-100/40 rounded-2xl p-6 shadow-xl shadow-brand-500/5 transition-all duration-300">
-        
-        {/* Title Header */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-extrabold tracking-tight text-brand-800">
             Đăng ký
@@ -134,19 +123,13 @@ export default function RegisterForm() {
             Tạo tài khoản mới để tiếp tục
           </p>
         </div>
-
-        {/* General Error Display */}
         {error && (
           <div className="mb-5 p-3 bg-rose-50 border border-rose-200/60 rounded-xl flex items-start space-x-3 text-rose-600 text-sm leading-relaxed">
             <Info className="w-5 h-5 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
-
-        {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
-
-          {/* Role Selection */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
               Bạn là?
@@ -176,8 +159,6 @@ export default function RegisterForm() {
               </button>
             </div>
           </div>
-          
-          {/* Full Name Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
               Họ và tên
@@ -200,8 +181,6 @@ export default function RegisterForm() {
               <p className="text-xs text-rose-500 mt-1 pl-1">{fieldErrors.fullName}</p>
             )}
           </div>
-
-          {/* Username Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
               Tên đăng nhập
@@ -224,8 +203,6 @@ export default function RegisterForm() {
               <p className="text-xs text-rose-500 mt-1 pl-1">{fieldErrors.username}</p>
             )}
           </div>
-
-          {/* Email Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
               Địa chỉ Email
@@ -248,8 +225,6 @@ export default function RegisterForm() {
               <p className="text-xs text-rose-500 mt-1 pl-1">{fieldErrors.email}</p>
             )}
           </div>
-
-          {/* Password Input */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
               Mật khẩu
@@ -280,8 +255,6 @@ export default function RegisterForm() {
               <p className="text-xs text-rose-500 mt-1 pl-1">{fieldErrors.password}</p>
             )}
           </div>
-
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={isLoading}
@@ -297,8 +270,6 @@ export default function RegisterForm() {
             )}
           </button>
         </form>
-
-        {/* Bottom Navigation */}
         <p className="mt-6 text-center text-sm text-zinc-400">
           Đã có tài khoản?{" "}
           <Link href={ROUTES.LOGIN} className="font-semibold text-brand-500 hover:text-brand-600 transition-colors">

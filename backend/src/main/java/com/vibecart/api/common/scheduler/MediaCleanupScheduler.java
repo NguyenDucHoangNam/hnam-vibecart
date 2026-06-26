@@ -18,12 +18,6 @@ public class MediaCleanupScheduler {
 
     private final MediaMetadataRepository mediaMetadataRepository;
     private final StorageService storageService;
-
-    /**
-     * Tác vụ quét dọn định kỳ chạy mỗi 15 phút.
-     * Tự động xóa các file có trạng thái PENDING quá 15 phút trên S3 và xóa bản ghi
-     * DB tương ứng.
-     */
     @Scheduled(cron = "0 */15 * * * *")
     public void cleanupOrphanedPendingUploads() {
         ZonedDateTime cutoffTime = ZonedDateTime.now().minusMinutes(15);

@@ -21,10 +21,10 @@ interface ChatContextType {
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
   hasMoreMessages: boolean;
-  typingUsers: string[]; // Tên người dùng đang soạn thảo trong phòng hiện tại
-  onlineStatusMap: Record<string, "ONLINE" | "OFFLINE">; // userId -> status
+  typingUsers: string[];
+  onlineStatusMap: Record<string, "ONLINE" | "OFFLINE">;
   globalUnreadCount: number;
-  isConnected: boolean; // WebSocket connection status
+  isConnected: boolean;
   
   setActiveConversation: (conv: ConversationResponse | null) => void;
   fetchConversations: () => Promise<void>;
@@ -40,10 +40,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const toast = useToast();
 
-  // STOMP WebSocket hook
   const { isConnected, subscribe, send } = useWebSocket();
 
-  // States
   const [conversations, setConversations] = useState<ConversationResponse[]>([]);
   const [activeConversation, setActiveConversationState] = useState<ConversationResponse | null>(null);
   const [messages, setMessages] = useState<MessageResponse[]>([]);
@@ -55,7 +53,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  // Refs for real-time state tracking inside callbacks
   const activeConversationRef = useRef<ConversationResponse | null>(null);
   const conversationsRef = useRef<ConversationResponse[]>([]);
   
@@ -67,13 +64,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     conversationsRef.current = conversations;
   }, [conversations]);
 
-  // Derived: Tổng tin nhắn chưa đọc
   const globalUnreadCount = conversations.reduce((sum, conv) => {
     if (!user) return sum;
     return sum + (conv.unreadCounts?.[user.id] || 0);
   }, 0);
 
-  // Lấy danh sách cuộc trò chuyện từ REST API
   const fetchConversations = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsLoadingConversations(true);
@@ -81,7 +76,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const data = await chatService.getConversations();
       setConversations(data || []);
       
-      // Đồng bộ trạng thái trực tuyến cho các thành viên trong các phòng chat
       if (data) {
         const uniqueMemberIds = new Set<string>();
         data.forEach(c => c.memberIds.forEach(id => {
@@ -96,7 +90,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               [memberId]: presence.status
             }));
           } catch {
-            // Lỗi nhẹ bỏ qua
           }
         });
       }
@@ -107,7 +100,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, user]);
 
-  // Khởi chạy khi đăng nhập
   useEffect(() => {
     if (isAuthenticated) {
       fetchConversations();
@@ -118,7 +110,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, fetchConversations]);
 
-  // Tải thêm tin nhắn cũ (Infinite scroll)
   const loadMoreMessages = useCallback(async () => {
     if (!activeConversation || isLoadingMessages || !hasMoreMessages) return;
     
@@ -139,7 +130,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeConversation, isLoadingMessages, hasMoreMessages, messagesPage]);
 
-  // Thiết lập cuộc trò chuyện đang mở
   const setActiveConversation = useCallback(async (conv: ConversationResponse | null) => {
     setActiveConversationState(conv);
     setMessages([]);
@@ -151,14 +141,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoadingMessages(true);
     try {
-      // 1. Tải 30 tin nhắn mới nhất
       const response = await chatService.getMessages(conv.id, 0, 30);
       if (response && response.content) {
         setMessages(response.content);
         setHasMoreMessages(!response.last);
       }
 
-      // 2. Reset unread count cục bộ
       setConversations(prev => prev.map(c => {
         if (c.id === conv.id && user) {
           const updatedUnreads = { ...(c.unreadCounts || {}) };
@@ -168,7 +156,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return c;
       }));
 
-      // Đồng bộ trạng thái đã xem qua STOMP WebSocket
       if (isConnected) {
         send("/app/chat.seen", { conversationId: conv.id });
       }
@@ -178,8 +165,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingMessages(false);
     }
   }, [user, isConnected, send]);
-
-  // Gửi tin nhắn qua STOMP WebSocket
   const sendMessage = useCallback(async (
     content: string, 
     type: MessageResponse["type"] = "TEXT",
@@ -194,9 +179,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
 
     if (type !== "TEXT" && cardId) {
-      // Image hoặc Product/Order card
       messagePayload.attachmentMetadata = {
-        fileUrl: type === "IMAGE" ? content : undefined, // Nếu là ảnh thì content là url
+        fileUrl: type === "IMAGE" ? content : undefined,
         fileName: type === "IMAGE" ? "Image_attachment.jpg" : `Card_${cardId}`,
         fileSize: 0,
         mimeType: type === "IMAGE" ? "image/jpeg" : "application/json",
@@ -206,8 +190,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     send("/app/chat.sendMessage", messagePayload);
   }, [activeConversation, isConnected, send]);
-
-  // Gửi trạng thái gõ chữ (Typing state)
   const sendTypingState = useCallback((isTyping: boolean) => {
     if (!activeConversation || !isConnected) return;
     send("/app/chat.typing", {
@@ -215,8 +197,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       isTyping
     });
   }, [activeConversation, isConnected, send]);
-
-  // Khởi tạo Chat trực tiếp với đối phương
   const startDirectChat = useCallback(async (targetUserId: string): Promise<string> => {
     try {
       const response = await chatService.createConversation([targetUserId], "DIRECT");
@@ -228,22 +208,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [fetchConversations, setActiveConversation, toast]);
-
-  // =========================================================================
-  // REAL-TIME WEBSOCKET SUBSCRIPTIONS & EVENT HANDLERS
-  // =========================================================================
-
-  // 1. Lắng nghe tin nhắn mới toàn cục (Chung cho tất cả các phòng)
   useEffect(() => {
     if (!isConnected) return;
-
-    // Lắng nghe tin nhắn mới gửi đến hàng đợi cá nhân
     const unsubscribeMessages = subscribe<MessageResponse>("/user/queue/messages", (message) => {
-      // 1. Cập nhật preview lastMessage trên Sidebar
       setConversations(prev => {
         const index = prev.findIndex(c => c.id === message.conversationId);
         if (index === -1) {
-          // Phòng chat mới chưa có trong list, kéo lại hội thoại
           fetchConversations();
           return prev;
         }
@@ -259,34 +229,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           createdAt: message.createdAt
         };
         conv.updatedAt = message.createdAt;
-
-        // Nếu tin nhắn thuộc phòng KHÔNG hoạt động, cộng unread count
         if (user && activeConversationRef.current?.id !== message.conversationId) {
           const updatedUnreads = { ...(conv.unreadCounts || {}) };
           updatedUnreads[user.id] = (updatedUnreads[user.id] || 0) + 1;
           conv.unreadCounts = updatedUnreads;
         }
-
-        // Đưa cuộc hội thoại lên đầu danh sách
         updated.splice(index, 1);
         return [conv, ...updated];
       });
-
-      // 2. Nếu tin nhắn thuộc phòng ĐANG mở, thêm vào khung chat
       if (activeConversationRef.current?.id === message.conversationId) {
         setMessages(prev => {
-          if (prev.some(m => m.id === message.id)) return prev; // Chống trùng lặp
+          if (prev.some(m => m.id === message.id)) return prev;
           return [message, ...prev];
         });
-
-        // Tự động báo nhận đã xem tin nhắn nếu tin nhắn từ người khác gửi đến
         if (user && message.senderId !== user.id && isConnected) {
           send("/app/chat.seen", { conversationId: message.conversationId });
         }
       }
     });
-
-    // Lắng nghe trạng thái gõ chữ cá nhân (Cho Direct chat)
     const unsubscribeTyping = subscribe<TypingResponse>("/user/queue/typing", (data) => {
       if (activeConversationRef.current?.id === data.conversationId) {
         setTypingUsers(prev => {
@@ -299,8 +259,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
       }
     });
-
-    // Listen for DIRECT chat read receipts on personal queue
     const unsubscribeSeen = subscribe<{ conversationId: string; userId: string; readAt: string }>("/user/queue/seen", (payload) => {
       try {
         if (activeConversationRef.current?.id === payload.conversationId) {
@@ -326,21 +284,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (unsubscribeSeen) unsubscribeSeen();
     };
   }, [isConnected, subscribe, fetchConversations, user, toast]);
-
-  // 2. Lắng nghe chi tiết cho phòng đang Active
   useEffect(() => {
     if (!isConnected || !activeConversation) return;
 
     const roomId = activeConversation.id;
-
-    // Lắng nghe tin nhắn mới trực tiếp trong phòng
     const unsubscribeRoomMessages = subscribe<MessageResponse>(`/topic/chat.${roomId}`, (message) => {
       setMessages(prev => {
         if (prev.some(m => m.id === message.id)) return prev;
         return [message, ...prev];
       });
-
-      // Cập nhật preview lastMessage trên Sidebar
       setConversations(prev => {
         const index = prev.findIndex(c => c.id === message.conversationId);
         if (index === -1) {
@@ -359,21 +311,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           createdAt: message.createdAt
         };
         conv.updatedAt = message.createdAt;
-
-        // Đưa cuộc hội thoại lên đầu danh sách
         updated.splice(index, 1);
         return [conv, ...updated];
       });
-
-      // Tự động báo nhận đã xem tin nhắn nếu tin nhắn từ người khác gửi đến
       if (user && message.senderId !== user.id && isConnected) {
         send("/app/chat.seen", { conversationId: roomId });
       }
     });
-
-    // Lắng nghe trạng thái soạn thảo trong phòng
     const unsubscribeRoomTyping = subscribe<TypingResponse>(`/topic/chat.${roomId}/typing`, (data) => {
-      // Bỏ qua trạng thái soạn thảo của chính mình
       if (user && data.username === user.username) return;
 
       setTypingUsers(prev => {
@@ -385,12 +330,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       });
     });
-
-    // Lắng nghe trạng thái đã đọc (Seen status)
     const unsubscribeRoomSeen = subscribe<{ conversationId: string; userId: string; readAt: string }>(`/topic/chat.${roomId}/seen`, (payload) => {
       try {
         setMessages(prev => prev.map(msg => {
-          // Bổ sung tích đã đọc cho tin nhắn
           const alreadyRead = msg.readBy.some(receipt => receipt.userId === payload.userId);
           if (!alreadyRead && msg.senderId !== payload.userId) {
             return {
@@ -411,17 +353,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (unsubscribeRoomSeen) unsubscribeRoomSeen();
     };
   }, [isConnected, activeConversation, subscribe, user]);
-
-  // 3. Heartbeat Ping Presence & Heartbeat định kỳ duy trì trạng thái
   useEffect(() => {
     if (!isConnected || !isAuthenticated) return;
-
-    // ping lần đầu ngay khi connect
     send("/app/chat.ping", {});
 
     const interval = setInterval(() => {
       send("/app/chat.ping", {});
-    }, 30000); // 30 giây ping một lần (khớp với spec: TTL 40s trên Redis)
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isConnected, isAuthenticated, send]);

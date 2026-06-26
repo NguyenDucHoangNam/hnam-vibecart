@@ -10,10 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
-
-/**
- * Producer gửi sự kiện đồng bộ sản phẩm lên Kafka topic.
- */
 @Component
 @RequiredArgsConstructor
 public class ProductSyncProducer {

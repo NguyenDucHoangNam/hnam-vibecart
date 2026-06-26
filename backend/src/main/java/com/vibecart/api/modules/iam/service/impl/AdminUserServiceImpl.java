@@ -23,10 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.Set;
-
-/**
- * Implementation của {@link AdminUserService} cung cấp các tính năng quản trị tài khoản người dùng dành cho Admin.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

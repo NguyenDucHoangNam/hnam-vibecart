@@ -21,10 +21,6 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link CartService} quản lý giỏ hàng qua Redis.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

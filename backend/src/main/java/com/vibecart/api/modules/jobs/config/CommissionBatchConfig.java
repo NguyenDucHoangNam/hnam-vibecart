@@ -26,10 +26,6 @@ import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-/**
- * Cấu hình Spring Batch job quyết toán hoa hồng (Commission Settlement).
- */
 @Configuration
 public class CommissionBatchConfig {
 

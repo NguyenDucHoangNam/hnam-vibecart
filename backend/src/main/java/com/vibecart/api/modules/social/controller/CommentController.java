@@ -12,10 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-/**
- * Controller quản lý bình luận trên bài viết.
- */
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/comments")
 @RequiredArgsConstructor
@@ -23,10 +19,6 @@ import org.springframework.web.bind.annotation.*;
 public class CommentController {
 
     private final CommentService commentService;
-
-    /**
-     * Thêm bình luận mới vào bài viết.
-     */
     @PostMapping
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(
             @PathVariable String postId,
@@ -44,10 +36,6 @@ public class CommentController {
                         .build()
         );
     }
-
-    /**
-     * Lấy danh sách bình luận của bài viết theo phân trang.
-     */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<CommentResponse>>> getComments(
             @PathVariable String postId,
@@ -64,10 +52,6 @@ public class CommentController {
                         .build()
         );
     }
-
-    /**
-     * Xóa bình luận theo ID (chủ bình luận hoặc Admin).
-     */
     @DeleteMapping("/{commentId}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(
             @PathVariable String postId,

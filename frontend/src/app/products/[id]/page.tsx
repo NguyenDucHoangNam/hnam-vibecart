@@ -26,29 +26,21 @@ export default function ProductDetailsPage() {
   const toast = useToast();
   const { addToCart } = useCart();
   const productId = params.id as string;
-
-  // States
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Load Product details
   useEffect(() => {
     async function loadProduct() {
       setIsLoading(true);
       try {
         const data = await productService.getProductById(productId);
         setProduct(data);
-        
-        // Auto-select first active variant if available
         if (data.variants && data.variants.length > 0) {
           const activeVar = data.variants.find((v) => v.status === "ACTIVE") || data.variants[0];
           setSelectedVariant(activeVar);
         }
-
-        // Auto-select thumbnail or first image
         const thumb = data.images?.find((img) => img.isThumbnail)?.imageUrl || data.images?.[0]?.imageUrl || "";
         setSelectedImage(thumb);
 
@@ -60,10 +52,7 @@ export default function ProductDetailsPage() {
       }
     }
     loadProduct();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
-
-  // Adjust local quantity selection
   const handleQuantityChange = (val: number) => {
     if (!selectedVariant) return;
     const nextVal = quantity + val;
@@ -78,14 +67,10 @@ export default function ProductDetailsPage() {
     }
     setQuantity(nextVal);
   };
-
-  // Add Item to Cart Context
   const handleAddToCart = async () => {
     if (!product || !selectedVariant) return;
     await addToCart(selectedVariant, product, quantity);
   };
-
-  // Buy Now
   const handleBuyNow = async () => {
     if (!product || !selectedVariant) return;
     await addToCart(selectedVariant, product, quantity);
@@ -120,8 +105,6 @@ export default function ProductDetailsPage() {
       </div>
     );
   }
-
-  // Active price parameters
   const originalPrice = selectedVariant ? selectedVariant.price : 0;
   const discountPrice = selectedVariant ? selectedVariant.discountPrice : 0;
   const availableStock = selectedVariant ? selectedVariant.availableStock : 0;
@@ -131,13 +114,10 @@ export default function ProductDetailsPage() {
 
   return (
     <div className="flex-1 bg-zinc-50 px-4 sm:px-6 lg:px-8 py-10 transition-colors duration-300 relative">
-      {/* Floating orbs */}
       <div className="absolute top-[15%] right-[5%] w-80 h-80 bg-brand-100/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[10%] left-[5%] w-96 h-96 bg-brand-200/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl w-full mx-auto relative z-10">
-        
-        {/* Back Link */}
         <Link 
           href={ROUTES.PRODUCTS}
           className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900 text-xs font-semibold mb-8 group"
@@ -145,13 +125,8 @@ export default function ProductDetailsPage() {
           <ChevronLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
           Quay lại cửa hàng
         </Link>
-
-        {/* DETAILS GRID */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-14 bg-white rounded-[2.5rem] border border-zinc-200/60 p-6 sm:p-8 lg:p-10 shadow-sm">
-          
-          {/* 1. LEFT SIDE: IMAGE CAROUSEL */}
           <div className="flex flex-col gap-4.5">
-            {/* Main Showcase Image */}
             <div className="relative w-full aspect-[4/3] rounded-[2rem] overflow-hidden bg-zinc-50 border border-zinc-200/50">
               {selectedImage ? (
                 <img
@@ -164,8 +139,6 @@ export default function ProductDetailsPage() {
                   <Package className="h-16 w-16" />
                 </div>
               )}
-
-              {/* Discount Tag Overlay */}
               {hasDiscount && (
                 <div className="absolute top-4 left-4 bg-red-500 text-white text-[10px] font-extrabold px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-md">
                   <Tag className="h-3.5 w-3.5" />
@@ -173,8 +146,6 @@ export default function ProductDetailsPage() {
                 </div>
               )}
             </div>
-
-            {/* List Album Images */}
             {product.images && product.images.length > 1 && (
               <div className="flex flex-wrap gap-3">
                 {product.images
@@ -195,21 +166,14 @@ export default function ProductDetailsPage() {
               </div>
             )}
           </div>
-
-          {/* 2. RIGHT SIDE: SPECIFICATIONS */}
           <div className="flex flex-col">
-            {/* Category Name */}
             <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-600 uppercase tracking-widest mb-2.5">
               <Sparkles className="h-3.5 w-3.5" />
               {product.categoryName || "Danh mục"}
             </div>
-
-            {/* Name */}
             <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 leading-tight">
               {product.name}
             </h1>
-
-            {/* Creator profile reference */}
             <div className="mt-3.5 flex items-center gap-2.5 py-3 border-y border-zinc-100">
               <div className="h-8.5 w-8.5 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-200">
                 <User className="h-4.5 w-4.5" />
@@ -225,15 +189,9 @@ export default function ProductDetailsPage() {
                 </Link>
               </div>
             </div>
-
-            {/* Product description */}
             <p className="text-sm text-zinc-500 leading-relaxed font-light mt-5">
               {product.description || "Sản phẩm này hiện tại chưa được cập nhật thông tin mô tả chi tiết từ Creator..."}
             </p>
-
-            {/* ═══════════════════════════════════════════════════════════════ */}
-            {/* VARIANT SELECTOR GRID */}
-            {/* ═══════════════════════════════════════════════════════════════ */}
             <div className="mt-8">
               <h3 className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-3.5">Chọn phân loại sản phẩm *</h3>
               <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
@@ -277,8 +235,6 @@ export default function ProductDetailsPage() {
                 })}
               </div>
             </div>
-
-            {/* Price display panel */}
             <div className="mt-8 bg-zinc-50 rounded-2xl p-4.5 border border-zinc-200/50 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider mb-1">Giá bán thời gian thực</span>
@@ -298,8 +254,6 @@ export default function ProductDetailsPage() {
                 )}
               </div>
             </div>
-
-            {/* Quantity selector & Available Stock check */}
             <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-6 border-t border-zinc-100">
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider mb-1.5">Số lượng mua</span>
@@ -329,8 +283,6 @@ export default function ProductDetailsPage() {
                   </span>
                 </div>
               </div>
-
-              {/* Status information badge */}
               {isOutOfStock && (
                 <div className="inline-flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-100 px-4 py-2 rounded-xl font-bold">
                   <Info className="h-4 w-4" />
@@ -338,8 +290,6 @@ export default function ProductDetailsPage() {
                 </div>
               )}
             </div>
-
-            {/* ACTION BUTTONS */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
               <button
                 disabled={isOutOfStock || !selectedVariant}

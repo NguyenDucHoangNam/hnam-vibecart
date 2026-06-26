@@ -4,8 +4,6 @@ import React, { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
-
-// Routes where the footer should be hidden (full-app layout like Messenger)
 const FULL_HEIGHT_ROUTES = ["/messages"];
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {

@@ -30,11 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
-/**
- * Implementation của {@link ShortLinkService} xử lý tạo shortlink, cache Redis
- * và chuyển hướng.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -158,7 +153,7 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         if (originalUrl == null) {
             log.info("Redis cache miss for shortCode: {}. Reading from DB...", shortCode);
             ShortLink shortLink = shortLinkRepository.findByShortCode(shortCode)
-                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND)); // product/link not found
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
             shortLinkId = shortLink.getId();
             originalUrl = shortLink.getOriginalUrl();

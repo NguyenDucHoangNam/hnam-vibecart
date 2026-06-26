@@ -34,10 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link PostService} xử lý bài viết, like và news feed.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -98,7 +94,6 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(post);
         log.info("Post created by {}: {}", username, savedPost.getId());
 
-        // [FAN-OUT] Đẩy bài viết mới vào timeline Redis của tất cả follower (async)
         feedFanoutService.fanoutNewPost(creator.getId(), savedPost.getId());
 
         return toSinglePostResponse(savedPost, username);
@@ -198,7 +193,6 @@ public class PostServiceImpl implements PostService {
         postRepository.delete(post);
         log.info("Post deleted by {}: {}", username, postId);
 
-        // [FAN-OUT] Xóa bài viết khỏi timeline Redis của tất cả follower (async)
         feedFanoutService.removeDeletedPost(creatorId, postId);
     }
 
@@ -209,18 +203,15 @@ public class PostServiceImpl implements PostService {
         User user = findUserByUsername(username);
         String timelineKey = TIMELINE_KEY_PREFIX + user.getId();
 
-        // [FAN-OUT] Đọc postIds từ Redis Timeline
         long start = (long) page * size;
         long end = start + size - 1;
         List<String> postIds = redisTemplate.opsForList().range(timelineKey, start, end);
 
         if (postIds != null && !postIds.isEmpty()) {
-            // Cache HIT: gia hạn TTL và lấy bài viết từ DB theo batch ID
             redisTemplate.expire(timelineKey, TIMELINE_TTL_DAYS, TimeUnit.DAYS);
 
             List<Post> posts = postRepository.findAllById(postIds);
 
-            // Giữ nguyên thứ tự từ Redis (mới nhất trước)
             Map<String, Post> postMap = posts.stream()
                     .collect(Collectors.toMap(Post::getId, p -> p));
             List<Post> orderedPosts = postIds.stream()
@@ -230,7 +221,6 @@ public class PostServiceImpl implements PostService {
 
             List<PostResponse> content = toBatchPostResponses(orderedPosts, username);
 
-            // Kiểm tra hasNext bằng cách xem Redis list còn phần tử không
             Long totalSize = redisTemplate.opsForList().size(timelineKey);
             boolean isLast = totalSize == null || end >= totalSize - 1;
 
@@ -244,14 +234,12 @@ public class PostServiceImpl implements PostService {
                     .build();
         }
 
-        // Cache MISS: fallback query DB + async warm-up
         log.info("Timeline cache miss for user {}, falling back to DB query", user.getId());
         Pageable pageable = PageRequest.of(page, size);
         Slice<Post> feedSlice = postRepository.findFeedByUserId(user.getId(), pageable);
 
         List<PostResponse> content = toBatchPostResponses(feedSlice.getContent(), username);
 
-        // Async warm-up timeline cho lần sau
         feedFanoutService.warmUpTimeline(user.getId());
 
         return PageResponse.<PostResponse>builder()
@@ -316,11 +304,6 @@ public class PostServiceImpl implements PostService {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
     }
-
-    /**
-     * [BATCH] Convert danh sách Post entities → PostResponses chỉ với 3 queries tổng cộng
-     * thay vì 3N queries (N+1 problem).
-     */
     private List<PostResponse> toBatchPostResponses(List<Post> posts, String currentUsername) {
         if (posts.isEmpty()) return List.of();
 
@@ -360,8 +343,6 @@ public class PostServiceImpl implements PostService {
                 ))
                 .toList();
     }
-
-    /** Convert single Post entity → PostResponse (dùng cho getPost, createPost, updatePost) */
     private PostResponse toSinglePostResponse(Post post, String currentUsername) {
         long likeCount = postLikeRepository.countByIdPostId(post.getId());
         long commentCount = postCommentRepository.countByPostId(post.getId());
@@ -376,20 +357,10 @@ public class PostServiceImpl implements PostService {
 
         return postMapper.toPostResponse(post, likeCount, commentCount, likedByMe);
     }
-
-    /** List<String> → comma-separated String for DB storage */
     private String joinMediaUrls(List<String> urls) {
         if (urls == null || urls.isEmpty()) return null;
         return String.join(",", urls);
     }
-
-    /**
-     * [SEC-4] Validate danh sách media URLs trước khi lưu bài viết.
-     * Kiểm tra 3 lớp:
-     * 1. S3 Key tồn tại trong bảng media_metadata
-     * 2. Status = "VERIFIED" (đã qua xử lý/quét virus)
-     * 3. uploadedBy == username (chống Creator A dùng file của Creator B)
-     */
     private void validateMediaUrls(List<String> mediaUrls, String username) {
         if (mediaUrls == null || mediaUrls.isEmpty()) return;
 
@@ -407,12 +378,6 @@ public class PostServiceImpl implements PostService {
             }
         }
     }
-
-    /**
-     * Trích xuất S3 Key từ URL đầy đủ.
-     * Ví dụ: "https://vibecart.s3.amazonaws.com/posts/abc123.jpg" → "posts/abc123.jpg"
-     * Nếu URL không chứa domain prefix, coi toàn bộ chuỗi là S3 Key.
-     */
     private String extractS3Key(String url) {
         if (url == null) return "";
 

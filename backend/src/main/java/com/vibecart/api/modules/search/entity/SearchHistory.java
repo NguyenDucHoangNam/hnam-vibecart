@@ -17,7 +17,7 @@ import java.util.List;
 public class SearchHistory {
 
     @Id
-    private String id; // userId (UUID String)
+    private String id;
 
     @Builder.Default
     private List<SearchItem> items = new ArrayList<>();

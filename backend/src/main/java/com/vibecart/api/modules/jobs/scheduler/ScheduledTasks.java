@@ -9,10 +9,6 @@ import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-/**
- * Scheduled tasks chạy định kỳ: quyết toán hoa hồng hàng ngày.
- */
 @Component
 public class ScheduledTasks {
 

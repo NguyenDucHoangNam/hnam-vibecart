@@ -8,10 +8,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
-
-/**
- * Thực thể MongoDB đại diện cho một cuộc hội thoại (Direct hoặc Group).
- */
 @Document(collection = "conversations")
 @Getter
 @Setter
@@ -48,10 +44,6 @@ public class Conversation {
     @Builder.Default
     @Field("updated_at")
     private Instant updatedAt = Instant.now();
-
-    /**
-     * Thông tin tin nhắn cuối cùng để hiển thị nhanh trên danh sách hội thoại.
-     */
     @Getter
     @Setter
     @Builder

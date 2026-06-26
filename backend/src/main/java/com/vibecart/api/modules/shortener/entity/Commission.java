@@ -38,5 +38,5 @@ public class Commission extends BaseEntity {
 
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, APPROVED, REJECTED
+    private String status = "PENDING";
 }

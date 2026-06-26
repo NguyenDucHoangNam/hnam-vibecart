@@ -77,7 +77,6 @@ async function refreshAccessToken(): Promise<string | null> {
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { params, headers, ...customConfig } = options;
   
-  // Format URL query params
   let url = `${API_BASE_URL}${endpoint}`;
   if (params) {
     const query = new URLSearchParams(
@@ -89,7 +88,6 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
     url = `${url}?${query}`;
   }
 
-  // Get current access token
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 
   const defaultHeaders: HeadersInit = {};
@@ -112,7 +110,6 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   try {
     const response = await fetch(url, config);
 
-    // If 401 Unauthorized, try to refresh access token
     if (response.status === 401 && token) {
       if (!isRefreshing) {
         isRefreshing = true;
@@ -133,11 +130,9 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
         }
       }
 
-      // Queue other requests while refreshing
       return new Promise<T>((resolve, reject) => {
         subscribeTokenRefresh(
           (newToken) => {
-            // Re-run original fetch with new token
             const retriedHeaders = {
               ...config.headers,
               "Authorization": `Bearer ${newToken}`,
@@ -169,14 +164,12 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
       );
     }
 
-    // Handles 204 No Content
     if (response.status === 204) {
       return {} as T;
     }
 
     const jsonData = await response.json();
     
-    // Unwrap backend ApiResponse wrapper: { code, message, result }
     if (jsonData && typeof jsonData === "object" && "result" in jsonData) {
       return jsonData.result as T;
     }
@@ -190,7 +183,6 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   }
 }
 
-// REST helper methods
 export const api = {
   get: <T>(endpoint: string, options?: RequestOptions) => 
     apiClient<T>(endpoint, { ...options, method: "GET" }),

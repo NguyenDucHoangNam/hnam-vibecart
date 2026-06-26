@@ -15,13 +15,11 @@ export interface PresignedUrlRequest {
 }
 
 export const chatService = {
-  // Lấy danh sách cuộc hội thoại
   getConversations: async () => {
     const res = await api.get<ConversationResponse[]>(ENDPOINTS.CHAT.CONVERSATIONS);
     return res;
   },
 
-  // Tạo hoặc lấy phòng chat Direct/Group
   createConversation: async (memberIds: string[], type: "DIRECT" | "GROUP", name?: string) => {
     const res = await api.post<ConversationResponse>(ENDPOINTS.CHAT.CONVERSATIONS, {
       memberIds,
@@ -31,7 +29,6 @@ export const chatService = {
     return res;
   },
 
-  // Lấy lịch sử tin nhắn của một phòng (Phân trang)
   getMessages: async (conversationId: string, page = 0, size = 30) => {
     const res = await api.get<PageResponse<MessageResponse>>(
       ENDPOINTS.CHAT.MESSAGES(conversationId),
@@ -40,7 +37,6 @@ export const chatService = {
     return res;
   },
 
-  // Lấy S3/Storage pre-signed upload URL
   getPresignedUrl: async (payload: PresignedUrlRequest) => {
     const res = await api.post<PresignedUrlResponse>(
       ENDPOINTS.CHAT.ATTACHMENT_URL,
@@ -49,7 +45,6 @@ export const chatService = {
     return res;
   },
 
-  // Lấy trạng thái trực tuyến của user
   getUserPresence: async (userId: string) => {
     const res = await api.get<PresenceResponse>(
       ENDPOINTS.CHAT.PRESENCE(userId)
@@ -57,7 +52,6 @@ export const chatService = {
     return res;
   },
 
-  // Upload tệp trực tiếp lên S3/Storage thông qua pre-signed PUT url
   uploadAttachmentFile: async (
     uploadUrl: string,
     file: File,

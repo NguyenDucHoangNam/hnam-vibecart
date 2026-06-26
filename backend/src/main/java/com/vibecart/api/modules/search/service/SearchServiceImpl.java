@@ -47,11 +47,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link SearchService} xử lý các logic tìm kiếm tích hợp
- * Elasticsearch, MongoDB và Redis.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

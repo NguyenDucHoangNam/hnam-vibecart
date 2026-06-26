@@ -13,10 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.ZonedDateTime;
-
-/**
- * Implementation của {@link VoucherService} xử lý mã giảm giá.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

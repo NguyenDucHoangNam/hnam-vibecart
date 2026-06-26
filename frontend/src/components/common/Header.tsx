@@ -27,15 +27,11 @@ export function Header() {
   const { globalUnreadCount } = useChat();
   const pathname = usePathname();
   const router = useRouter();
-
-  // Dropdown states
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdowns on outside clicks
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -47,8 +43,6 @@ export function Header() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  // Close mobile menu on pathname change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
@@ -60,8 +54,6 @@ export function Header() {
 
   const isCreator = user?.roles?.includes("ROLE_CREATOR");
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
-
-  // Get dynamic avatar border styling based on role
   const getAvatarBorderClass = () => {
     if (isAdmin) {
       return "border-2 border-rose-500 ring-2 ring-rose-100 shadow-sm shadow-rose-500/20";
@@ -69,11 +61,8 @@ export function Header() {
     if (isCreator) {
       return "border-2 border-emerald-500 ring-2 ring-emerald-100 shadow-sm shadow-emerald-500/20";
     }
-    // Return a beautiful blue border for standard customers/shoppers so every role is visually distinct and outstanding!
     return "border-2 border-blue-500 ring-2 ring-blue-100 shadow-sm shadow-blue-500/20";
   };
-
-  // Get dynamic fallback gradient based on role
   const getFallbackGradientClass = () => {
     if (isAdmin) {
       return "from-rose-400 to-rose-500";
@@ -83,8 +72,6 @@ export function Header() {
     }
     return "from-blue-400 to-blue-500";
   };
-
-  // Get user initials for fallback avatar
   const getUserInitials = () => {
     if (!user?.fullName) return "U";
     return user.fullName
@@ -94,8 +81,6 @@ export function Header() {
       .substring(0, 2)
       .toUpperCase();
   };
-
-  // Center Navigation Links matching the exact screenshot design
   const navLinks = [
     { label: "Cửa hàng", href: ROUTES.PRODUCTS, icon: ShoppingBag },
     { label: "Bảng tin", href: ROUTES.FEED, icon: Compass },
@@ -107,8 +92,6 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-brand-100 bg-white h-20 transition-all duration-300 shadow-sm shadow-brand-50/20">
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-
-        {/* Left: Brand Logo */}
         <Link href={ROUTES.HOME} className="flex items-center gap-2.5 group shrink-0">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-100 bg-white p-1.5 shadow-sm transition-all duration-300 group-hover:scale-105">
             <img src="/logo.png" alt="VibeCart Logo" className="h-full w-full object-contain" />
@@ -117,8 +100,6 @@ export function Header() {
             VibeCart
           </span>
         </Link>
-
-        {/* Center: Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => {
             const LinkIcon = link.icon;
@@ -138,11 +119,7 @@ export function Header() {
             );
           })}
         </nav>
-
-        {/* Right: Actions */}
         <div className="flex items-center gap-5">
-
-          {/* Cart Icon */}
           <Link
             href={ROUTES.CART}
             className="relative flex h-11 w-11 items-center justify-center rounded-full text-zinc-700 hover:bg-zinc-50 transition-all duration-200"
@@ -154,8 +131,6 @@ export function Header() {
               </span>
             )}
           </Link>
-
-          {/* Chat Icon - Show when logged in */}
           {isAuthenticated && (
             <Link
               href={ROUTES.MESSAGES}
@@ -169,8 +144,6 @@ export function Header() {
               )}
             </Link>
           )}
-
-          {/* Auth Sections */}
           <div>
             {isAuthenticated && user ? (
               <div className="relative" ref={dropdownRef}>
@@ -200,8 +173,6 @@ export function Header() {
                   </div>
                   <ChevronDown className={`h-4.5 w-4.5 text-zinc-500 transition-transform duration-300 ${isProfileDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
-
-                {/* Profile Dropdown List */}
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 mt-2.5 w-60 rounded-2xl border border-zinc-100 bg-white p-2.5 shadow-xl shadow-zinc-200/50 animate-in fade-in slide-in-from-top-3 duration-250">
                     <div className="px-3.5 py-3 border-b border-zinc-100 mb-2 flex flex-col items-start gap-1.5">
@@ -296,8 +267,6 @@ export function Header() {
               </div>
             )}
           </div>
-
-          {/* Hamburger Menu Toggle (Mobile) */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="flex h-9 w-9 md:hidden items-center justify-center rounded-full border border-zinc-100 text-zinc-600 hover:bg-zinc-50 transition-colors"
@@ -307,14 +276,11 @@ export function Header() {
 
         </div>
       </div>
-
-      {/* Mobile Drawer Navigation Menu */}
       {isMobileMenuOpen && (
         <div
           ref={mobileMenuRef}
           className="md:hidden w-full border-t border-brand-100 bg-white/95 backdrop-blur-md px-4 py-5 shadow-inner flex flex-col gap-4 animate-in slide-in-from-top duration-300"
         >
-          {/* Nav Links */}
           <div className="flex flex-col gap-2">
             {navLinks.map((link) => {
               const LinkIcon = link.icon;
@@ -336,8 +302,6 @@ export function Header() {
           </div>
 
           <div className="h-px bg-brand-100/60" />
-
-          {/* User Section (Mobile) */}
           <div>
             {isAuthenticated && user ? (
               <div className="flex flex-col gap-3">

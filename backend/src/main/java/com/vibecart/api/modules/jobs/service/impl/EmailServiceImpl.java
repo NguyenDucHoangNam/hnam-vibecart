@@ -13,10 +13,6 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.util.Map;
-
-/**
- * Implementation của {@link EmailService} gửi email thông qua JavaMailSender.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -37,7 +33,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setFrom("VibeCart <" + fromEmail + ">");
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(htmlContent, true); // HTML true
+            helper.setText(htmlContent, true);
 
             mailSender.send(message);
             log.info("Email sent successfully to: {}", to);

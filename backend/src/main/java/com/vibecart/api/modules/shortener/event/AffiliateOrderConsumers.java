@@ -16,10 +16,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
-
-/**
- * Consumer xử lý các sự kiện đơn hàng (thanh toán, giao thành công, hủy) để tính toán hoa hồng tiếp thị.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

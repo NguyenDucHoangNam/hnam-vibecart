@@ -34,7 +34,6 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      // Calling /api/v1/auth/forgot-password
       await api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, { email: email.trim() });
       setIsSent(true);
       toast.success("Đã gửi yêu cầu", "Vui lòng kiểm tra hộp thư đến của bạn để nhận liên kết đặt lại mật khẩu.");
@@ -57,12 +56,10 @@ export default function ForgotPasswordPage() {
       }}
     >
       <div className="w-full max-w-sm">
-        {/* Container Card */}
         <div className="bg-white/80 backdrop-blur-xl border border-brand-100/40 rounded-2xl p-6 shadow-xl shadow-brand-500/5 transition-all duration-300">
           
           {!isSent ? (
             <>
-              {/* Form State */}
               <div className="text-center mb-6">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 mb-4 shadow-sm border border-brand-100/40">
                   <KeySquare className="h-6 w-6" />
@@ -74,18 +71,13 @@ export default function ForgotPasswordPage() {
                   Nhập email tài khoản của bạn để nhận liên kết đặt lại mật khẩu bảo mật
                 </p>
               </div>
-
-              {/* General Error Display */}
               {error && (
                 <div className="mb-6 p-4 bg-rose-50 border border-rose-200/50 rounded-xl flex items-start space-x-3 text-rose-700 text-sm leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
                   <Info className="w-5 h-5 shrink-0 mt-0.5" />
                   <span>{error}</span>
                 </div>
               )}
-
-              {/* Form Entry */}
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Email Input */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider block">
                     Địa chỉ Email
@@ -105,8 +97,6 @@ export default function ForgotPasswordPage() {
                     />
                   </div>
                 </div>
-
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -124,7 +114,6 @@ export default function ForgotPasswordPage() {
               </form>
             </>
           ) : (
-            /* Success Sent State */
             <div className="text-center py-4 animate-in fade-in zoom-in-95 duration-300">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 mb-6 shadow-sm border border-emerald-100/50">
                 <CheckCircle className="h-8 w-8" />
@@ -141,8 +130,6 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
           )}
-
-          {/* Bottom Back Nav */}
           <div className="mt-6 text-center text-sm border-t border-brand-100/40 pt-4">
             <Link
               href={ROUTES.LOGIN}

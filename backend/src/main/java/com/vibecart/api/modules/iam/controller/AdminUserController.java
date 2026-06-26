@@ -15,10 +15,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-/**
- * Controller quản trị người dùng dành cho Admin.
- */
 @RestController
 @RequestMapping("/api/v1/admin/users")
 @RequiredArgsConstructor
@@ -26,10 +22,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdminUserController {
 
         private final AdminUserService adminUserService;
-
-        /**
-         * Tìm kiếm và phân trang người dùng theo bộ lọc.
-         */
         @GetMapping
         @PreAuthorize("hasRole('ADMIN')")
         public ResponseEntity<ApiResponse<Page<UserResponse>>> searchUsers(
@@ -49,10 +41,6 @@ public class AdminUserController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Cập nhật trạng thái tài khoản người dùng.
-         */
         @PutMapping("/{id}/status")
         @PreAuthorize("hasRole('ADMIN')")
         public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(
@@ -72,10 +60,6 @@ public class AdminUserController {
 
                 return ResponseEntity.ok(response);
         }
-
-        /**
-         * Cập nhật vai trò (phân quyền) của người dùng.
-         */
         @PutMapping("/{id}/roles")
         @PreAuthorize("hasRole('ADMIN')")
         public ResponseEntity<ApiResponse<UserResponse>> updateUserRoles(

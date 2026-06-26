@@ -37,12 +37,8 @@ export default function ShopPage() {
   const searchParams = useSearchParams();
   const toast = useToast();
   const { isAuthenticated, user: currentUser } = useAuth();
-
-  // URL params
   const urlQuery = searchParams.get("q") || searchParams.get("query") || "";
   const urlCategory = searchParams.get("categoryId") || searchParams.get("category") || "";
-
-  // Data states
   const [products, setProducts] = useState<ProductDocument[]>([]);
   const [creators, setCreators] = useState<UserSearchResponse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -53,16 +49,12 @@ export default function ShopPage() {
   const [page, setPage] = useState(0);
   const [size] = useState(12);
   const [productSuggestion, setProductSuggestion] = useState<string | null>(null);
-
-  // Filter states
   const [searchVal, setSearchVal] = useState(urlQuery);
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
   const [minPrice, setMinPrice] = useState<number | "">("");
   const [maxPrice, setMaxPrice] = useState<number | "">("");
   const [sortBy, setSortBy] = useState("relevance");
   const [isFilterMobileOpen, setIsFilterMobileOpen] = useState(false);
-
-  // Autocomplete / Popover
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
@@ -70,23 +62,15 @@ export default function ShopPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ───────────────────────────────────────────────────────────────
-  // INIT
-  // ───────────────────────────────────────────────────────────────
-
   useEffect(() => {
     categoryService.getCategoriesTree().then(d => setCategories(d || [])).catch(() => {});
     searchService.getTrending().then(d => setTrendingKeywords(d || [])).catch(() => {});
   }, []);
-
-  // Sync URL → state
   useEffect(() => {
     setSearchVal(searchParams.get("q") || searchParams.get("query") || "");
     setSelectedCategory(searchParams.get("categoryId") || searchParams.get("category") || "");
     setPage(0);
   }, [searchParams]);
-
-  // Load recent search history
   const loadRecentSearches = useCallback(async () => {
     if (isAuthenticated) {
       try {
@@ -110,8 +94,6 @@ export default function ShopPage() {
   }, [isAuthenticated]);
 
   useEffect(() => { loadRecentSearches(); }, [loadRecentSearches]);
-
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
@@ -122,10 +104,6 @@ export default function ShopPage() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  // ───────────────────────────────────────────────────────────────
-  // AUTOCOMPLETE (debounce 300ms)
-  // ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!searchVal.trim()) { setSuggestions([]); return; }
     const t = setTimeout(async () => {
@@ -136,10 +114,6 @@ export default function ShopPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchVal]);
-
-  // ───────────────────────────────────────────────────────────────
-  // SEARCH PRODUCTS (Elasticsearch)
-  // ───────────────────────────────────────────────────────────────
   const executeProductSearch = useCallback(async () => {
     setIsLoadingProducts(true);
     try {
@@ -159,14 +133,9 @@ export default function ShopPage() {
     } finally {
       setIsLoadingProducts(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, size, searchVal, selectedCategory, minPrice, maxPrice, sortBy]);
 
   useEffect(() => { executeProductSearch(); }, [executeProductSearch]);
-
-  // ───────────────────────────────────────────────────────────────
-  // SEARCH CREATORS (Elasticsearch) — triggers when searchVal changes
-  // ───────────────────────────────────────────────────────────────
   const executeCreatorSearch = useCallback(async () => {
     if (!searchVal.trim()) { setCreators([]); setTotalCreators(0); return; }
     setIsLoadingCreators(true);
@@ -179,14 +148,9 @@ export default function ShopPage() {
       setTotalCreators(filtered.length);
     } catch { setCreators([]); }
     finally { setIsLoadingCreators(false); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchVal]);
 
   useEffect(() => { executeCreatorSearch(); }, [executeCreatorSearch]);
-
-  // ───────────────────────────────────────────────────────────────
-  // HELPERS
-  // ───────────────────────────────────────────────────────────────
   const saveSearchToHistory = async (kw: string) => {
     if (!kw.trim()) return;
     const now = new Date().toISOString();
@@ -294,21 +258,13 @@ export default function ShopPage() {
     });
     return opts;
   };
-
-  // ───────────────────────────────────────────────────────────────
-  // RENDER
-  // ───────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 bg-zinc-50 min-h-screen transition-colors duration-300 relative">
-
-      {/* Hero search header */}
       <div className="bg-white border-b border-zinc-200/60">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           <h1 className="text-center text-xl sm:text-2xl font-extrabold text-zinc-900 mb-6 tracking-tight">
             Tìm sản phẩm & Creators trên <span className="text-brand-500">VibeCart</span>
           </h1>
-
-          {/* Search bar */}
           <div className="relative max-w-2xl mx-auto">
             <form onSubmit={(e) => handleSearchSubmit(e)}
               className="relative flex rounded-full overflow-hidden border border-zinc-200 shadow-lg shadow-zinc-200/40 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all duration-300 bg-white">
@@ -332,13 +288,9 @@ export default function ShopPage() {
                 Tìm kiếm
               </button>
             </form>
-
-            {/* Dropdown popover */}
             {isDropdownOpen && (
               <div ref={dropdownRef}
                 className="absolute left-0 right-0 mt-2 bg-white border border-zinc-200 rounded-2xl shadow-2xl p-4 z-30 text-left max-h-[320px] overflow-y-auto custom-scrollbar animate-toast-in">
-
-                {/* Autocomplete suggestions */}
                 {searchVal.trim() && (
                   <div className="mb-3">
                     <div className="text-[9px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1 mb-2">
@@ -361,8 +313,6 @@ export default function ShopPage() {
                     )}
                   </div>
                 )}
-
-                {/* Recent + Trending when empty */}
                 {!searchVal.trim() && (
                   <div className="space-y-4">
                     {recentKeywords.length > 0 && (
@@ -419,8 +369,6 @@ export default function ShopPage() {
           </div>
         </div>
       </div>
-
-      {/* Spellcheck suggestion */}
       {productSuggestion && (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
           <div className="bg-amber-50 border border-amber-200 p-3 px-4 rounded-2xl flex items-center gap-3 text-xs text-amber-700">
@@ -434,11 +382,7 @@ export default function ShopPage() {
           </div>
         </div>
       )}
-
-      {/* Main content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* ═══════ CREATORS SECTION (appears when searching) ═══════ */}
         {searchVal.trim() && creators.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4">
@@ -453,7 +397,6 @@ export default function ShopPage() {
               {creators.map(creator => (
                 <div key={creator.id}
                   className="group min-w-[200px] max-w-[200px] bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm hover:shadow-lg hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center text-center shrink-0">
-                  {/* Avatar */}
                   <div className="relative w-14 h-14 rounded-full overflow-hidden mb-3 border-2 border-brand-100 group-hover:border-brand-300 transition-colors bg-zinc-50">
                     {creator.avatarUrl ? (
                       <img src={creator.avatarUrl} alt={creator.fullName || creator.username} className="w-full h-full object-cover" />
@@ -468,16 +411,12 @@ export default function ShopPage() {
                     {creator.fullName || "Creator VibeCart"}
                   </h4>
                   <span className="text-[10px] text-zinc-400 font-medium mt-0.5">@{creator.username}</span>
-
-                  {/* Badge + Stats */}
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-100 px-2 py-0.5 text-[9px] font-bold text-brand-600 uppercase tracking-wider mt-2">
                     <Sparkles className="h-2.5 w-2.5" /> Creator
                   </span>
                   <p className="text-[10px] text-zinc-400 font-light mt-1.5">
                     <span className="font-bold text-zinc-700">{creator.followerCount || 0}</span> người theo dõi
                   </p>
-
-                  {/* Follow button */}
                   <button onClick={() => handleFollowToggle(creator.id)}
                     className={`w-full h-8 rounded-xl text-[10px] uppercase font-bold tracking-wider mt-3 transition-all duration-300 ${
                       creator.isFollowing
@@ -495,11 +434,7 @@ export default function ShopPage() {
             </div>
           </div>
         )}
-
-        {/* ═══════ PRODUCTS + FILTERS ═══════ */}
         <div className="flex flex-col lg:flex-row gap-8">
-
-          {/* Sidebar filters */}
           <aside className="hidden lg:block w-60 shrink-0 bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm h-fit sticky top-24">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-5">
               <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
@@ -507,8 +442,6 @@ export default function ShopPage() {
               </h3>
               <button onClick={handleResetFilters} className="text-[10px] text-zinc-400 hover:text-brand-500 font-semibold transition-colors">Xóa tất cả</button>
             </div>
-
-            {/* Categories */}
             <div className="mb-5">
               <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Danh mục</h4>
               <div className="space-y-0.5 max-h-56 overflow-y-auto custom-scrollbar">
@@ -521,8 +454,6 @@ export default function ShopPage() {
                 {renderCategoryOptions(categories)}
               </div>
             </div>
-
-            {/* Price */}
             <div className="mb-5">
               <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Khoảng giá</h4>
               <div className="flex gap-2 items-center">
@@ -539,8 +470,6 @@ export default function ShopPage() {
                 Áp dụng
               </button>
             </div>
-
-            {/* Sort */}
             <div>
               <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Sắp xếp</h4>
               <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(0); }}
@@ -552,11 +481,7 @@ export default function ShopPage() {
               </select>
             </div>
           </aside>
-
-          {/* Product grid */}
           <main className="flex-1 flex flex-col">
-
-            {/* Mobile filter bar */}
             <div className="lg:hidden flex items-center justify-between bg-white border border-zinc-200/60 p-3 rounded-2xl mb-5">
               <button onClick={() => setIsFilterMobileOpen(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700">
@@ -570,8 +495,6 @@ export default function ShopPage() {
                 <option value="newest">Mới nhất</option>
               </select>
             </div>
-
-            {/* Results meta */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="h-7 w-7 rounded-lg bg-brand-50 border border-brand-100 flex items-center justify-center">
@@ -583,8 +506,6 @@ export default function ShopPage() {
                 )}
               </div>
             </div>
-
-            {/* Loading skeleton */}
             {isLoadingProducts ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 min-h-[400px]">
                 {Array.from({ length: 6 }).map((_, idx) => (
@@ -632,7 +553,6 @@ export default function ShopPage() {
                   return (
                     <Link href={ROUTES.PRODUCT_DETAILS(product.id)} key={product.id}
                       className="group bg-white rounded-2xl border border-zinc-200/50 p-3.5 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden">
-                      {/* Image */}
                       <div className="relative w-full h-[190px] rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100">
                         {product.thumbnailUrl ? (
                           <img src={product.thumbnailUrl} alt={product.name}
@@ -648,8 +568,6 @@ export default function ShopPage() {
                           </div>
                         )}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 flex flex-col">
                         <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-semibold">{product.categoryName || "Danh mục"}</span>
                         <h4 className="text-xs font-bold text-zinc-900 mt-1 group-hover:text-brand-500 transition-colors line-clamp-2 leading-snug">
@@ -658,8 +576,6 @@ export default function ShopPage() {
                         <p className="text-[11px] text-zinc-400 mt-1 line-clamp-2 leading-relaxed font-light">
                           {product.description || "Không có mô tả..."}
                         </p>
-
-                        {/* Price + CTA */}
                         <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100">
                           <div>
                             <span className="text-[9px] text-zinc-400 font-light block mb-0.5">Giá từ</span>
@@ -681,8 +597,6 @@ export default function ShopPage() {
                 })}
               </div>
             )}
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-8">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoadingProducts}
@@ -719,8 +633,6 @@ export default function ShopPage() {
           </main>
         </div>
       </div>
-
-      {/* Mobile filter drawer */}
       {isFilterMobileOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden animate-fade-in">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsFilterMobileOpen(false)} />

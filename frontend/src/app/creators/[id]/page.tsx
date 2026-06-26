@@ -37,33 +37,22 @@ export default function CreatorProfilePage() {
   const { user, isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const toast = useToast();
-
-  // State thông tin & bài viết
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"posts" | "products" | "about">("posts");
-
-  // State sản phẩm của creator
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
-
-  // State follow & statistics
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [checkingFollow, setCheckingFollow] = useState(false);
-
-  // Metadata Creator lấy từ API profile (không phụ thuộc bài đăng)
   const [creatorName, setCreatorName] = useState("");
   const [creatorFullName, setCreatorFullName] = useState("");
   const [creatorAvatar, setCreatorAvatar] = useState("");
   const [creatorJoinDate, setCreatorJoinDate] = useState("");
-
-  // Load toàn bộ dữ liệu profile
   const loadProfileData = useCallback(async () => {
     setLoading(true);
     try {
-      // [FE-4] 1. Lấy thông tin profile trực tiếp từ API
       try {
         const profile = await userService.getUserProfile(creatorId);
         if (profile) {
@@ -75,25 +64,19 @@ export default function CreatorProfilePage() {
       } catch (err) {
         console.error("Lỗi lấy profile, fallback từ bài viết:", err);
       }
-
-      // 2. Tải danh sách bài đăng của creator này
       const postsRes = await postService.getPosts(0, 30, creatorId);
       if (postsRes && postsRes.content) {
         setPosts(postsRes.content);
-        
-        // Fallback: nếu profile API fail, trích xuất từ bài viết đầu tiên
         if (!creatorName && postsRes.content.length > 0) {
           setCreatorName(postsRes.content[0].creatorUsername);
           setCreatorAvatar(postsRes.content[0].creatorAvatarUrl || "");
         }
       }
-
-      // 3. Tải danh sách sản phẩm của creator này
       setProductsLoading(true);
       try {
         const prodRes = await productService.getProductsByCreator(creatorId, {
           page: 0,
-          size: 100, // Load all products for display
+          size: 100,
         });
         if (prodRes && prodRes.content) {
           setProducts(prodRes.content);
@@ -103,16 +86,12 @@ export default function CreatorProfilePage() {
       } finally {
         setProductsLoading(false);
       }
-
-      // 4. Tải thống kê người theo dõi
       const [followers, following] = await Promise.all([
         userService.getFollowerCount(creatorId),
         userService.getFollowingCount(creatorId)
       ]);
       setFollowerCount(followers);
       setFollowingCount(following);
-
-      // 5. Kiểm tra xem người dùng hiện tại đã follow chưa
       if (isAuthenticated && user?.id !== creatorId) {
         setCheckingFollow(true);
         const check = await userService.checkFollow(creatorId);
@@ -130,15 +109,11 @@ export default function CreatorProfilePage() {
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);
-
-  // Tương tác Theo dõi/Hủy theo dõi (Optimistic UI)
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để theo dõi nhà sáng tạo này!");
       return;
     }
-
-    // Optimistic Update
     setIsFollowing(prev => !prev);
     setFollowerCount(prev => isFollowing ? prev - 1 : prev + 1);
 
@@ -150,20 +125,15 @@ export default function CreatorProfilePage() {
         toast.info("Đã hủy theo dõi", `Bạn đã dừng theo dõi @${creatorName || 'creator'}`);
       }
     } catch (err: any) {
-      // Rollback
       setIsFollowing(prev => !prev);
       setFollowerCount(prev => isFollowing ? prev + 1 : prev - 1);
       toast.error("Lỗi thao tác", err?.message || "Không thể gửi yêu cầu lên máy chủ.");
     }
   };
-
-  // Sao chép liên kết profile
   const handleShareProfile = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success("Sao chép thành công", "Liên kết hồ sơ đã được lưu vào bộ nhớ tạm.");
   };
-
-  // Thích bài viết
   const handleLikeToggle = async (postId: string) => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để thích bài viết.");
@@ -184,7 +154,6 @@ export default function CreatorProfilePage() {
     try {
       await postService.toggleLike(postId);
     } catch (err: any) {
-      // Rollback
       setPosts(prev => prev.map(p => {
         if (p.id === postId) {
           return {
@@ -198,8 +167,6 @@ export default function CreatorProfilePage() {
       toast.error("Lỗi tương tác", "Không thể cập nhật lượt thích bài viết.");
     }
   };
-
-  // Thêm nhanh vào giỏ hàng
   const handleAddProductToCart = async (product: Product) => {
     if (!product.variants || product.variants.length === 0) {
       toast.warning("Sản phẩm chưa có biến thể", "Không thể thêm sản phẩm này vào giỏ hàng.");
@@ -221,8 +188,6 @@ export default function CreatorProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-50/50 pb-16">
-      
-      {/* 1. TOP NAV BAR (Minimalist, replaces heavy banner cover image) */}
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-8 pb-4 flex justify-between items-center">
         <Link 
           href={ROUTES.FEED}
@@ -240,13 +205,8 @@ export default function CreatorProfilePage() {
           Chia sẻ hồ sơ
         </button>
       </div>
-
-      {/* 2. PROFILE HEADER: Avatar, Tên, Follower system */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-20">
         <div className="bg-white rounded-3xl border border-zinc-150 p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row justify-between items-center sm:items-center gap-6">
-          
-          {/* Trái: Avatar + Info */}
           <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5 text-center sm:text-left">
             <div className="relative">
               {creatorAvatar ? (
@@ -289,8 +249,6 @@ export default function CreatorProfilePage() {
               </div>
             </div>
           </div>
- 
-          {/* Phải: Follow/Unfollow interaction & Message */}
           {isAuthenticated && user?.id !== creatorId ? (
             <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
               <button
@@ -342,10 +300,6 @@ export default function CreatorProfilePage() {
           )}
         </div>
       </div>
- 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 3. STATISTICS CARDS: Grid of counts */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-6">
         <div className="grid grid-cols-3 gap-4">
           {[
@@ -375,13 +329,7 @@ export default function CreatorProfilePage() {
           })}
         </div>
       </div>
- 
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 4. MAIN BODY: TABS & FEEDS LIST */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* LEFT NAV TABS (3 cột) */}
         <div className="lg:col-span-3 flex flex-col gap-2 bg-white border border-zinc-150 p-3 rounded-2xl shadow-sm">
           <button
             onClick={() => setActiveTab("posts")}
@@ -419,8 +367,6 @@ export default function CreatorProfilePage() {
             Giới thiệu Creator
           </button>
         </div>
- 
-        {/* RIGHT FEED STREAM (9 cột) */}
         <div className="lg:col-span-9 flex flex-col gap-6">
           {activeTab === "posts" ? (
             <>
@@ -445,10 +391,6 @@ export default function CreatorProfilePage() {
                   ))}
                 </div>
               )}
-
-              {/* ═══════════════════════════════════════════════════════════════ */}
-              {/* TẤT CẢ SẢN PHẨM BÊN DƯỚI BÀI VIẾT (Sản phẩm của Creator) */}
-              {/* ═══════════════════════════════════════════════════════════════ */}
               <div className="mt-8 pt-8 border-t border-zinc-200/60 flex flex-col gap-6">
                 <div className="flex items-center gap-2.5">
                   <div className="h-9 w-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
@@ -647,10 +589,6 @@ export default function CreatorProfilePage() {
     </div>
   );
 }
-
-// =====================================================================
-// COMPONENT CARD BÀI VIẾT PHỤC VỤ TRANG PROFILE (Sleek layout)
-// =====================================================================
 interface PostCardMiniProps {
   post: Post;
   isAuthenticated: boolean;
@@ -708,26 +646,18 @@ function PostCardMini({
 
   return (
     <div className="rounded-2xl border border-zinc-150/70 bg-white p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
-      
-      {/* Ngày đăng */}
       <div className="text-[10px] text-zinc-400 font-bold mb-2 flex items-center gap-1">
         <Calendar className="h-3.5 w-3.5" />
         Đăng ngày {formatPostTime(post.createdAt)}
       </div>
-
-      {/* Nội dung chữ */}
       <p className="text-sm text-zinc-700 leading-relaxed mb-4 whitespace-pre-line font-light">
         {post.content}
       </p>
-
-      {/* Thumbnail ảnh đại diện của bài đăng nếu có */}
       {mediaList.length > 0 && (
         <div className="relative rounded-xl overflow-hidden bg-zinc-900 mb-4 aspect-[16/9] max-h-72 flex items-center justify-center">
           <img src={mediaList[0]} alt="Ảnh bài viết" className="w-full h-full object-contain" />
         </div>
       )}
-
-      {/* Sản phẩm gắn kèm */}
       {products.length > 0 && (
         <div className="border border-brand-100/50 bg-brand-50/10 rounded-xl p-3 mb-4 flex flex-col gap-2">
           <span className="text-[9px] font-extrabold text-brand-600 uppercase tracking-widest flex items-center gap-1">
@@ -751,11 +681,7 @@ function PostCardMini({
           </div>
         </div>
       )}
-
-      {/* Action panel */}
       <div className="flex items-center justify-between pt-3 border-t border-zinc-100">
-        
-        {/* Like */}
         <button
           onClick={() => onLikeToggle(post.id)}
           className={`flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full transition-all ${
@@ -767,8 +693,6 @@ function PostCardMini({
           <Heart className={`h-3.5 w-3.5 ${post.likedByMe ? "fill-rose-600" : ""}`} />
           {post.likeCount} thích
         </button>
-
-        {/* Comment */}
         <Link
           href={ROUTES.POST_DETAILS(post.id)}
           className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 hover:text-brand-500 px-3 py-1 rounded-full hover:bg-zinc-50"
@@ -776,8 +700,6 @@ function PostCardMini({
           <MessageSquare className="h-3.5 w-3.5" />
           {post.commentCount} bình luận
         </Link>
-
-        {/* Share */}
         <button
           onClick={handleShare}
           className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 hover:text-brand-500 px-3 py-1 rounded-full hover:bg-zinc-50"

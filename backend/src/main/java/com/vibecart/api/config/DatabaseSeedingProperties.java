@@ -4,10 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-
-/**
- * Cấu hình các thuộc tính phục vụ tiến trình seeding cơ sở dữ liệu từ file properties/yaml.
- */
 @Configuration
 @ConfigurationProperties(prefix = "app.seeding")
 @Getter
@@ -17,10 +13,6 @@ public class DatabaseSeedingProperties {
     private UserSeed user;
     private UserSeed creator;
     private UserSeed admin;
-
-    /**
-     * Thông tin tài khoản người dùng mẫu cần khởi tạo.
-     */
     @Getter
     @Setter
     public static class UserSeed {

@@ -13,10 +13,6 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-/**
- * Consumer lắng nghe sự kiện click từ Kafka và ghi nhận vào database theo batch.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j

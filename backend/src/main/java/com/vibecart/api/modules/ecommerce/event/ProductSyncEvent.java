@@ -9,7 +9,7 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSyncEvent {
-    private String eventType; // CREATED, UPDATED, DELETED
+    private String eventType;
     private ZonedDateTime timestamp;
     private String productId;
     private String name;

@@ -43,8 +43,6 @@ export const userService = {
   getActiveUsers: async () => {
     return api.get<FollowResponse[]>(ENDPOINTS.CHAT.ACTIVE_PRESENCE);
   },
-
-  /** [FE-4] Lấy thông tin profile trực tiếp thay vì trích xuất từ bài viết */
   getUserProfile: async (userId: string) => {
     return api.get<{
       id: string;

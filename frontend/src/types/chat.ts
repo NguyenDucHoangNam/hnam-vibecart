@@ -31,7 +31,7 @@ export interface AttachmentMetadataResponse {
   fileName: string;
   fileSize: number;
   mimeType: string;
-  cardId?: string; // Dùng để lưu id sản phẩm/đơn hàng đính kèm
+  cardId?: string;
 }
 
 export interface ReadReceiptResponse {
@@ -62,15 +62,13 @@ export interface PresenceResponse {
   lastActiveAt: string;
 }
 
-// Dành cho việc khởi tạo
 export interface ConversationRequest {
   type: "DIRECT" | "GROUP";
   name?: string;
   memberIds: string[];
 }
 
-// Cũ tương thích ngược
 export interface ChatRoom extends ConversationResponse {}
 export interface Message extends MessageResponse {
-  senderName: string; // Tương thích trường cũ
+  senderName: string;
 }

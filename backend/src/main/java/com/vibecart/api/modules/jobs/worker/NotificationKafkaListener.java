@@ -14,10 +14,6 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
-
-/**
- * Kafka listener xử lý sự kiện gửi thông báo email với cơ chế retry và DLT.
- */
 @Component
 public class NotificationKafkaListener {
 

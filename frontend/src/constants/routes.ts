@@ -12,22 +12,13 @@ export const ROUTES = {
   CHECKOUT: "/checkout",
   ORDERS: "/orders",
   ORDER_DETAILS: (id: string) => `/orders/${id}`,
-  
-  // Social
   FEED: "/feed",
   POST_DETAILS: (id: string) => `/feed/posts/${id}`,
   CREATOR_PROFILE: (id: string) => `/creators/${id}`,
-  
-  // Affiliate / Creator dashboard
   CREATOR_DASHBOARD: "/creator/dashboard",
   AFFILIATE_LINKS: "/creator/affiliate-links",
-  
-  // Chat
   MESSAGES: "/messages",
   CHAT_ROOM: (id: string) => `/messages/${id}`,
-  
-  
-  // Admin
   ADMIN: "/admin",
   ADMIN_PRODUCTS: "/admin/products",
   ADMIN_CATEGORIES: "/admin/categories",

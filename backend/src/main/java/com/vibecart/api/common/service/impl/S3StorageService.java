@@ -15,10 +15,6 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.io.InputStream;
 import java.time.Duration;
-
-/**
- * Dịch vụ lưu trữ tệp tin tương tác trực tiếp với AWS S3 hoặc MinIO.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -27,10 +23,6 @@ public class S3StorageService implements StorageService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
     private final StorageProperties storageProperties;
-
-    /**
-     * Kiểm tra tính khả dụng của S3 Bucket khi ứng dụng khởi động.
-     */
     @PostConstruct
     public void init() {
         String bucketName = storageProperties.getBucketName();
@@ -47,10 +39,6 @@ public class S3StorageService implements StorageService {
             log.error("S3 storage bucket '{}' verification failed: {}", bucketName, e.getMessage());
         }
     }
-
-    /**
-     * Tải tệp tin lên S3.
-     */
     @Override
     public String uploadFile(String key, InputStream content, long contentLength, String contentType) {
         try {
@@ -68,10 +56,6 @@ public class S3StorageService implements StorageService {
             throw new RuntimeException("Failed to upload file to storage: " + e.getMessage(), e);
         }
     }
-
-    /**
-     * Xóa tệp tin khỏi S3.
-     */
     @Override
     public void deleteFile(String key) {
         try {
@@ -87,10 +71,6 @@ public class S3StorageService implements StorageService {
             throw new RuntimeException("Failed to delete file from storage: " + e.getMessage(), e);
         }
     }
-
-    /**
-     * Tạo Pre-signed URL phục vụ Client tự upload lên S3.
-     */
     @Override
     public String generatePresignedUploadUrl(String key, String contentType, long contentLength, int expirationMinutes) {
         try {
@@ -115,10 +95,6 @@ public class S3StorageService implements StorageService {
             throw new RuntimeException("Failed to generate upload URL: " + e.getMessage(), e);
         }
     }
-
-    /**
-     * Lấy URL tĩnh công khai của tệp tin trên S3.
-     */
     @Override
     public String getFileUrl(String key) {
         String publicUrlPrefix = storageProperties.getPublicUrlPrefix();
@@ -136,10 +112,6 @@ public class S3StorageService implements StorageService {
         
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, storageProperties.getRegion(), key);
     }
-
-    /**
-     * Kiểm tra tệp tin có tồn tại và khớp kích thước trên S3 không.
-     */
     @Override
     public boolean verifyFile(String key, long expectedSize) {
         try {

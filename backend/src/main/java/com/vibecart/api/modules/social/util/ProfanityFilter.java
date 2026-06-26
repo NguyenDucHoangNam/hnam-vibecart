@@ -4,12 +4,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.regex.Pattern;
-
-/**
- * Bộ lọc từ ngữ thô tục, nhạy cảm (Profanity Filter).
- * Kiểm tra nội dung bình luận trước khi lưu vào database.
- * Dựa trên danh sách từ cấm có sẵn (tiếng Việt + tiếng Anh).
- */
 @Component
 public class ProfanityFilter {
 
@@ -27,18 +21,11 @@ public class ProfanityFilter {
     static {
         BANNED_PATTERNS = BANNED_WORDS.stream()
                 .map(word -> Pattern.compile(
-                        "(?i)" + Pattern.quote(word), // Case-insensitive
+                        "(?i)" + Pattern.quote(word),
                         Pattern.UNICODE_CASE
                 ))
                 .toList();
     }
-
-    /**
-     * Kiểm tra nội dung có chứa từ ngữ thô tục hay không.
-     *
-     * @param content Nội dung cần kiểm tra
-     * @return true nếu nội dung vi phạm (chứa từ cấm)
-     */
     public boolean containsProfanity(String content) {
         if (content == null || content.isBlank()) return false;
 

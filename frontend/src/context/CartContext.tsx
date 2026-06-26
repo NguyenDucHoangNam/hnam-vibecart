@@ -30,11 +30,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [totalDiscountAmount, setTotalDiscountAmount] = useState(0);
   const [totalSavingAmount, setTotalSavingAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Derive total quantity
   const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
-
-  // Fetch Cart from Backend or Local Storage
   const fetchCart = async () => {
     if (isAuthenticated) {
       try {
@@ -48,14 +44,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setItems([]);
       }
     } else {
-      // Guest: Load from Local Storage
       try {
         const localItemsJson = localStorage.getItem("local_cart");
         if (localItemsJson) {
           const localItems: CartItem[] = JSON.parse(localItemsJson);
           setItems(localItems);
-
-          // Re-calculate guest totals locally
           const original = localItems.reduce((acc, item) => acc + item.originalPrice * item.quantity, 0);
           const discountPriceSum = localItems.reduce((acc, item) => acc + (item.discountPrice || item.originalPrice) * item.quantity, 0);
           setTotalOriginalAmount(original);
@@ -73,8 +66,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     }
   };
-
-  // Merge Guest Cart to Backend upon Login
   useEffect(() => {
     async function initCart() {
       setIsLoading(true);
@@ -84,7 +75,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           if (localItemsJson) {
             const localItems: CartItem[] = JSON.parse(localItemsJson);
             if (localItems.length > 0) {
-              // Convert to merge format
               const mergePayload = localItems.map((item) => ({
                 variantId: item.variantId,
                 quantity: item.quantity,
@@ -107,12 +97,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     initCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, user]);
-
-  // Add Item to Cart
   const addToCart = async (variant: ProductVariant, product: Product, quantity = 1) => {
     if (quantity <= 0) return;
-
-    // Check available stock
     if (variant.availableStock < quantity) {
       toast.warning("Hết hàng", `Không thể thêm. Tồn kho khả dụng chỉ còn ${variant.availableStock} sản phẩm.`);
       return;
@@ -128,7 +114,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         toast.error("Lỗi thêm vào giỏ", err?.message || "Không thể thêm sản phẩm vào giỏ hàng.");
       }
     } else {
-      // Guest Storage Logic
       setItems((prevItems) => {
         const existingIndex = prevItems.findIndex((item) => item.variantId === variant.id);
         let newItems = [...prevItems];
@@ -145,8 +130,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
 
           newItems[existingIndex].quantity = newQty;
-
-          // Recompute status for guest
           let status: "AVAILABLE" | "OUT_OF_STOCK" | "INSUFFICIENT_STOCK" = "AVAILABLE";
           if (variant.availableStock <= 0) {
             status = "OUT_OF_STOCK";
@@ -155,10 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           }
           newItems[existingIndex].status = status;
         } else {
-          // Find thumbnail if any
           const thumbnail = product.images?.find((img) => img.isThumbnail)?.imageUrl || product.images?.[0]?.imageUrl || "";
-
-          // Determine status for guest item
           let status: "AVAILABLE" | "OUT_OF_STOCK" | "INSUFFICIENT_STOCK" = "AVAILABLE";
           if (variant.availableStock <= 0) {
             status = "OUT_OF_STOCK";
@@ -182,8 +162,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           });
         }
         localStorage.setItem("local_cart", JSON.stringify(newItems));
-
-        // Recompute local guest totals
         const original = newItems.reduce((acc, item) => acc + item.originalPrice * item.quantity, 0);
         const discountPriceSum = newItems.reduce((acc, item) => acc + (item.discountPrice || item.originalPrice) * item.quantity, 0);
         setTotalOriginalAmount(original);
@@ -195,8 +173,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     }
   };
-
-  // Update Item Quantity
   const updateQuantity = async (variantId: string, quantity: number) => {
     if (quantity <= 0) {
       await removeFromCart(variantId);
@@ -214,12 +190,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         await fetchCart();
       } catch (err: any) {
         console.error("Cart Context: Failed to update quantity on backend", err);
-        // Force reload cart from backend to sync
         await fetchCart();
         toast.error("Lỗi cập nhật", err?.message || "Không thể cập nhật số lượng tồn kho khả dụng.");
       }
     } else {
-      // Guest Update Quantity
       setItems((prevItems) => {
         const item = prevItems.find((i) => i.variantId === variantId);
         if (!item) return prevItems;
@@ -242,8 +216,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           return i;
         });
         localStorage.setItem("local_cart", JSON.stringify(newItems));
-
-        // Recompute local guest totals
         const original = newItems.reduce((acc, item) => acc + item.originalPrice * item.quantity, 0);
         const discountPriceSum = newItems.reduce((acc, item) => acc + (item.discountPrice || item.originalPrice) * item.quantity, 0);
         setTotalOriginalAmount(original);
@@ -254,8 +226,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     }
   };
-
-  // Remove Item from Cart
   const removeFromCart = async (variantId: string) => {
     if (isAuthenticated) {
       try {
@@ -267,12 +237,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         toast.error("Lỗi xóa sản phẩm", "Không thể xóa sản phẩm khỏi giỏ hàng.");
       }
     } else {
-      // Guest Remove Item
       setItems((prevItems) => {
         const newItems = prevItems.filter((item) => item.variantId !== variantId);
         localStorage.setItem("local_cart", JSON.stringify(newItems));
-
-        // Recompute local guest totals
         const original = newItems.reduce((acc, item) => acc + item.originalPrice * item.quantity, 0);
         const discountPriceSum = newItems.reduce((acc, item) => acc + (item.discountPrice || item.originalPrice) * item.quantity, 0);
         setTotalOriginalAmount(original);
@@ -284,8 +251,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
     }
   };
-
-  // Clear Cart
   const clearCart = async () => {
     if (isAuthenticated) {
       try {

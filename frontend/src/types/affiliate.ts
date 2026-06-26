@@ -1,8 +1,8 @@
 export interface ShortLink {
   id: string;
   originalUrl: string;
-  shortUrl: string; // e.g. vibe.ly/X8kP
-  code: string; // Base62 code
+  shortUrl: string;
+  code: string;
   productId: string;
   productName: string;
   creatorId: string;

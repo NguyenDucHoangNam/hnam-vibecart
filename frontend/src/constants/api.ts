@@ -2,7 +2,6 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost
 export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws-chat";
 
 export const ENDPOINTS = {
-  // Auth & Identity
   AUTH: {
     REGISTER: "/auth/register",
     VERIFY_OTP: "/auth/verify-otp",
@@ -22,8 +21,6 @@ export const ENDPOINTS = {
     ADMIN_LIST_USERS: "/admin/users",
     ADMIN_UPDATE_ROLES: (id: string) => `/admin/users/${id}/roles`,
   },
-  
-  // E-commerce Core
   PRODUCTS: {
     LIST: "/products",
     DETAILS: (id: string) => `/products/${id}`,
@@ -46,8 +43,6 @@ export const ENDPOINTS = {
     CANCEL: (id: string) => `/orders/${id}/cancel`,
     PAYMENT_URL: (id: string) => `/orders/${id}/payment-url`,
   },
-  
-  // Social Network
   POSTS: {
     LIST: "/posts",
     CREATE: "/posts",
@@ -69,15 +64,11 @@ export const ENDPOINTS = {
     FOLLOWERS_COUNT: (id: string) => `/users/${id}/followers/count`,
     FOLLOWING_COUNT: (id: string) => `/users/${id}/following/count`,
   },
-  
-  // Affiliate & Link Shortener
   AFFILIATE: {
     GENERATE_SHORT: "/affiliate/short-links",
     ANALYTICS: "/affiliate/analytics",
     SUMMARY: "/affiliate/summary",
   },
-  
-  // Chat Rooms
   CHAT: {
     CONVERSATIONS: "/chat/conversations",
     MESSAGES: (id: string) => `/chat/conversations/${id}/messages`,
@@ -85,8 +76,6 @@ export const ENDPOINTS = {
     PRESENCE: (userId: string) => `/chat/presence/${userId}`,
     ACTIVE_PRESENCE: "/chat/presence/active",
   },
-  
-  // Search Engine
   SEARCH: {
     RESULTS: "/search",
     AUTOCOMPLETE: "/search/autocomplete",

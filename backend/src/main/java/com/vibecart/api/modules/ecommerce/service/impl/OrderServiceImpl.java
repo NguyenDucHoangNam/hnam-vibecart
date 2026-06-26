@@ -47,10 +47,6 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-/**
- * Implementation của {@link OrderService} xử lý đơn hàng: đặt, thanh toán, hủy, cập nhật trạng thái.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -187,12 +183,6 @@ public class OrderServiceImpl implements OrderService {
             }
         }
     }
-
-    /**
-     * Core transactional order creation — one sub-order per creator.
-     * This transaction must be as SHORT as possible.
-     * NO external API calls (PayOS) inside this transaction!
-     */
     @Transactional
     protected List<Order> createOrdersTransactional(
             String userId,

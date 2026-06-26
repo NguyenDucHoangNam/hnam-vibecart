@@ -35,7 +35,7 @@ public class EmailWorkerConsumer {
             log.info("Order confirmation email sent successfully to: {}", event.getUserEmail());
         } catch (MailException | MessagingException e) {
             log.error("Failed to send order confirmation email to: {}", event.getUserEmail(), e);
-            throw new RuntimeException("Email sending failed", e); // Trigger Kafka retry
+            throw new RuntimeException("Email sending failed", e);
         }
     }
 

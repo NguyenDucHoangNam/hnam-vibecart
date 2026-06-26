@@ -6,10 +6,6 @@ import com.vibecart.api.modules.ecommerce.dto.response.CheckoutResponse;
 import com.vibecart.api.modules.ecommerce.dto.response.OrderResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
-/**
- * Service quản lý đơn hàng: đặt hàng, thanh toán, cập nhật trạng thái.
- */
 public interface OrderService {
     CheckoutResponse placeOrder(String userId, PlaceOrderRequest request, String idempotencyKey);
     OrderResponse getOrderById(String userId, String orderId);

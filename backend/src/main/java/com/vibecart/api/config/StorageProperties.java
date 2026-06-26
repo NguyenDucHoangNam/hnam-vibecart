@@ -4,10 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
-
-/**
- * Cấu hình các thuộc tính truy cập bộ lưu trữ S3/MinIO từ file cấu hình.
- */
 @Configuration
 @ConfigurationProperties(prefix = "app.storage")
 @Getter
