@@ -10,11 +10,10 @@ import com.vibecart.api.modules.iam.entity.Role;
 import com.vibecart.api.modules.iam.dto.response.UserResponse;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
+import com.vibecart.api.common.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -36,7 +35,7 @@ public class FollowController {
      */
     @PostMapping("/{userId}/follow")
     public ResponseEntity<ApiResponse<Boolean>> toggleFollow(@PathVariable String userId) {
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("API: Toggle follow for user {} by {}", userId, username);
         boolean isFollowing = followService.toggleFollow(userId, username);
 
@@ -57,7 +56,7 @@ public class FollowController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        String username = getOptionalUsername();
+        String username = SecurityUtils.getOptionalUsername();
         PageResponse<FollowResponse> result = followService.getFollowers(userId, page, size, username);
 
         return ResponseEntity.ok(
@@ -77,7 +76,7 @@ public class FollowController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        String username = getOptionalUsername();
+        String username = SecurityUtils.getOptionalUsername();
         PageResponse<FollowResponse> result = followService.getFollowing(userId, page, size, username);
 
         return ResponseEntity.ok(
@@ -93,7 +92,7 @@ public class FollowController {
      */
     @GetMapping("/{userId}/follow/check")
     public ResponseEntity<ApiResponse<Boolean>> checkFollow(@PathVariable String userId) {
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         boolean isFollowing = followService.isFollowing(userId, username);
 
         return ResponseEntity.ok(
@@ -162,15 +161,4 @@ public class FollowController {
                         .build());
     }
 
-    private String getCurrentUsername() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-
-    private String getOptionalUsername() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            return auth.getName();
-        }
-        return null;
-    }
 }

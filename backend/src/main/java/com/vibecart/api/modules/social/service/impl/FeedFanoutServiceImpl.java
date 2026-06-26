@@ -17,13 +17,11 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Triển khai Fan-out on Write cho News Feed sử dụng Redis List.
+ * Lớp triển khai của {@link FeedFanoutService} quản lý cập nhật timeline bằng Redis.
  * <p>
- * Mỗi user có một Redis List {@code feed:timeline:{userId}} chứa danh sách postId
- * sắp xếp mới nhất → cũ nhất. Tối đa {@value #MAX_TIMELINE_SIZE} phần tử.
- * <p>
- * Tất cả phương thức chạy bất đồng bộ trên thread pool {@code feedFanoutExecutor}
- * để không block API request chính.
+ * Lưu trữ danh sách bài viết dưới dạng Redis List (dạng Cache Timeline).
+ * Tất cả các thao tác cập nhật (fan-out, backfill, cleanup) được xử lý bất đồng bộ (sử dụng {@link Async})
+ * để đảm bảo tối ưu hóa thời gian phản hồi cho các luồng xử lý chính.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,21 +35,20 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
     static final String TIMELINE_KEY_PREFIX = "feed:timeline:";
     static final int MAX_TIMELINE_SIZE = 500;
     static final long TIMELINE_TTL_DAYS = 30;
-    /** Số bài gần nhất của người được follow sẽ backfill vào timeline khi follow mới */
     private static final int BACKFILL_SIZE = 20;
 
+    /**
+     * Fan-out bài viết mới tới tất cả người theo dõi (followers) và bản thân người tạo.
+     */
     @Override
     @Async("feedFanoutExecutor")
     public void fanoutNewPost(String creatorId, String postId) {
         try {
-            // Lấy toàn bộ follower IDs
             List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(creatorId);
             log.info("Fan-out post {} from creator {} to {} followers", postId, creatorId, followerIds.size());
 
-            // Đẩy vào timeline của chính creator
             pushToTimeline(creatorId, postId);
 
-            // Đẩy vào timeline của từng follower
             for (String followerId : followerIds) {
                 pushToTimeline(followerId, postId);
             }
@@ -62,6 +59,9 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
         }
     }
 
+    /**
+     * Xóa bài viết khỏi timeline của người theo dõi và người tạo khi bài viết bị xóa.
+     */
     @Override
     @Async("feedFanoutExecutor")
     public void removeDeletedPost(String creatorId, String postId) {
@@ -69,10 +69,8 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
             List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(creatorId);
             log.info("Removing deleted post {} from {} timelines", postId, followerIds.size() + 1);
 
-            // Xóa khỏi timeline của creator
             removeFromTimeline(creatorId, postId);
 
-            // Xóa khỏi timeline của từng follower
             for (String followerId : followerIds) {
                 removeFromTimeline(followerId, postId);
             }
@@ -83,11 +81,13 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
         }
     }
 
+    /**
+     * Đưa các bài viết gần đây của người được follow vào timeline của người follow.
+     */
     @Override
     @Async("feedFanoutExecutor")
     public void onFollow(String followerId, String followingId) {
         try {
-            // Lấy N bài gần nhất của người được follow
             List<Post> recentPosts = postRepository.findByCreatorIdOrderByCreatedAtDesc(
                     followingId, PageRequest.of(0, BACKFILL_SIZE)
             ).getContent();
@@ -99,15 +99,12 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
 
             String timelineKey = TIMELINE_KEY_PREFIX + followerId;
 
-            // Đẩy từng postId vào timeline (theo thứ tự cũ → mới để LPUSH ra đúng thứ tự)
             for (int i = recentPosts.size() - 1; i >= 0; i--) {
                 String postId = recentPosts.get(i).getId();
-                // Chỉ thêm nếu chưa có trong timeline (tránh duplicate)
-                Long existingCount = redisTemplate.opsForList().remove(timelineKey, 0, postId);
+                redisTemplate.opsForList().remove(timelineKey, 0, postId);
                 redisTemplate.opsForList().leftPush(timelineKey, postId);
             }
 
-            // Trim và gia hạn TTL
             redisTemplate.opsForList().trim(timelineKey, 0, MAX_TIMELINE_SIZE - 1);
             redisTemplate.expire(timelineKey, TIMELINE_TTL_DAYS, TimeUnit.DAYS);
 
@@ -117,11 +114,13 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
         }
     }
 
+    /**
+     * Dọn dẹp timeline của người theo dõi sau khi unfollow.
+     */
     @Override
     @Async("feedFanoutExecutor")
     public void onUnfollow(String followerId, String followingId) {
         try {
-            // Lấy danh sách bài viết của người bị unfollow
             List<Post> posts = postRepository.findByCreatorIdOrderByCreatedAtDesc(
                     followingId, PageRequest.of(0, MAX_TIMELINE_SIZE)
             ).getContent();
@@ -147,20 +146,21 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
         }
     }
 
+    /**
+     * Nạp dữ liệu (warm-up) timeline từ DB lên Redis khi cache bị trống.
+     */
     @Override
     @Async("feedFanoutExecutor")
     public void warmUpTimeline(String userId) {
         try {
             String timelineKey = TIMELINE_KEY_PREFIX + userId;
 
-            // Kiểm tra nếu timeline đã tồn tại (race condition protection)
             Long existingSize = redisTemplate.opsForList().size(timelineKey);
             if (existingSize != null && existingSize > 0) {
                 log.debug("Timeline already exists for user {}, skipping warm-up", userId);
                 return;
             }
 
-            // Lấy feed từ DB (query cũ)
             Slice<Post> feedSlice = postRepository.findFeedByUserId(userId, PageRequest.of(0, MAX_TIMELINE_SIZE));
             List<Post> feedPosts = feedSlice.getContent();
 
@@ -169,13 +169,11 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
                 return;
             }
 
-            // Đẩy postId vào Redis List (bài mới nhất đẩy trước → LPUSH → đúng thứ tự)
             List<String> postIds = new ArrayList<>();
             for (Post post : feedPosts) {
                 postIds.add(post.getId());
             }
 
-            // rightPushAll để giữ nguyên thứ tự (bài mới nhất ở đầu list)
             redisTemplate.opsForList().rightPushAll(timelineKey, postIds);
             redisTemplate.opsForList().trim(timelineKey, 0, MAX_TIMELINE_SIZE - 1);
             redisTemplate.expire(timelineKey, TIMELINE_TTL_DAYS, TimeUnit.DAYS);
@@ -186,9 +184,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
         }
     }
 
-    /**
-     * Đẩy postId vào đầu timeline (mới nhất) và giới hạn kích thước.
-     */
     private void pushToTimeline(String userId, String postId) {
         String timelineKey = TIMELINE_KEY_PREFIX + userId;
         redisTemplate.opsForList().leftPush(timelineKey, postId);
@@ -196,9 +191,6 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
         redisTemplate.expire(timelineKey, TIMELINE_TTL_DAYS, TimeUnit.DAYS);
     }
 
-    /**
-     * Xóa postId khỏi timeline.
-     */
     private void removeFromTimeline(String userId, String postId) {
         String timelineKey = TIMELINE_KEY_PREFIX + userId;
         redisTemplate.opsForList().remove(timelineKey, 0, postId);

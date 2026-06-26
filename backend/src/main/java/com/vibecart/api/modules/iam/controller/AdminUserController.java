@@ -5,6 +5,7 @@ import com.vibecart.api.modules.iam.dto.request.UpdateUserRolesRequest;
 import com.vibecart.api.modules.iam.dto.request.UpdateUserStatusRequest;
 import com.vibecart.api.modules.iam.dto.response.UserResponse;
 import com.vibecart.api.modules.iam.service.AdminUserService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -59,7 +59,7 @@ public class AdminUserController {
                         @PathVariable String id,
                         @Valid @RequestBody UpdateUserStatusRequest request) {
 
-                String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                String adminUsername = SecurityUtils.getCurrentUsername();
                 log.info("Admin {} request to update user {} status to {}", adminUsername, id, request.getStatus());
 
                 UserResponse result = adminUserService.updateUserStatus(id, request, adminUsername);
@@ -82,7 +82,7 @@ public class AdminUserController {
                         @PathVariable String id,
                         @Valid @RequestBody UpdateUserRolesRequest request) {
 
-                String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                String adminUsername = SecurityUtils.getCurrentUsername();
                 log.info("Admin {} request to update user {} roles to {}", adminUsername, id, request.getRoles());
 
                 UserResponse result = adminUserService.updateUserRoles(id, request, adminUsername);

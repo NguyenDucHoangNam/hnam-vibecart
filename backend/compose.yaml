@@ -42,6 +42,8 @@ services:
     ports:
       - '${ELASTIC_PORT:-9200}:9200'
       - '9300:9300'
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
 
   mongodb:
     image: 'mongo:latest'
@@ -52,6 +54,8 @@ services:
       - 'MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}'
     ports:
       - '${MONGO_PORT:-27018}:27017'
+    volumes:
+      - mongodb_data:/data/db
 
   postgres:
     image: 'postgres:latest'
@@ -62,6 +66,8 @@ services:
       - 'POSTGRES_USER=${DB_USER}'
     ports:
       - '${DB_PORT:-5435}:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME:-vibecart}"]
       interval: 5s
@@ -109,5 +115,8 @@ services:
 
 volumes:
   minio_data:
+  elasticsearch_data:
+  mongodb_data:
+  postgres_data:
 
 

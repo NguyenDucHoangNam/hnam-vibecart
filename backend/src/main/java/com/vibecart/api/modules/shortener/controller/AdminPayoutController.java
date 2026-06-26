@@ -4,12 +4,12 @@ import com.vibecart.api.common.dto.ApiResponse;
 import com.vibecart.api.modules.shortener.dto.request.PayoutApproveRequest;
 import com.vibecart.api.modules.shortener.dto.response.PayoutResponse;
 import com.vibecart.api.modules.shortener.service.PayoutService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,7 +33,7 @@ public class AdminPayoutController {
         public ResponseEntity<ApiResponse<List<PayoutResponse>>> getPayoutRequests(
                         @RequestParam(value = "status", required = false, defaultValue = "ALL") String status) {
 
-                String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                String adminUsername = SecurityUtils.getCurrentUsername();
                 log.info("Admin {} is listing payout requests with status filtering: {}", adminUsername, status);
 
                 List<PayoutResponse> result = payoutService.getPayoutRequestsByStatus(status);
@@ -56,7 +56,7 @@ public class AdminPayoutController {
                         @PathVariable("id") String id,
                         @Valid @RequestBody PayoutApproveRequest approveRequest) {
 
-                String adminUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+                String adminUsername = SecurityUtils.getCurrentUsername();
                 log.info("Admin {} is approving/rejecting payout request ID: {} with decision: {}",
                                 adminUsername, id, approveRequest.getStatus());
 

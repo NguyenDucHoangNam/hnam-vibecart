@@ -15,7 +15,7 @@ public class MessageRequest {
     private String content;
 
     @NotBlank(message = "Message type must not be blank")
-    private String type; // TEXT, IMAGE, VIDEO, DOCUMENT, PRODUCT, ORDER
+    private String type;
 
     private AttachmentMetadataRequest attachmentMetadata;
 

@@ -5,14 +5,13 @@ import com.vibecart.api.common.dto.PageResponse;
 import com.vibecart.api.modules.social.dto.request.PostRequest;
 import com.vibecart.api.modules.social.dto.response.PostResponse;
 import com.vibecart.api.modules.social.service.PostService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -32,7 +31,7 @@ public class PostController {
     @PostMapping
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<PostResponse>> createPost(@Valid @RequestBody PostRequest request) {
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("API: Create post by {}", username);
         PostResponse result = postService.createPost(request, username);
 
@@ -54,7 +53,7 @@ public class PostController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String creatorId) {
 
-        String username = getOptionalUsername();
+        String username = SecurityUtils.getOptionalUsername();
         PageResponse<PostResponse> result = postService.getPosts(page, size, creatorId, username);
 
         return ResponseEntity.ok(
@@ -71,7 +70,7 @@ public class PostController {
      */
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostResponse>> getPost(@PathVariable String postId) {
-        String username = getOptionalUsername();
+        String username = SecurityUtils.getOptionalUsername();
         PostResponse result = postService.getPost(postId, username);
 
         return ResponseEntity.ok(
@@ -92,7 +91,7 @@ public class PostController {
             @PathVariable String postId,
             @Valid @RequestBody PostRequest request) {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         PostResponse result = postService.updatePost(postId, request, username);
 
         return ResponseEntity.ok(
@@ -110,8 +109,8 @@ public class PostController {
     @DeleteMapping("/{postId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable String postId) {
-        String username = getCurrentUsername();
-        boolean isAdmin = hasRole("ROLE_ADMIN");
+        String username = SecurityUtils.getCurrentUsername();
+        boolean isAdmin = SecurityUtils.hasRole("ROLE_ADMIN");
         postService.deletePost(postId, username, isAdmin);
 
         return ResponseEntity.ok(
@@ -130,7 +129,7 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         PageResponse<PostResponse> result = postService.getFeed(page, size, username);
 
         return ResponseEntity.ok(
@@ -147,7 +146,7 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     public ResponseEntity<ApiResponse<Boolean>> toggleLike(@PathVariable String postId) {
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         boolean isLiked = postService.toggleLike(postId, username);
 
         return ResponseEntity.ok(
@@ -164,7 +163,7 @@ public class PostController {
      */
     @GetMapping("/{postId}/likes/check")
     public ResponseEntity<ApiResponse<Boolean>> checkLiked(@PathVariable String postId) {
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         boolean isLiked = postService.isLiked(postId, username);
 
         return ResponseEntity.ok(
@@ -190,22 +189,4 @@ public class PostController {
         );
     }
 
-
-    private String getCurrentUsername() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-
-    private String getOptionalUsername() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            return auth.getName();
-        }
-        return null;
-    }
-
-    private boolean hasRole(String role) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(role));
-    }
 }

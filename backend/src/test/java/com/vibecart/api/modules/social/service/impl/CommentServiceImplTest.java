@@ -12,6 +12,7 @@ import com.vibecart.api.modules.social.entity.PostComment;
 import com.vibecart.api.modules.social.mapper.CommentMapper;
 import com.vibecart.api.modules.social.repository.PostCommentRepository;
 import com.vibecart.api.modules.social.repository.PostRepository;
+import com.vibecart.api.modules.social.util.ProfanityFilter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ public class CommentServiceImplTest {
     private CommentMapper commentMapper;
 
     @Mock
-    private com.vibecart.api.modules.social.service.ProfanityFilter profanityFilter;
+    private ProfanityFilter profanityFilter;
 
     @InjectMocks
     private CommentServiceImpl commentService;

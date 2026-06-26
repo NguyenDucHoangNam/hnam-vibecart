@@ -1,4 +1,4 @@
-package com.vibecart.api.modules.chat.model;
+package com.vibecart.api.modules.chat.event;
 
 import lombok.*;
 import java.io.Serializable;

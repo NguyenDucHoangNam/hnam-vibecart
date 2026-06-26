@@ -13,6 +13,7 @@ import com.vibecart.api.modules.chat.dto.response.PresenceResponse;
 import com.vibecart.api.modules.chat.dto.response.PresignedUrlResponse;
 import com.vibecart.api.modules.chat.service.ChatService;
 import com.vibecart.api.modules.chat.service.PresenceService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +21,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -47,7 +46,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<ConversationResponse>> createOrGetConversation(
             @Valid @RequestBody ConversationRequest request) {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("REST: createOrGetConversation by user '{}', type={}", username, request.getType());
 
         ConversationResponse result = chatService.createOrGetConversation(request, username);
@@ -67,7 +66,7 @@ public class ChatController {
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<ConversationResponse>>> getConversations() {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("REST: getConversations for user '{}'", username);
 
         List<ConversationResponse> result = chatService.getConversationsForUser(username);
@@ -90,7 +89,7 @@ public class ChatController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("REST: getMessages in room '{}' for user '{}'", conversationId, username);
 
         PageResponse<MessageResponse> result = chatService.getMessages(conversationId, page, size, username);
@@ -111,7 +110,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<PresignedUrlResponse>> getPresignedUrl(
             @Valid @RequestBody PresignedUrlRequest request) {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("REST: getPresignedUrl for file '{}' by user '{}'", request.getFileName(), username);
 
         PresignedUrlResponse result = chatService.generateAttachmentUploadUrl(request, username);
@@ -148,7 +147,7 @@ public class ChatController {
     @GetMapping("/api/v1/chat/presence/active")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<com.vibecart.api.modules.social.dto.response.FollowResponse>>> getActiveUsers() {
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("REST: getActiveUsers requested by '{}'", username);
 
         List<com.vibecart.api.modules.social.dto.response.FollowResponse> result = presenceService
@@ -211,8 +210,4 @@ public class ChatController {
         }
     }
 
-    private String getCurrentUsername() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (auth != null) ? auth.getName() : null;
-    }
 }

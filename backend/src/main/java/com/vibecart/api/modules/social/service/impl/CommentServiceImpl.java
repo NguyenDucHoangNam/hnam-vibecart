@@ -13,7 +13,7 @@ import com.vibecart.api.modules.social.mapper.CommentMapper;
 import com.vibecart.api.modules.social.repository.PostCommentRepository;
 import com.vibecart.api.modules.social.repository.PostRepository;
 import com.vibecart.api.modules.social.service.CommentService;
-import com.vibecart.api.modules.social.service.ProfanityFilter;
+import com.vibecart.api.modules.social.util.ProfanityFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

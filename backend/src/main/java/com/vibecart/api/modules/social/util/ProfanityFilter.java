@@ -1,4 +1,4 @@
-package com.vibecart.api.modules.social.service;
+package com.vibecart.api.modules.social.util;
 
 import org.springframework.stereotype.Component;
 

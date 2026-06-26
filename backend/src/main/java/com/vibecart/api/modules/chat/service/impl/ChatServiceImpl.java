@@ -19,7 +19,7 @@ import com.vibecart.api.modules.chat.dto.response.TypingResponse;
 import com.vibecart.api.modules.chat.entity.Conversation;
 import com.vibecart.api.modules.chat.entity.Message;
 import com.vibecart.api.modules.chat.mapper.ChatMapper;
-import com.vibecart.api.modules.chat.model.ChatEvent;
+import com.vibecart.api.modules.chat.event.ChatEvent;
 import com.vibecart.api.modules.chat.repository.ConversationRepository;
 import com.vibecart.api.modules.chat.repository.MessageRepository;
 import com.vibecart.api.modules.chat.service.ChatService;

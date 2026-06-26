@@ -1,8 +1,6 @@
 package com.vibecart.api.modules.ecommerce.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vibecart.api.modules.iam.entity.User;
-import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
 import com.vibecart.api.modules.ecommerce.dto.request.InventoryAdjustRequest;
@@ -33,8 +31,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.vibecart.api.common.util.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,7 +65,6 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryHistoryRepository inventoryHistoryRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
-    private final UserRepository userRepository;
 
     public ProductServiceImpl(ProductRepository productRepository,
                               ProductVariantRepository productVariantRepository,
@@ -80,8 +76,7 @@ public class ProductServiceImpl implements ProductService {
                               ProductSyncProducer productSyncProducer,
                               InventoryHistoryRepository inventoryHistoryRepository,
                               OutboxEventRepository outboxEventRepository,
-                              ObjectMapper objectMapper,
-                              UserRepository userRepository) {
+                              ObjectMapper objectMapper) {
         this.productRepository = productRepository;
         this.productVariantRepository = productVariantRepository;
         this.productImageRepository = productImageRepository;
@@ -93,13 +88,12 @@ public class ProductServiceImpl implements ProductService {
         this.inventoryHistoryRepository = inventoryHistoryRepository;
         this.outboxEventRepository = outboxEventRepository;
         this.objectMapper = objectMapper;
-        this.userRepository = userRepository;
     }
 
     @Override
     @Transactional
     public ProductResponse create(ProductRequest request) {
-        String currentUserId = getCurrentUserId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
         log.info("Creating product '{}' by user: {}", request.name(), currentUserId);
 
 
@@ -210,14 +204,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponse update(String id, ProductRequest request) {
-        String currentUserId = getCurrentUserId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
         log.info("Updating product {} by user: {}", id, currentUserId);
 
         Product product = productRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
 
-        if (!product.getCreatorId().equals(currentUserId) && !isAdmin()) {
+        if (!product.getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -329,14 +323,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void delete(String id) {
-        String currentUserId = getCurrentUserId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
         log.info("Deleting product {} by user: {}", id, currentUserId);
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
 
-        if (!product.getCreatorId().equals(currentUserId) && !isAdmin()) {
+        if (!product.getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -357,7 +351,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void adjustInventory(String variantId, InventoryAdjustRequest request) {
-        String currentUserId = getCurrentUserId();
+        String currentUserId = SecurityUtils.getCurrentUserId();
         log.info("Adjusting inventory for variant {}: {}, reason: {}",
                 variantId, request.adjustmentQuantity(), request.reason());
 
@@ -366,7 +360,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
 
-        if (!variant.getProduct().getCreatorId().equals(currentUserId) && !isAdmin()) {
+        if (!variant.getProduct().getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -382,8 +376,8 @@ public class ProductServiceImpl implements ProductService {
         Inventory inventory = inventoryRepository.findByVariantId(variantId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        String currentUserId = getCurrentUserId();
-        if (!inventory.getVariant().getProduct().getCreatorId().equals(currentUserId) && !isAdmin()) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        if (!inventory.getVariant().getProduct().getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -490,20 +484,5 @@ public class ProductServiceImpl implements ProductService {
 
     private java.time.ZonedDateTime nowZoned() {
         return java.time.ZonedDateTime.now();
-    }
-
-    private String getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) return null;
-        String username = authentication.getName();
-        return userRepository.findByUsername(username)
-                .map(User::getId)
-                .orElse(username);
-    }
-
-    private boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

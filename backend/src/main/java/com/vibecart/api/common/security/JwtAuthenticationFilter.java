@@ -10,14 +10,15 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +51,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
 
                 String username = tokenProvider.getUsernameFromToken(jwt);
+                String userId = tokenProvider.getUserIdFromToken(jwt);
                 String rolesString = tokenProvider.getRolesFromToken(jwt);
 
                 List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesString.split(","))
@@ -59,10 +61,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         username, null, authorities);
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                Map<String, String> details = new HashMap<>();
+                details.put("userId", userId);
+                authentication.setDetails(details);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("Authenticated user '{}' with authorities {}", username, authorities);
+                log.debug("Authenticated user '{}' (id={}) with authorities {}", username, userId, authorities);
             }
         } catch (Exception ex) {
             log.error("Could not set user authentication in security context", ex);

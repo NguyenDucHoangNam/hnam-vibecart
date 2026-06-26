@@ -5,13 +5,12 @@ import com.vibecart.api.common.dto.PageResponse;
 import com.vibecart.api.modules.social.dto.request.CommentRequest;
 import com.vibecart.api.modules.social.dto.response.CommentResponse;
 import com.vibecart.api.modules.social.service.CommentService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -33,7 +32,7 @@ public class CommentController {
             @PathVariable String postId,
             @Valid @RequestBody CommentRequest request) {
 
-        String username = getCurrentUsername();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("API: Add comment to post {} by {}", postId, username);
         CommentResponse result = commentService.addComment(postId, request, username);
 
@@ -74,8 +73,8 @@ public class CommentController {
             @PathVariable String postId,
             @PathVariable String commentId) {
 
-        String username = getCurrentUsername();
-        boolean isAdmin = hasRole("ROLE_ADMIN");
+        String username = SecurityUtils.getCurrentUsername();
+        boolean isAdmin = SecurityUtils.hasRole("ROLE_ADMIN");
         commentService.deleteComment(postId, commentId, username, isAdmin);
 
         return ResponseEntity.ok(
@@ -86,14 +85,4 @@ public class CommentController {
         );
     }
 
-
-    private String getCurrentUsername() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-
-    private boolean hasRole(String role) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals(role));
-    }
 }

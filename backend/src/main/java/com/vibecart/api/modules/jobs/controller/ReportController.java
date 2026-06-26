@@ -3,20 +3,18 @@ package com.vibecart.api.modules.jobs.controller;
 import com.vibecart.api.common.dto.ApiResponse;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
-import com.vibecart.api.modules.iam.entity.User;
-import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.jobs.dto.ExportReportRequest;
 import com.vibecart.api.modules.jobs.dto.TaskStatusResponse;
 import com.vibecart.api.modules.jobs.entity.BackgroundTask;
 import com.vibecart.api.modules.jobs.entity.TaskStatus;
 import com.vibecart.api.modules.jobs.repository.BackgroundTaskRepository;
 import com.vibecart.api.modules.jobs.service.ReportWorkerService;
+import com.vibecart.api.common.util.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.ZonedDateTime;
@@ -35,35 +33,29 @@ public class ReportController {
 
         private final BackgroundTaskRepository taskRepository;
         private final ReportWorkerService reportWorkerService;
-        private final UserRepository userRepository;
 
         public ReportController(BackgroundTaskRepository taskRepository,
-                        ReportWorkerService reportWorkerService,
-                        UserRepository userRepository) {
+                        ReportWorkerService reportWorkerService) {
                 this.taskRepository = taskRepository;
                 this.reportWorkerService = reportWorkerService;
-                this.userRepository = userRepository;
         }
 
         @PostMapping("/export")
         @PreAuthorize("hasRole('CREATOR')")
         public ResponseEntity<ApiResponse<Map<String, Object>>> exportReport(@RequestBody ExportReportRequest request) {
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
-                log.info("REST request to export report for creator: {}", username);
-
-                User creator = userRepository.findByUsername(username)
-                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                String creatorId = SecurityUtils.getCurrentUserId();
+                log.info("REST request to export report for creator: {}", creatorId);
 
                 BackgroundTask task = BackgroundTask.builder()
                                 .id(UUID.randomUUID().toString())
-                                .userId(creator.getId())
+                                .userId(creatorId)
                                 .taskType("EXCEL_EXPORT")
                                 .status(TaskStatus.PENDING)
                                 .build();
 
                 task = taskRepository.save(task);
 
-                reportWorkerService.executeExportReportTask(task.getId(), creator.getId(), request.getStartDate(),
+                reportWorkerService.executeExportReportTask(task.getId(), creatorId, request.getStartDate(),
                                 request.getEndDate());
 
                 Map<String, Object> result = new HashMap<>();
@@ -84,20 +76,16 @@ public class ReportController {
         @GetMapping("/tasks/{taskId}")
         @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
         public ResponseEntity<ApiResponse<TaskStatusResponse>> getTaskStatus(@PathVariable String taskId) {
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
-                log.info("REST request to query status for TaskID={}. Requested by: {}", taskId, username);
-
-                User currentUser = userRepository.findByUsername(username)
-                                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+                String currentUserId = SecurityUtils.getCurrentUserId();
+                log.info("REST request to query status for TaskID={}. Requested by: {}", taskId, currentUserId);
 
                 BackgroundTask task = taskRepository.findById(taskId)
-                                .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT)); // Task not found
+                                .orElseThrow(() -> new AppException(ErrorCode.INVALID_INPUT));
 
-                boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                boolean isAdmin = SecurityUtils.isAdmin();
 
-                if (!task.getUserId().equals(currentUser.getId()) && !isAdmin) {
-                        log.warn("Unauthorized access attempt to task {} by user {}", taskId, currentUser.getId());
+                if (!task.getUserId().equals(currentUserId) && !isAdmin) {
+                        log.warn("Unauthorized access attempt to task {} by user {}", taskId, currentUserId);
                         throw new AppException(ErrorCode.UNAUTHORIZED);
                 }
 

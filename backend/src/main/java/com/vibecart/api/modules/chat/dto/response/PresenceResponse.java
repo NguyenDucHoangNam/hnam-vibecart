@@ -9,6 +9,6 @@ import java.time.Instant;
 @AllArgsConstructor
 public class PresenceResponse {
     private String userId;
-    private String status; // ONLINE or OFFLINE
+    private String status;
     private Instant lastActiveAt;
 }

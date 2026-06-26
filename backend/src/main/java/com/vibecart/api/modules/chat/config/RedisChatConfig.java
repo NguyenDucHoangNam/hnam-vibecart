@@ -3,7 +3,7 @@ package com.vibecart.api.modules.chat.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.vibecart.api.modules.chat.model.ChatEvent;
+import com.vibecart.api.modules.chat.event.ChatEvent;
 import com.vibecart.api.modules.chat.dto.response.MessageResponse;
 import com.vibecart.api.modules.chat.dto.response.TypingResponse;
 import lombok.RequiredArgsConstructor;

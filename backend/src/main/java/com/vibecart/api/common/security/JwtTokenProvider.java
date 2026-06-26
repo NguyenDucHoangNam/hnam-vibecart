@@ -36,14 +36,15 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Tạo JWT token từ thông tin người dùng và quyền hạn tương ứng.
+     * Tạo JWT token từ thông tin người dùng, userId và quyền hạn tương ứng.
      */
-    public String generateToken(String username, String roles) {
+    public String generateToken(String username, String userId, String roles) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
                 .subject(username)
+                .claim("userId", userId)
                 .claim("roles", roles)
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -75,6 +76,19 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.get("roles", String.class);
+    }
+
+    /**
+     * Lấy userId của người dùng từ JWT token.
+     */
+    public String getUserIdFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("userId", String.class);
     }
 
     /**

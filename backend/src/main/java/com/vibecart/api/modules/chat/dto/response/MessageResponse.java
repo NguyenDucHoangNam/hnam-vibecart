@@ -15,7 +15,7 @@ public class MessageResponse {
     private String conversationId;
     private String senderId;
     private String content;
-    private String type; // TEXT, IMAGE, VIDEO, DOCUMENT, PRODUCT, ORDER
+    private String type;
     private AttachmentMetadataResponse attachmentMetadata;
     private List<ReadReceiptResponse> readBy;
     private Instant createdAt;

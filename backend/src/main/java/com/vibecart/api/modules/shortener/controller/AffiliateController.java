@@ -9,12 +9,12 @@ import com.vibecart.api.modules.shortener.dto.response.ShortlinkResponse;
 import com.vibecart.api.modules.shortener.service.DashboardService;
 import com.vibecart.api.modules.shortener.service.PayoutService;
 import com.vibecart.api.modules.shortener.service.ShortLinkService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,7 +40,7 @@ public class AffiliateController {
     public ResponseEntity<ApiResponse<ShortlinkResponse>> createShortLink(
             @Valid @RequestBody ShortlinkCreateRequest request) {
 
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("Creator {} is creating a short link for product {}", username, request.getProductId());
 
         ShortlinkResponse result = shortLinkService.createShortLink(request, username);
@@ -61,7 +61,7 @@ public class AffiliateController {
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<List<ShortlinkResponse>>> getMyShortLinks() {
 
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("Creator {} is fetching short links list", username);
 
         List<ShortlinkResponse> result = shortLinkService.getMyShortLinks(username);
@@ -82,7 +82,7 @@ public class AffiliateController {
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics() {
 
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("Creator {} is fetching affiliate dashboard metrics", username);
 
         DashboardResponse result = dashboardService.getDashboardMetrics(username);
@@ -104,7 +104,7 @@ public class AffiliateController {
     public ResponseEntity<ApiResponse<PayoutResponse>> requestPayout(
             @Valid @RequestBody PayoutRequestDto requestDto) {
 
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("Creator {} requesting withdrawal of {} VND", username, requestDto.getAmount());
 
         PayoutResponse result = payoutService.createPayoutRequest(requestDto, username);
@@ -125,7 +125,7 @@ public class AffiliateController {
     @PreAuthorize("hasRole('CREATOR')")
     public ResponseEntity<ApiResponse<List<PayoutResponse>>> getMyPayoutRequests() {
 
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        String username = SecurityUtils.getCurrentUsername();
         log.info("Creator {} is fetching payout request history", username);
 
         List<PayoutResponse> result = payoutService.getMyPayoutRequests(username);

@@ -30,6 +30,7 @@ import com.vibecart.api.modules.ecommerce.service.PayOSService;
 import com.vibecart.api.modules.ecommerce.service.VoucherService;
 import com.vibecart.api.modules.iam.entity.User;
 import com.vibecart.api.modules.iam.repository.UserRepository;
+import com.vibecart.api.common.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -37,8 +38,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -345,7 +344,7 @@ public class OrderServiceImpl implements OrderService {
 
         boolean isOwner = order.getUserId().equals(userId);
         boolean isCreatorOwner = order.getCreatorId() != null && order.getCreatorId().equals(userId);
-        if (!isOwner && !isCreatorOwner && !isAdmin()) {
+        if (!isOwner && !isCreatorOwner && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.ORDER_ACCESS_DENIED);
         }
 
@@ -744,12 +743,4 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    private boolean isAdmin() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-        return authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-    }
 }

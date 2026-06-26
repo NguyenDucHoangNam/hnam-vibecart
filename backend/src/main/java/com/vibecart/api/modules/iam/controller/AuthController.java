@@ -5,13 +5,13 @@ import com.vibecart.api.modules.iam.dto.request.*;
 import com.vibecart.api.modules.iam.dto.response.*;
 import com.vibecart.api.modules.iam.service.AuthService;
 import com.vibecart.api.modules.iam.service.UserService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -176,7 +176,7 @@ public class AuthController {
         @GetMapping("/me")
         public ResponseEntity<ApiResponse<UserResponse>> getMyProfile() {
                 log.info("API request to fetch current user profile");
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                String username = SecurityUtils.getCurrentUsername();
                 UserResponse result = userService.getProfile(username);
 
                 ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
@@ -194,7 +194,7 @@ public class AuthController {
         @PostMapping("/change-password")
         public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
                 log.info("API request to change password");
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                String username = SecurityUtils.getCurrentUsername();
                 userService.changePassword(username, request);
 
                 ApiResponse<Void> response = ApiResponse.<Void>builder()
@@ -212,7 +212,7 @@ public class AuthController {
         public ResponseEntity<ApiResponse<AuthResponse>> updateProfile(
                         @Valid @RequestBody UpdateProfileRequest request) {
                 log.info("API request to update profile");
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                String username = SecurityUtils.getCurrentUsername();
                 AuthResponse result = userService.updateProfile(username, request);
 
                 ApiResponse<AuthResponse> response = ApiResponse.<AuthResponse>builder()
@@ -263,7 +263,7 @@ public class AuthController {
         @DeleteMapping("/account")
         public ResponseEntity<ApiResponse<Void>> deleteAccount() {
                 log.info("API request to delete account");
-                String username = SecurityContextHolder.getContext().getAuthentication().getName();
+                String username = SecurityUtils.getCurrentUsername();
                 userService.deleteAccount(username);
 
                 ApiResponse<Void> response = ApiResponse.<Void>builder()

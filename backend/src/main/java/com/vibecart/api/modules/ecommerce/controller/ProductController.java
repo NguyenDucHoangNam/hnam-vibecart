@@ -7,6 +7,7 @@ import com.vibecart.api.modules.ecommerce.dto.response.ProductResponse;
 import com.vibecart.api.modules.ecommerce.service.ProductService;
 import com.vibecart.api.modules.search.dto.response.SearchResultResponse;
 import com.vibecart.api.modules.search.service.SearchService;
+import com.vibecart.api.common.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,8 +17,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -82,11 +81,7 @@ public class ProductController {
         }
 
 
-        String userId = null;
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            userId = auth.getName();
-        }
+        String userId = SecurityUtils.getOptionalUsername();
 
         SearchResultResponse result = searchService.search(
                 activeQuery, activeCategoryId, minPrice, maxPrice,

@@ -644,7 +644,7 @@ public class AuthServiceImpl implements AuthService {
                 .map(Role::getName)
                 .collect(Collectors.joining(","));
 
-        String accessToken = jwtTokenProvider.generateToken(user.getUsername(), rolesStr);
+        String accessToken = jwtTokenProvider.generateToken(user.getUsername(), user.getId(), rolesStr);
         String refreshToken = UUID.randomUUID().toString();
 
         String sessionKey = KEY_USER_SESSIONS + user.getUsername();

@@ -16,7 +16,7 @@ public class ConversationRequest {
     @Pattern(regexp = "DIRECT|GROUP", message = "Type must be either DIRECT or GROUP")
     private String type;
 
-    private String name; // Required only if GROUP
+    private String name;
 
     @NotEmpty(message = "memberIds must not be empty")
     private Set<String> memberIds;

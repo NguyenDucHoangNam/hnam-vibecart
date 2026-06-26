@@ -4,6 +4,7 @@ import com.vibecart.api.common.dto.ApiResponse;
 import com.vibecart.api.common.dto.MediaUploadResponse;
 import com.vibecart.api.common.dto.PresignedUrlResponse;
 import com.vibecart.api.common.service.MediaService;
+import com.vibecart.api.common.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ public class MediaController {
                         @RequestParam("file") MultipartFile file,
                         @RequestParam(value = "folder", defaultValue = "general") String folder) {
 
-                MediaUploadResponse response = mediaService.uploadFile(file, folder, getCurrentUsername());
+                MediaUploadResponse response = mediaService.uploadFile(file, folder, SecurityUtils.getCurrentUsername());
 
                 return ResponseEntity.status(HttpStatus.CREATED).body(
                                 ApiResponse.<MediaUploadResponse>builder()
@@ -53,7 +54,7 @@ public class MediaController {
                         @RequestParam("files") List<MultipartFile> files,
                         @RequestParam(value = "folder", defaultValue = "general") String folder) {
 
-                List<MediaUploadResponse> results = mediaService.uploadFiles(files, folder, getCurrentUsername());
+                List<MediaUploadResponse> results = mediaService.uploadFiles(files, folder, SecurityUtils.getCurrentUsername());
 
                 return ResponseEntity.status(HttpStatus.CREATED).body(
                                 ApiResponse.<List<MediaUploadResponse>>builder()
@@ -75,7 +76,7 @@ public class MediaController {
                         @RequestParam(value = "folder", defaultValue = "general") String folder) {
 
                 PresignedUrlResponse response = mediaService.generatePresignedUrl(
-                                contentType, fileSize, folder, getCurrentUsername());
+                                contentType, fileSize, folder, SecurityUtils.getCurrentUsername());
 
                 return ResponseEntity.ok(
                                 ApiResponse.<PresignedUrlResponse>builder()
@@ -92,7 +93,7 @@ public class MediaController {
         public ResponseEntity<ApiResponse<Void>> deleteFile(@RequestParam("key") String key) {
                 mediaService.deleteFile(
                                 key,
-                                getCurrentUsername(),
+                                SecurityUtils.getCurrentUsername(),
                                 SecurityContextHolder.getContext().getAuthentication().getAuthorities());
 
                 return ResponseEntity.ok(
@@ -107,19 +108,12 @@ public class MediaController {
          */
         @PostMapping("/confirm")
         public ResponseEntity<ApiResponse<Void>> confirmUpload(@RequestParam("key") String key) {
-                mediaService.confirmUpload(key, getCurrentUsername());
+                mediaService.confirmUpload(key, SecurityUtils.getCurrentUsername());
 
                 return ResponseEntity.ok(
                                 ApiResponse.<Void>builder()
                                                 .code(1000)
                                                 .message("Xác nhận tải lên thành công")
                                                 .build());
-        }
-
-        /**
-         * Lấy tên người dùng từ Security Context.
-         */
-        private String getCurrentUsername() {
-                return SecurityContextHolder.getContext().getAuthentication().getName();
         }
 }

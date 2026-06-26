@@ -6,12 +6,11 @@ import com.vibecart.api.modules.search.dto.response.SearchHistoryResponse;
 import com.vibecart.api.modules.search.dto.response.SearchResultResponse;
 import com.vibecart.api.modules.search.dto.response.UserSearchResultResponse;
 import com.vibecart.api.modules.search.service.SearchService;
+import com.vibecart.api.common.util.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -61,11 +60,7 @@ public class SearchController {
 
         log.info("REST request to search products. Query='{}'", q);
 
-        String userId = null;
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            userId = auth.getName();
-        }
+        String userId = SecurityUtils.getOptionalUsername();
 
         SearchResultResponse result = searchService.search(q, categoryId, minPrice, maxPrice, sort, page, size, userId);
 
@@ -114,11 +109,7 @@ public class SearchController {
 
         log.info("REST request to search users. Query='{}'", q);
 
-        String currentUsername = null;
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
-            currentUsername = auth.getName();
-        }
+        String currentUsername = SecurityUtils.getOptionalUsername();
 
         UserSearchResultResponse result = searchService.searchUsers(q, page, size, currentUsername);
 
@@ -178,7 +169,7 @@ public class SearchController {
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<SearchHistoryResponse>>> getPersonalHistory() {
-        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        String userId = SecurityUtils.getCurrentUsername();
         log.info("REST request to get personal search history for user {}", userId);
 
         List<SearchHistoryResponse> history = searchService.getPersonalHistory(userId);
@@ -201,7 +192,7 @@ public class SearchController {
     @DeleteMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteHistoryKeyword(@RequestParam String keyword) {
-        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        String userId = SecurityUtils.getCurrentUsername();
         log.info("REST request to delete keyword '{}' from history for user {}", keyword, userId);
 
         searchService.deleteHistoryKeyword(userId, keyword);
@@ -222,7 +213,7 @@ public class SearchController {
     @DeleteMapping("/history/clear")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> clearHistory() {
-        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        String userId = SecurityUtils.getCurrentUsername();
         log.info("REST request to clear history for user {}", userId);
 
         searchService.clearHistory(userId);
@@ -244,7 +235,7 @@ public class SearchController {
     @PostMapping("/history/merge")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> mergeHistory(@RequestBody SearchMergeRequest request) {
-        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        String userId = SecurityUtils.getCurrentUsername();
         log.info("REST request to merge history from localStorage for user {}", userId);
 
         searchService.mergeHistory(userId, request);
