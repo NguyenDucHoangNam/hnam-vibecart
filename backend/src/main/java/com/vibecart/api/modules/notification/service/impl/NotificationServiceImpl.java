@@ -174,10 +174,80 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
 
-        Notification notification = notificationMapper.fromEvent(event);
+        String groupKey = null;
+        if ("FOLLOW".equals(event.getType())) {
+            groupKey = "FOLLOW:" + event.getRecipientId();
+        } else if ("LIKE".equals(event.getType()) && event.getReferenceId() != null) {
+            groupKey = "LIKE:" + event.getReferenceId();
+        }
+
+        Notification notification = null;
+        if (groupKey != null) {
+            java.util.Optional<Notification> existingOpt = notificationRepository
+                    .findFirstByRecipientIdAndGroupKeyAndIsReadFalseAndCreatedAtAfterOrderByCreatedAtDesc(
+                            event.getRecipientId(), groupKey, Instant.now().minus(24, ChronoUnit.HOURS));
+
+            if (existingOpt.isPresent()) {
+                notification = existingOpt.get();
+
+                if (notification.getAggregatedActorIds() == null) {
+                    notification.setAggregatedActorIds(new java.util.ArrayList<>(List.of(notification.getActorId())));
+                }
+                if (notification.getAggregatedActorNames() == null) {
+                    notification.setAggregatedActorNames(new java.util.ArrayList<>(List.of(notification.getActorFullName())));
+                }
+
+                if (!notification.getAggregatedActorIds().contains(event.getActorId())) {
+                    notification.getAggregatedActorIds().add(event.getActorId());
+                    notification.getAggregatedActorNames().add(event.getActorFullName());
+                }
+
+                notification.setActorId(event.getActorId());
+                notification.setActorUsername(event.getActorUsername());
+                notification.setActorFullName(event.getActorFullName());
+                notification.setActorAvatarUrl(event.getActorAvatarUrl());
+                notification.setCreatedAt(Instant.now());
+
+                int count = notification.getAggregatedActorIds().size();
+                notification.setAggregatedCount(count);
+
+                String contentText = "";
+                if ("FOLLOW".equals(event.getType())) {
+                    if (count == 1) {
+                        contentText = event.getActorFullName() + " đã bắt đầu theo dõi bạn";
+                    } else if (count == 2) {
+                        contentText = notification.getAggregatedActorNames().get(0) + " và " + notification.getAggregatedActorNames().get(1) + " đã bắt đầu theo dõi bạn";
+                    } else {
+                        contentText = notification.getAggregatedActorNames().get(count - 1) + ", " + notification.getAggregatedActorNames().get(count - 2) + " và " + (count - 2) + " người khác đã bắt đầu theo dõi bạn";
+                    }
+                } else if ("LIKE".equals(event.getType())) {
+                    if (count == 1) {
+                        contentText = event.getActorFullName() + " đã thích bài viết của bạn";
+                    } else if (count == 2) {
+                        contentText = notification.getAggregatedActorNames().get(0) + " và " + notification.getAggregatedActorNames().get(1) + " đã thích bài viết của bạn";
+                    } else {
+                        contentText = notification.getAggregatedActorNames().get(count - 1) + ", " + notification.getAggregatedActorNames().get(count - 2) + " và " + (count - 2) + " người khác đã thích bài viết của bạn";
+                    }
+                }
+                notification.setContent(contentText);
+            }
+        }
+
+        boolean isNew = false;
+        if (notification == null) {
+            notification = notificationMapper.fromEvent(event);
+            notification.setGroupKey(groupKey);
+            notification.setAggregatedActorIds(new java.util.ArrayList<>(List.of(event.getActorId())));
+            notification.setAggregatedActorNames(new java.util.ArrayList<>(List.of(event.getActorFullName())));
+            notification.setAggregatedCount(1);
+            isNew = true;
+        }
+
         notificationRepository.save(notification);
 
-        incrementUnreadCount(event.getRecipientId());
+        if (isNew) {
+            incrementUnreadCount(event.getRecipientId());
+        }
 
         NotificationResponse response = notificationMapper.toResponse(notification);
 
@@ -193,8 +263,8 @@ public class NotificationServiceImpl implements NotificationService {
         messagingTemplate.convertAndSendToUser(
                 event.getRecipientUsername(), "/queue/notifications", response);
 
-        log.info("Notification sent: type={}, actor={}, recipient={}",
-                event.getType(), event.getActorUsername(), event.getRecipientUsername());
+        log.info("Notification processed: type={}, aggregatedCount={}, isNew={}, recipient={}",
+                event.getType(), notification.getAggregatedCount(), isNew, event.getRecipientUsername());
     }
 
     @Override
@@ -234,6 +304,7 @@ public class NotificationServiceImpl implements NotificationService {
         defaults.put("COMMENT", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
         defaults.put("ORDER_PAID", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
         defaults.put("ORDER_DELIVERED", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
+        defaults.put("PRODUCT_NEW", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
 
         return NotificationPreference.builder()
                 .userId(userId)

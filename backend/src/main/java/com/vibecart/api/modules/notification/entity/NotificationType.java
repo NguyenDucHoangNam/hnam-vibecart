@@ -5,5 +5,6 @@ public enum NotificationType {
     LIKE,
     COMMENT,
     ORDER_PAID,
-    ORDER_DELIVERED
+    ORDER_DELIVERED,
+    PRODUCT_NEW
 }

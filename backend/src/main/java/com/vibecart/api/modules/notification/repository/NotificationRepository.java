@@ -21,4 +21,7 @@ public interface NotificationRepository extends MongoRepository<Notification, St
 
     boolean existsByActorIdAndRecipientIdAndTypeAndCreatedAtAfter(
             String actorId, String recipientId, String type, Instant after);
+
+    java.util.Optional<Notification> findFirstByRecipientIdAndGroupKeyAndIsReadFalseAndCreatedAtAfterOrderByCreatedAtDesc(
+            String recipientId, String groupKey, java.time.Instant after);
 }

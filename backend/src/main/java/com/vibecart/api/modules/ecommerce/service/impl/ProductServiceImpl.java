@@ -47,6 +47,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import com.vibecart.api.modules.iam.repository.UserRepository;
+import com.vibecart.api.modules.iam.entity.User;
+import com.vibecart.api.modules.social.repository.FollowRepository;
+import com.vibecart.api.modules.notification.dto.event.InAppNotificationEvent;
+import com.vibecart.api.config.KafkaTopicConfig;
+import org.springframework.kafka.core.KafkaTemplate;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,6 +71,9 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryHistoryRepository inventoryHistoryRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
+    private final FollowRepository followRepository;
+    private final KafkaTemplate<String, InAppNotificationEvent> notificationKafkaTemplate;
 
     @Override
     @Transactional
@@ -143,6 +152,33 @@ public class ProductServiceImpl implements ProductService {
         log.info("Product created successfully with ID: {}", savedProduct.getId());
 
         saveOutboxEvent("CREATED", savedProduct);
+
+        try {
+            List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(currentUserId);
+            if (followerIds != null && !followerIds.isEmpty()) {
+                User creator = userRepository.findById(currentUserId).orElse(null);
+                if (creator != null) {
+                    List<User> followers = userRepository.findAllById(followerIds);
+                    for (User follower : followers) {
+                        InAppNotificationEvent event = InAppNotificationEvent.builder()
+                                .eventId(UUID.randomUUID().toString())
+                                .recipientId(follower.getId())
+                                .recipientUsername(follower.getUsername())
+                                .actorId(creator.getId())
+                                .actorUsername(creator.getUsername())
+                                .actorFullName(creator.getFullName())
+                                .actorAvatarUrl(creator.getAvatarUrl())
+                                .type("PRODUCT_NEW")
+                                .referenceId(savedProduct.getId())
+                                .content(creator.getFullName() + " đã đăng một sản phẩm mới: " + savedProduct.getName())
+                                .build();
+                        notificationKafkaTemplate.send(KafkaTopicConfig.IN_APP_NOTIFICATION_TOPIC, event);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to send new product notifications to followers: {}", e.getMessage(), e);
+        }
 
         return productMapper.toResponse(
                 productRepository.findByIdWithDetails(savedProduct.getId())

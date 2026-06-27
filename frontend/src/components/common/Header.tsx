@@ -112,6 +112,9 @@ export function Header() {
         if (n.type === "FOLLOW" && n.actor?.id) {
           router.push(ROUTES.CREATOR_PROFILE(n.actor.id));
           setIsNotifDropdownOpen(false);
+        } else if (n.type === "PRODUCT_NEW" && n.referenceId) {
+          router.push(ROUTES.PRODUCT_DETAILS(n.referenceId));
+          setIsNotifDropdownOpen(false);
         }
       }}
     >
@@ -214,9 +217,6 @@ export function Header() {
   const navLinks = [
     { label: "Cửa hàng", href: ROUTES.PRODUCTS, icon: ShoppingBag },
     { label: "Bảng tin", href: ROUTES.FEED, icon: Compass },
-    ...(isAuthenticated && isCreator && user?.id
-      ? [{ label: "Trang cá nhân", href: ROUTES.CREATOR_PROFILE(user.id), icon: UserIcon }]
-      : []),
   ];
 
   return (

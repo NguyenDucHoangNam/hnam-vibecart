@@ -74,6 +74,8 @@ export default function NotificationsPage() {
         if (!n.read) markAsRead(n.id);
         if (n.type === "FOLLOW" && n.actor?.id) {
           router.push(ROUTES.CREATOR_PROFILE(n.actor.id));
+        } else if (n.type === "PRODUCT_NEW" && n.referenceId) {
+          router.push(ROUTES.PRODUCT_DETAILS(n.referenceId));
         }
       }}
     >

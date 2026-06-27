@@ -17,6 +17,8 @@ public class NotificationResponse {
     private ActorInfo actor;
     private String referenceId;
     private boolean sendSound = true;
+    private java.util.List<String> aggregatedActorNames;
+    private int aggregatedCount = 1;
 
     @Data
     @Builder

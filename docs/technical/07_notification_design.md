@@ -127,7 +127,19 @@ frontend/src/
    └── Show toast
 ```
 
-### 3.2 Unread Count Caching (Redis)
+### 3.3 Product Creation → Notification Flow
+
+```
+1. Creator creates a new product (ProductServiceImpl.create())
+2. Product saved successfully (PostgreSQL)
+3. ProductServiceImpl queries followers:
+   └── List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(creatorId)
+4. For each follower, publish event:
+   └── KafkaTemplate.send("in-app-notification-events", PRODUCT_NEW event)
+5. Kafka consumer processes, saves to Mongo, caches, and sends via STOMP user queue
+```
+
+### 3.4 Unread Count Caching (Redis)
 
 ```
 Key:    "notification:unread:{userId}"
@@ -149,12 +161,23 @@ Operations:
 - Query: `existsByActorIdAndRecipientIdAndTypeAndCreatedAtAfter()`
 - Ngăn spam follow/unfollow/follow tạo nhiều notification trùng
 
-### 4.2 Optimistic UI (#3)
+### 4.2 Notification Aggregation (#5)
+- Khi có thông báo mới (e.g. FOLLOW, LIKE):
+  - Tìm kiếm thông báo chưa đọc cùng loại, cùng người nhận trong 24 giờ qua:
+    `findFirstByRecipientIdAndGroupKeyAndIsReadFalseAndCreatedAtAfterOrderByCreatedAtDesc()`
+  - Nếu tìm thấy:
+    - Thêm actor vào danh sách `aggregated_actor_ids` và `aggregated_actor_names`.
+    - Cập nhật text content: `"A, B và N người khác đã bắt đầu theo dõi bạn"`.
+    - Cập nhật `createdAt = Instant.now()` để đẩy thông báo lên đầu.
+    - Lưu lại mà **không** tăng unread count của Redis (vì thông báo vốn đã chưa đọc).
+  - Nếu không tìm thấy: Tạo thông báo mới và tăng unread count của Redis.
+
+### 4.3 Optimistic UI (#3)
 - Frontend update state trước khi gọi API
 - Rollback nếu API response lỗi
 - Áp dụng cho: markAsRead, delete, markAllAsRead, deleteAll
 
-### 4.3 Notification Preferences (#4)
+### 4.4 Notification Preferences (#4)
 - MongoDB collection `notification_preferences`
 - Per-type toggle: inApp, sound, push
 - Default preferences auto-generated nếu chưa có

@@ -31,7 +31,7 @@ Tài liệu này đặc tả hợp đồng tích hợp API toàn diện cho hệ
       "sendSound": true
     }
     ```
-*   **Notification Types:** `FOLLOW`, `LIKE`, `COMMENT`, `ORDER_PAID`, `ORDER_DELIVERED`
+*   **Notification Types:** `FOLLOW`, `LIKE`, `COMMENT`, `ORDER_PAID`, `ORDER_DELIVERED`, `PRODUCT_NEW`
 
 ---
 
@@ -190,6 +190,10 @@ Tất cả endpoint yêu cầu **Bearer Token Authentication**.
   "type": "String",
   "reference_id": "String",
   "content": "String",
+  "group_key": "String (indexed)",
+  "aggregated_actor_ids": "Array of Strings",
+  "aggregated_actor_names": "Array of Strings",
+  "aggregated_count": "Integer (default: 1)",
   "is_read": "Boolean (default: false)",
   "created_at": "Instant (TTL: 90 ngày)"
 }

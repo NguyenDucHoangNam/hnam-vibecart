@@ -46,6 +46,20 @@ public class Notification {
     @Field("content")
     private String content;
 
+    @Indexed
+    @Field("group_key")
+    private String groupKey;
+
+    @Field("aggregated_actor_ids")
+    private java.util.List<String> aggregatedActorIds;
+
+    @Field("aggregated_actor_names")
+    private java.util.List<String> aggregatedActorNames;
+
+    @Builder.Default
+    @Field("aggregated_count")
+    private int aggregatedCount = 1;
+
     @Builder.Default
     @Field("is_read")
     private boolean isRead = false;

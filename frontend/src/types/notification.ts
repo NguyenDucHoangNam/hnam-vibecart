@@ -7,7 +7,7 @@ export interface NotificationActorInfo {
 
 export interface NotificationResponse {
   id: string;
-  type: "FOLLOW" | "LIKE" | "COMMENT" | "ORDER_PAID" | "ORDER_DELIVERED";
+  type: "FOLLOW" | "LIKE" | "COMMENT" | "ORDER_PAID" | "ORDER_DELIVERED" | "PRODUCT_NEW";
   content: string;
   read: boolean;
   createdAt: string;
