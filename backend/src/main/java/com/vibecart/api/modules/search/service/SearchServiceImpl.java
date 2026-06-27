@@ -364,10 +364,10 @@ public class SearchServiceImpl implements SearchService {
         }
         log.info("Merging search history from localStorage for user {}: {} terms", userId,
                 request.getKeywords().size());
-        List<String> keywords = new ArrayList<>(request.getKeywords());
-        Collections.reverse(keywords);
-        for (String keyword : keywords) {
-            recordPersonalHistory(userId, keyword);
+        List<com.vibecart.api.modules.search.dto.request.SearchMergeItem> keywords = new java.util.ArrayList<>(request.getKeywords());
+        java.util.Collections.reverse(keywords);
+        for (com.vibecart.api.modules.search.dto.request.SearchMergeItem item : keywords) {
+            recordPersonalHistory(userId, item.getKeyword());
         }
     }
 
@@ -487,9 +487,9 @@ public class SearchServiceImpl implements SearchService {
     }
 
     @Override
-    public UserSearchResultResponse searchUsers(String query, int page, int size, String currentUsername) {
-        log.info("Searching users with query='{}', page={}, size={}, currentUsername={}",
-                query, page, size, currentUsername);
+    public UserSearchResultResponse searchUsers(String query, int page, int size, String currentUserId) {
+        log.info("Searching users with query='{}', page={}, size={}, currentUserId={}",
+                query, page, size, currentUserId);
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
@@ -509,8 +509,8 @@ public class SearchServiceImpl implements SearchService {
 
         boolQueryBuilder.filter(f -> f.term(t -> t.field("roles").value("ROLE_CREATOR")));
 
-        if (currentUsername != null && !currentUsername.isBlank() && !currentUsername.equals("anonymousUser")) {
-            boolQueryBuilder.mustNot(mn -> mn.term(t -> t.field("username.keyword").value(currentUsername)));
+        if (currentUserId != null && !currentUserId.isBlank()) {
+            boolQueryBuilder.mustNot(mn -> mn.term(t -> t.field("id").value(currentUserId)));
         }
 
         NativeQuery searchQuery = NativeQuery.builder()
@@ -526,13 +526,30 @@ public class SearchServiceImpl implements SearchService {
                     boolean isFollowing = false;
                     long followerCount = 0;
                     try {
-                        if (currentUsername != null && !currentUsername.equals("anonymousUser")
-                                && !currentUsername.isBlank()) {
-                            isFollowing = followService.isFollowing(doc.getId(), currentUsername);
+                        if (currentUserId != null && !currentUserId.isBlank()) {
+                            // Find currentUsername from repository for followService call
+                            userRepository.findById(currentUserId).ifPresent(u -> {
+                                try {
+                                    // wait, isFollowing takes currentUsername, let's verify if there is an alternative or we can just fetch the user once
+                                } catch (Exception e) {}
+                            });
+                            // Wait! Let's check what arguments followService.isFollowing takes.
                         }
                         followerCount = followService.getFollowerCount(doc.getId());
                     } catch (Exception e) {
                         log.error("Failed to query follow relationships for user: {}", doc.getId(), e);
+                    }
+
+                    // Let's get isFollowing using followService.isFollowing(doc.getId(), currentUsername). Let's fetch currentUsername once
+                    String currentUsername = null;
+                    if (currentUserId != null && !currentUserId.isBlank()) {
+                        var uOpt = userRepository.findById(currentUserId);
+                        if (uOpt.isPresent()) {
+                            currentUsername = uOpt.get().getUsername();
+                        }
+                    }
+                    if (currentUsername != null) {
+                        isFollowing = followService.isFollowing(doc.getId(), currentUsername);
                     }
 
                     return UserSearchResponse.builder()
@@ -560,11 +577,9 @@ public class SearchServiceImpl implements SearchService {
         }
 
         if (totalElements > 0 && query != null && !query.isBlank()) {
-            recordSearchKeyword(query, currentUsername);
-            if (currentUsername != null && !currentUsername.equals("anonymousUser") && !currentUsername.isBlank()) {
-                userRepository.findByUsername(currentUsername).ifPresent(u -> {
-                    recordPersonalHistory(u.getId(), query.trim());
-                });
+            recordSearchKeyword(query, currentUserId);
+            if (currentUserId != null && !currentUserId.isBlank()) {
+                recordPersonalHistory(currentUserId, query.trim());
             }
         }
 

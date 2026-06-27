@@ -18,7 +18,7 @@ public interface SearchService {
     void mergeHistory(String userId, SearchMergeRequest request);
     void reindexAll();
     void aggregateWeeklyTrending();
-    UserSearchResultResponse searchUsers(String query, int page, int size, String currentUsername);
+    UserSearchResultResponse searchUsers(String query, int page, int size, String currentUserId);
     List<String> autocompleteUsers(String prefix);
     void indexUser(com.vibecart.api.modules.iam.entity.User user);
     void deleteUser(String userId);

@@ -30,7 +30,11 @@ public class SearchController {
     public ResponseEntity<ApiResponse<SearchResultResponse>> search(ProductSearchRequest request) {
         log.info("REST request to search products. Query='{}'", request.getActiveQuery());
 
-        String userId = SecurityUtils.getOptionalUsername();
+        String userId = null;
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            userId = SecurityUtils.getCurrentUserId();
+        }
         SearchResultResponse result = searchService.search(request, userId);
 
         ApiResponse<SearchResultResponse> response = ApiResponse.<SearchResultResponse>builder()
@@ -62,9 +66,13 @@ public class SearchController {
 
         log.info("REST request to search users. Query='{}'", q);
 
-        String currentUsername = SecurityUtils.getOptionalUsername();
+        String currentUserId = null;
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            currentUserId = SecurityUtils.getCurrentUserId();
+        }
 
-        UserSearchResultResponse result = searchService.searchUsers(q, page, size, currentUsername);
+        UserSearchResultResponse result = searchService.searchUsers(q, page, size, currentUserId);
 
         ApiResponse<UserSearchResultResponse> response = ApiResponse.<UserSearchResultResponse>builder()
                 .code(1000)
@@ -103,7 +111,7 @@ public class SearchController {
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<SearchHistoryResponse>>> getPersonalHistory() {
-        String userId = SecurityUtils.getCurrentUsername();
+        String userId = SecurityUtils.getCurrentUserId();
         log.info("REST request to get personal search history for user {}", userId);
 
         List<SearchHistoryResponse> history = searchService.getPersonalHistory(userId);
@@ -119,7 +127,7 @@ public class SearchController {
     @DeleteMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteHistoryKeyword(@RequestParam String keyword) {
-        String userId = SecurityUtils.getCurrentUsername();
+        String userId = SecurityUtils.getCurrentUserId();
         log.info("REST request to delete keyword '{}' from history for user {}", keyword, userId);
 
         searchService.deleteHistoryKeyword(userId, keyword);
@@ -134,7 +142,7 @@ public class SearchController {
     @DeleteMapping("/history/clear")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> clearHistory() {
-        String userId = SecurityUtils.getCurrentUsername();
+        String userId = SecurityUtils.getCurrentUserId();
         log.info("REST request to clear history for user {}", userId);
 
         searchService.clearHistory(userId);
@@ -149,7 +157,7 @@ public class SearchController {
     @PostMapping("/history/merge")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> mergeHistory(@RequestBody SearchMergeRequest request) {
-        String userId = SecurityUtils.getCurrentUsername();
+        String userId = SecurityUtils.getCurrentUserId();
         log.info("REST request to merge history from localStorage for user {}", userId);
 
         searchService.mergeHistory(userId, request);

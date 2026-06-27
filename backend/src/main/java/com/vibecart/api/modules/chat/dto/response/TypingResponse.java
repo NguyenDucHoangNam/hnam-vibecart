@@ -1,3 +1,4 @@
+
 package com.vibecart.api.modules.chat.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;

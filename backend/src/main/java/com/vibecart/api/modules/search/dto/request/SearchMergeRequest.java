@@ -7,5 +7,5 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SearchMergeRequest {
-    private List<String> keywords;
+    private List<SearchMergeItem> keywords;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useTransition } from "react";
+import React, { useState, useEffect, useRef, useTransition, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -30,7 +30,7 @@ import { ConversationResponse, MessageResponse } from "@/types";
 import { ROUTES } from "@/constants/routes";
 import { api } from "@/lib/api-client";
 
-export default function ChatPage() {
+function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -1110,5 +1110,17 @@ export default function ChatPage() {
       )}
 
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-zinc-50">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }

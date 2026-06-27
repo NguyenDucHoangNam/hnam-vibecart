@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -43,7 +43,7 @@ const isVideoUrl = (url: string): boolean => {
          url.includes('video/');
 };
 
-export default function ShopPage() {
+function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
@@ -75,6 +75,7 @@ export default function ShopPage() {
   const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
   const [recentKeywords, setRecentKeywords] = useState<{ keyword: string; searchedAt: string }[]>([]);
   const [creatorMap, setCreatorMap] = useState<Record<string, { username: string; fullName: string; avatarUrl?: string }>>({});
+  const [activeTab, setActiveTab] = useState<"products" | "creators">("products");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -333,35 +334,44 @@ export default function ShopPage() {
     });
     return opts;
   };
+  const isSearchActive = !!searchVal.trim() || !!selectedCategory;
+
   return (
     <div className="flex-1 bg-zinc-50 min-h-screen transition-colors duration-300 relative">
       <div className="bg-white border-b border-zinc-200/60">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
-          <h1 className="text-center text-lg sm:text-xl font-extrabold text-zinc-900 mb-4 tracking-tight">
+        <div className={`max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-in-out ${
+          isSearchActive ? "py-3 sm:py-3.5" : "py-5 sm:py-6"
+        }`}>
+          <h1 className={`text-center font-extrabold text-zinc-900 tracking-tight transition-all duration-500 ease-in-out origin-center ${
+            isSearchActive 
+              ? "max-h-0 opacity-0 mb-0 scale-95 overflow-hidden" 
+              : "max-h-16 opacity-100 text-lg sm:text-xl mb-4"
+          }`}>
             Tìm sản phẩm & Creators trên <span className="text-brand-500">VibeCart</span>
           </h1>
           <div className="relative max-w-2xl mx-auto">
             <form onSubmit={(e) => handleSearchSubmit(e)}
-              className="relative flex rounded-full overflow-hidden border border-zinc-200 shadow-lg shadow-zinc-200/40 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all duration-300 bg-white">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-zinc-400" />
+              className="group/search-form relative rounded-full border-2 border-zinc-100/80 hover:border-brand-200 focus-within:border-brand-500 shadow-xl shadow-zinc-150/40 focus-within:shadow-brand-500/10 focus-within:ring-4 focus-within:ring-brand-500/10 transition-all duration-300 bg-white h-[52px] flex items-center">
+              
+              <div className="pl-4.5 pr-2.5 flex items-center justify-center shrink-0">
+                <Search className="h-5 w-5 text-brand-500 transition-all duration-300 group-hover/search-form:scale-105 group-focus-within/search-form:scale-110 group-focus-within/search-form:text-brand-600" />
+              </div>
+              
               <input ref={inputRef} type="text"
                 placeholder="Tìm kiếm sản phẩm, thương hiệu, creators..."
                 value={searchVal}
                 onFocus={() => setIsDropdownOpen(true)}
                 onChange={(e) => { setSearchVal(e.target.value); setIsDropdownOpen(true); }}
-                className="w-full h-12 pl-11 pr-10 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                className="w-full h-full bg-transparent text-sm text-zinc-800 placeholder-zinc-400/85 focus:outline-none pr-12 font-medium"
               />
+              
               {searchVal && (
                 <button type="button"
                   onClick={() => { setSearchVal(""); setSuggestions([]); inputRef.current?.focus(); }}
-                  className="absolute right-[90px] top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+                  className="absolute right-3.5 p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-rose-50/80 active:scale-90 rounded-full transition-all duration-200">
                   <X className="h-4 w-4" />
                 </button>
               )}
-              <button type="submit"
-                className="h-12 px-6 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-r-full transition-colors active:scale-95">
-                Tìm kiếm
-              </button>
             </form>
             {isDropdownOpen && (
               <div ref={dropdownRef}
@@ -458,318 +468,362 @@ export default function ShopPage() {
         </div>
       )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {searchVal.trim() && creators.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center">
-                <Users className="h-4 w-4 text-brand-500" />
+        {/* Tab Switcher */}
+        <div className="flex border-b border-zinc-200/80 mb-6 gap-6 select-none">
+          <button
+            onClick={() => setActiveTab("products")}
+            className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-1.5 ${
+              activeTab === "products"
+                ? "text-brand-500 font-extrabold"
+                : "text-zinc-400 hover:text-zinc-600"
+            }`}
+          >
+            Sản phẩm
+            <span className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
+              activeTab === "products" ? "bg-brand-50 text-brand-600 font-bold" : "bg-zinc-100 text-zinc-400 font-medium"
+            }`}>
+              {totalProducts}
+            </span>
+            {activeTab === "products" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-full animate-toast-in" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("creators")}
+            className={`pb-3 text-sm font-bold transition-all relative flex items-center gap-1.5 ${
+              activeTab === "creators"
+                ? "text-brand-500 font-extrabold"
+                : "text-zinc-400 hover:text-zinc-600"
+            }`}
+          >
+            Creators
+            <span className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
+              activeTab === "creators" ? "bg-brand-50 text-brand-600 font-bold" : "bg-zinc-100 text-zinc-400 font-medium"
+            }`}>
+              {totalCreators}
+            </span>
+            {activeTab === "creators" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-full animate-toast-in" />
+            )}
+          </button>
+        </div>
+
+        {activeTab === "products" ? (
+          <div className="flex flex-col lg:flex-row gap-8">
+            <aside className={`${isFilterVisible ? "lg:block" : "lg:hidden"} hidden w-60 shrink-0 bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm h-fit sticky top-24`}>
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-5">
+                <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <Filter className="h-3.5 w-3.5 text-brand-500" /> Bộ lọc
+                </h3>
+                <button onClick={handleResetFilters} className="text-[10px] text-zinc-400 hover:text-brand-500 font-semibold transition-colors">Xóa tất cả</button>
               </div>
-              <h2 className="text-sm font-bold text-zinc-900">Creators</h2>
-              <span className="text-[10px] text-zinc-400 font-light">({totalCreators} kết quả)</span>
-            </div>
-
-            <div className="flex gap-4 overflow-x-auto pb-3 custom-scrollbar -mx-1 px-1">
-              {creators.map(creator => (
-                <div key={creator.id}
-                  className="group min-w-[200px] max-w-[200px] bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm hover:shadow-lg hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center text-center shrink-0">
-                  <div className="relative w-14 h-14 rounded-full overflow-hidden mb-3 border-2 border-brand-100 group-hover:border-brand-300 transition-colors bg-zinc-50">
-                    {creator.avatarUrl ? (
-                      <img src={creator.avatarUrl} alt={creator.fullName || creator.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-brand-500 font-black text-lg uppercase bg-brand-50">
-                        {creator.username.charAt(0)}
-                      </div>
-                    )}
+              <div className="mb-5">
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Danh mục</h4>
+                <div className="space-y-0.5 max-h-56 overflow-y-auto custom-scrollbar">
+                  <button
+                    onClick={() => { setSelectedCategory(""); setPage(0); const p = new URLSearchParams(); if (searchVal) p.set("q", searchVal); router.push(`${ROUTES.PRODUCTS}?${p.toString()}`); }}
+                    className={`w-full text-left py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-between ${!selectedCategory ? "bg-brand-500 text-white font-semibold" : "text-zinc-600 hover:bg-zinc-100"}`}>
+                    <span>Tất cả</span>
+                    {!selectedCategory && <Sparkles className="h-3 w-3" />}
+                  </button>
+                  {renderCategoryOptions(categories)}
+                </div>
+              </div>
+              <div className="mb-5">
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Khoảng giá</h4>
+                <div className="flex gap-2 items-center">
+                  <input type="number" placeholder="Từ" value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value ? Number(e.target.value) : "")}
+                    className="w-full h-9 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:border-brand-500" />
+                  <span className="text-zinc-300">—</span>
+                  <input type="number" placeholder="Đến" value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value ? Number(e.target.value) : "")}
+                    className="w-full h-9 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:border-brand-500" />
+                </div>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Sắp xếp</h4>
+                <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(0); }}
+                  className="w-full h-9 px-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-brand-500">
+                  <option value="relevance">Liên quan nhất</option>
+                  <option value="price_asc">Giá tăng dần</option>
+                  <option value="price_desc">Giá giảm dần</option>
+                  <option value="newest">Mới nhất</option>
+                </select>
+              </div>
+            </aside>
+            <main className="flex-1 flex flex-col">
+              <div className="lg:hidden flex items-center justify-between bg-white border border-zinc-200/60 p-3 rounded-2xl mb-5">
+                <button onClick={() => setIsFilterMobileOpen(true)}
+                  className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-brand-500" /> Bộ lọc
+                </button>
+                <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(0); }}
+                  className="h-9 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-700 focus:outline-none">
+                  <option value="relevance">Liên quan</option>
+                  <option value="price_asc">Giá ↑</option>
+                  <option value="price_desc">Giá ↓</option>
+                  <option value="newest">Mới nhất</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-brand-50 border border-brand-100 flex items-center justify-center">
+                    <Package className="h-3.5 w-3.5 text-brand-500" />
                   </div>
-
-                  <h4 className="text-xs font-bold text-zinc-900 group-hover:text-brand-500 transition-colors line-clamp-1 leading-snug">
-                    {creator.fullName || "Creator VibeCart"}
-                  </h4>
-                  <span className="text-[10px] text-zinc-400 font-medium mt-0.5">@{creator.username}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-100 px-2 py-0.5 text-[9px] font-bold text-brand-600 uppercase tracking-wider mt-2">
-                    <Sparkles className="h-2.5 w-2.5" /> Creator
-                  </span>
-                  <p className="text-[10px] text-zinc-400 font-light mt-1.5">
-                    <span className="font-bold text-zinc-700">{(creator.followerCount || 0).toLocaleString("vi-VN")}</span> người theo dõi
+                  <h2 className="text-sm font-bold text-zinc-900">Sản phẩm</h2>
+                  {!isLoadingProducts && (
+                    <span className="text-[10px] text-zinc-400 font-light">({totalProducts} kết quả)</span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setIsFilterVisible(!isFilterVisible)}
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-800 text-[10px] font-bold transition-all shadow-sm active:scale-95"
+                >
+                  <SlidersHorizontal className="h-3 w-3 text-brand-500" />
+                  {isFilterVisible ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
+                </button>
+              </div>
+              {isLoadingProducts ? (
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 min-h-[400px] ${isFilterVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <div key={idx} className="bg-white rounded-2xl border border-zinc-200/40 p-4 shadow-sm animate-pulse flex flex-col h-[340px]">
+                      <div className="w-full h-[180px] bg-zinc-100 rounded-xl mb-3" />
+                      <div className="h-3 w-2/3 bg-zinc-100 rounded mb-2" />
+                      <div className="h-4 w-full bg-zinc-100 rounded mb-2" />
+                      <div className="h-8 w-full bg-zinc-100 rounded mt-auto" />
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200/50 shadow-sm max-w-2xl mx-auto my-8">
+                  <div className="h-14 w-14 rounded-2xl bg-zinc-50 border flex items-center justify-center text-zinc-400 mx-auto mb-4">
+                    <Package className="h-7 w-7 text-zinc-400" />
+                  </div>
+                  <h4 className="text-sm font-bold text-zinc-800">Không tìm thấy sản phẩm nào</h4>
+                  <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed font-light">
+                    Hãy thử tìm bằng từ khóa khác hoặc xóa bớt các bộ lọc đang chọn.
                   </p>
-                  <button onClick={() => handleFollowToggle(creator.id)}
-                    className={`w-full h-8 rounded-xl text-[10px] uppercase font-bold tracking-wider mt-3 transition-all duration-300 ${
-                      creator.isFollowing
-                        ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-600"
-                        : "bg-brand-500 hover:bg-brand-600 text-white shadow-sm shadow-brand-500/15 active:scale-95"
-                    }`}>
-                    {creator.isFollowing ? (
-                      <span className="flex items-center justify-center gap-1"><UserCheck className="h-3 w-3" />Đang theo dõi</span>
+                </div>
+              ) : (
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${isFilterVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+                  {products.map((product) => {
+                    const discountPercent = product.minOriginalPrice && product.minPrice && product.minOriginalPrice > product.minPrice
+                      ? Math.round(((product.minOriginalPrice - product.minPrice) / product.minOriginalPrice) * 100)
+                      : 0;
+                    const hasDiscount = discountPercent > 0;
+                    const min = product.minPrice;
+                    const max = product.maxPrice;
+                    const hasRange = min !== max;
+                    const originalMin = product.minOriginalPrice || 0;
+                    const originalMax = product.maxOriginalPrice || 0;
+                    const hasOriginalRange = originalMin !== originalMax;
+                    return (
+                      <Link href={`${ROUTES.PRODUCTS}/${product.id}`} key={product.id} className="group bg-white rounded-2xl border border-zinc-200/40 p-4 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-[380px]">
+                        <div
+                          onClick={(e) => {
+                            if (product.status !== 'ACTIVE') {
+                              e.preventDefault();
+                              toast.warning("Thông báo", "Sản phẩm này hiện đang tạm ngưng kinh doanh.");
+                            }
+                          }}
+                          onMouseEnter={(e) => {
+                            const video = e.currentTarget.querySelector("video");
+                            if (video) video.play().catch(() => {});
+                          }}
+                          onMouseLeave={(e) => {
+                            const video = e.currentTarget.querySelector("video");
+                            if (video) {
+                              video.pause();
+                              video.currentTime = 0;
+                            }
+                          }}
+                          className="relative w-full aspect-square rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100"
+                        >
+                          {product.thumbnailUrl ? (
+                            isVideoUrl(product.thumbnailUrl) ? (
+                              <video 
+                                src={product.thumbnailUrl} 
+                                muted 
+                                loop 
+                                playsInline 
+                                preload="metadata"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              />
+                            ) : (
+                              <img src={product.thumbnailUrl} alt={product.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            )
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-300">
+                              <Package className="h-10 w-10" />
+                            </div>
+                          )}
+                          {product.status !== "ACTIVE" && (
+                            <div className="absolute top-2.5 left-2.5 bg-zinc-700/80 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              Tạm ngưng
+                            </div>
+                          )}
+                          {hasDiscount && discountPercent > 0 && (
+                            <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-lg shadow-md z-10">
+                              -{discountPercent}%
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          {creatorMap[product.creatorId] && (
+                            <div className="flex items-center gap-1.5 mb-2 shrink-0">
+                              <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-200/60 overflow-hidden flex items-center justify-center shrink-0">
+                                {creatorMap[product.creatorId].avatarUrl ? (
+                                  <img src={creatorMap[product.creatorId].avatarUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-[8px] font-bold text-brand-600 uppercase">
+                                    {creatorMap[product.creatorId].username.charAt(0)}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-zinc-500 truncate">
+                                {creatorMap[product.creatorId].fullName || creatorMap[product.creatorId].username}
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-semibold">{product.categoryName || "Danh mục"}</span>
+                          <h4 className="text-xs font-bold text-zinc-900 mt-1 group-hover:text-brand-500 transition-colors line-clamp-2 leading-snug">
+                            {product.name}
+                          </h4>
+                          <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100">
+                            <div>
+                              <span className="text-[9px] text-zinc-400 font-light block mb-0.5">Giá từ</span>
+                              <div className="flex flex-col gap-0.5">
+                                <span className={`text-xs font-bold ${hasDiscount && discountPercent > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>
+                                  {hasRange ? (
+                                    <>{new Intl.NumberFormat("vi-VN").format(min)}đ – {new Intl.NumberFormat("vi-VN").format(max)}đ</>
+                                  ) : (
+                                    <>{new Intl.NumberFormat("vi-VN").format(min)}đ</>
+                                  )}
+                                </span>
+                                {hasDiscount && discountPercent > 0 && (
+                                  <span className="text-[9px] text-zinc-400 line-through font-light">
+                                    {hasOriginalRange ? (
+                                      <>{new Intl.NumberFormat("vi-VN").format(originalMin)}đ – {new Intl.NumberFormat("vi-VN").format(originalMax)}đ</>
+                                    ) : (
+                                      <>{new Intl.NumberFormat("vi-VN").format(originalMin)}đ</>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex h-8 items-center gap-0.5 bg-brand-50 group-hover:bg-brand-500 group-hover:text-white text-brand-700 rounded-full px-3 text-[10px] font-semibold transition-all duration-300">
+                              Chi tiết <ChevronRight className="h-3 w-3" />
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoadingProducts}
+                    className="px-4 py-2 border border-zinc-200 hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-medium text-zinc-700 transition-colors">
+                    Trước
+                  </button>
+                  {(() => {
+                    const maxVis = 7;
+                    const pgs: (number | "...")[] = [];
+                    if (totalPages <= maxVis) { for (let i = 0; i < totalPages; i++) pgs.push(i); }
+                    else {
+                      pgs.push(0);
+                      const s = Math.max(1, page - 1), e = Math.min(totalPages - 2, page + 1);
+                      if (s > 1) pgs.push("...");
+                      for (let i = s; i <= e; i++) pgs.push(i);
+                      if (e < totalPages - 2) pgs.push("...");
+                      pgs.push(totalPages - 1);
+                    }
+                    return pgs.map((p, idx) => p === "..." ? (
+                      <span key={`e-${idx}`} className="h-8 w-8 flex items-center justify-center text-xs text-zinc-400">...</span>
                     ) : (
-                      <span className="flex items-center justify-center gap-1"><UserPlus className="h-3 w-3" />Theo dõi</span>
-                    )}
+                      <button key={p} onClick={() => setPage(p as number)}
+                        className={`h-8 w-8 rounded-xl text-xs font-semibold transition-all ${page === p ? "bg-brand-500 text-white shadow-md shadow-brand-500/15" : "border border-zinc-200 hover:bg-zinc-100 text-zinc-700"}`}>
+                        {(p as number) + 1}
+                      </button>
+                    ));
+                  })()}
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1 || isLoadingProducts}
+                    className="px-4 py-2 border border-zinc-200 hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-medium text-zinc-700 transition-colors">
+                    Sau
                   </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </main>
           </div>
-        )}
-        <div className="flex flex-col lg:flex-row gap-8">
-          <aside className={`${isFilterVisible ? "lg:block" : "lg:hidden"} hidden w-60 shrink-0 bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm h-fit sticky top-24`}>
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-5">
-              <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Filter className="h-3.5 w-3.5 text-brand-500" /> Bộ lọc
-              </h3>
-              <button onClick={handleResetFilters} className="text-[10px] text-zinc-400 hover:text-brand-500 font-semibold transition-colors">Xóa tất cả</button>
-            </div>
-            <div className="mb-5">
-              <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Danh mục</h4>
-              <div className="space-y-0.5 max-h-56 overflow-y-auto custom-scrollbar">
-                <button
-                  onClick={() => { setSelectedCategory(""); setPage(0); const p = new URLSearchParams(); if (searchVal) p.set("q", searchVal); router.push(`${ROUTES.PRODUCTS}?${p.toString()}`); }}
-                  className={`w-full text-left py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-between ${!selectedCategory ? "bg-brand-500 text-white font-semibold" : "text-zinc-600 hover:bg-zinc-100"}`}>
-                  <span>Tất cả</span>
-                  {!selectedCategory && <Sparkles className="h-3 w-3" />}
-                </button>
-                {renderCategoryOptions(categories)}
-              </div>
-            </div>
-            <div className="mb-5">
-              <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Khoảng giá</h4>
-              <div className="flex gap-2 items-center">
-                <input type="number" placeholder="Từ" value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full h-9 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:border-brand-500" />
-                <span className="text-zinc-300">—</span>
-                <input type="number" placeholder="Đến" value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full h-9 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:border-brand-500" />
-              </div>
-            </div>
-            <div>
-              <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Sắp xếp</h4>
-              <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(0); }}
-                className="w-full h-9 px-2.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-brand-500">
-                <option value="relevance">Liên quan nhất</option>
-                <option value="price_asc">Giá tăng dần</option>
-                <option value="price_desc">Giá giảm dần</option>
-                <option value="newest">Mới nhất</option>
-              </select>
-            </div>
-          </aside>
-          <main className="flex-1 flex flex-col">
-            <div className="lg:hidden flex items-center justify-between bg-white border border-zinc-200/60 p-3 rounded-2xl mb-5">
-              <button onClick={() => setIsFilterMobileOpen(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-brand-500" /> Bộ lọc
-              </button>
-              <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(0); }}
-                className="h-9 px-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-700 focus:outline-none">
-                <option value="relevance">Liên quan</option>
-                <option value="price_asc">Giá ↑</option>
-                <option value="price_desc">Giá ↓</option>
-                <option value="newest">Mới nhất</option>
-              </select>
-            </div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-brand-50 border border-brand-100 flex items-center justify-center">
-                  <Package className="h-3.5 w-3.5 text-brand-500" />
-                </div>
-                <h2 className="text-sm font-bold text-zinc-900">Sản phẩm</h2>
-                {!isLoadingProducts && (
-                  <span className="text-[10px] text-zinc-400 font-light">({totalProducts} kết quả)</span>
-                )}
-              </div>
-              <button 
-                onClick={() => setIsFilterVisible(!isFilterVisible)}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-800 text-[10px] font-bold transition-all shadow-sm active:scale-95"
-              >
-                <SlidersHorizontal className="h-3 w-3 text-brand-500" />
-                {isFilterVisible ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
-              </button>
-            </div>
-            {isLoadingProducts ? (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 min-h-[400px] ${isFilterVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
-                {Array.from({ length: 6 }).map((_, idx) => (
-                  <div key={idx} className="bg-white rounded-2xl border border-zinc-200/40 p-4 shadow-sm animate-pulse flex flex-col h-[340px]">
-                    <div className="w-full h-[180px] bg-zinc-100 rounded-xl mb-3" />
-                    <div className="h-3 bg-zinc-100 rounded w-1/3 mb-2" />
-                    <div className="h-4 bg-zinc-100 rounded w-3/4 mb-2" />
-                    <div className="h-3 bg-zinc-100 rounded w-full mb-auto" />
-                    <div className="h-8 bg-zinc-100 rounded-xl w-full mt-3" />
+        ) : (
+          <div className="w-full">
+            {isLoadingCreators ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 py-4 animate-fade-in">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={idx} className="bg-white rounded-2xl border border-zinc-200/40 p-5 shadow-sm animate-pulse h-60 flex flex-col items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-zinc-100 mb-4" />
+                    <div className="h-3.5 w-24 bg-zinc-100 rounded mb-2" />
+                    <div className="h-3 w-16 bg-zinc-100 rounded mb-4" />
+                    <div className="h-8 w-full bg-zinc-100 rounded-xl" />
                   </div>
                 ))}
               </div>
-
-            ) : products.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-zinc-200/50 text-center px-6">
-                <div className="h-14 w-14 bg-zinc-50 text-zinc-400 rounded-2xl flex items-center justify-center mb-4 border border-zinc-200/60">
-                  <Package className="h-7 w-7" />
+            ) : creators.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200/50 shadow-sm max-w-2xl mx-auto my-8 animate-fade-in">
+                <div className="h-14 w-14 rounded-2xl bg-zinc-50 border flex items-center justify-center text-zinc-400 mx-auto mb-4">
+                  <Users className="h-7 w-7 text-zinc-400" />
                 </div>
-                <h3 className="text-sm font-bold text-zinc-800">Không tìm thấy sản phẩm</h3>
-                <p className="text-xs text-zinc-400 mt-1 max-w-xs leading-relaxed font-light">
-                  Không có kết quả nào khớp với từ khóa hoặc bộ lọc. Hãy thử lại hoặc tham khảo xu hướng bên dưới.
+                <h4 className="text-sm font-bold text-zinc-800">Không tìm thấy Creator nào</h4>
+                <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed font-light">
+                  Hãy thử tìm bằng từ khóa khác hoặc kiểm tra lại tên tài khoản.
                 </p>
-                {trendingKeywords.length > 0 && (
-                  <div className="mt-6">
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block mb-2.5">Có thể bạn quan tâm</span>
-                    <div className="flex flex-wrap gap-1.5 justify-center">
-                      {trendingKeywords.slice(0, 5).map((item, idx) => (
-                        <button key={idx}
-                          onClick={() => { setSearchVal(item); handleSearchSubmit(undefined, item); }}
-                          className="px-3 py-1.5 rounded-full bg-zinc-50 hover:bg-brand-50 border border-zinc-200 text-[10px] text-zinc-700 font-semibold transition-colors">
-                          {item}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-
             ) : (
-              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3.5 ${isFilterVisible ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
-                {products.map(product => {
-                  const min = product.minPrice || 0;
-                  const max = product.maxPrice || 0;
-                  const hasRange = max > min;
-
-                  const originalMin = product.minOriginalPrice || min;
-                  const originalMax = product.maxOriginalPrice || max;
-                  const hasOriginalRange = originalMax > originalMin;
-                  const hasDiscount = originalMin > min || originalMax > max;
-                  const discountPercent = originalMax > 0 ? Math.round(((originalMax - max) / originalMax) * 100) : 0;
-
-                  return (
-                    <Link href={ROUTES.PRODUCT_DETAILS(product.id)} key={product.id}
-                      className="group bg-white rounded-2xl border border-zinc-200/50 p-3 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden">
-                      <div 
-                        onMouseEnter={(e) => {
-                          const video = e.currentTarget.querySelector("video");
-                          if (video) video.play().catch(() => {});
-                        }}
-                        onMouseLeave={(e) => {
-                          const video = e.currentTarget.querySelector("video");
-                          if (video) {
-                            video.pause();
-                            video.currentTime = 0;
-                          }
-                        }}
-                        className="relative w-full aspect-square rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100"
-                      >
-                        {product.thumbnailUrl ? (
-                          isVideoUrl(product.thumbnailUrl) ? (
-                            <video 
-                              src={product.thumbnailUrl} 
-                              muted 
-                              loop 
-                              playsInline 
-                              preload="metadata"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                          ) : (
-                            <img src={product.thumbnailUrl} alt={product.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          )
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-300">
-                            <Package className="h-10 w-10" />
-                          </div>
-                        )}
-                        {product.status !== "ACTIVE" && (
-                          <div className="absolute top-2.5 left-2.5 bg-zinc-700/80 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                            Tạm ngưng
-                          </div>
-                        )}
-                        {hasDiscount && discountPercent > 0 && (
-                          <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-lg shadow-md z-10">
-                            -{discountPercent}%
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 flex flex-col">
-                        {creatorMap[product.creatorId] && (
-                          <div className="flex items-center gap-1.5 mb-2 shrink-0">
-                            <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-200/60 overflow-hidden flex items-center justify-center shrink-0">
-                              {creatorMap[product.creatorId].avatarUrl ? (
-                                <img src={creatorMap[product.creatorId].avatarUrl} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-[8px] font-bold text-brand-600 uppercase">
-                                  {creatorMap[product.creatorId].username.charAt(0)}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-bold text-zinc-500 truncate">
-                              {creatorMap[product.creatorId].fullName || creatorMap[product.creatorId].username}
-                            </span>
-                          </div>
-                        )}
-                        <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-semibold">{product.categoryName || "Danh mục"}</span>
-                        <h4 className="text-xs font-bold text-zinc-900 mt-1 group-hover:text-brand-500 transition-colors line-clamp-2 leading-snug">
-                          {product.name}
-                        </h4>
-                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100">
-                          <div>
-                            <span className="text-[9px] text-zinc-400 font-light block mb-0.5">Giá từ</span>
-                            <div className="flex flex-col gap-0.5">
-                              <span className={`text-xs font-bold ${hasDiscount && discountPercent > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>
-                                {hasRange ? (
-                                  <>{new Intl.NumberFormat("vi-VN").format(min)}đ – {new Intl.NumberFormat("vi-VN").format(max)}đ</>
-                                ) : (
-                                  <>{new Intl.NumberFormat("vi-VN").format(min)}đ</>
-                                )}
-                              </span>
-                              {hasDiscount && discountPercent > 0 && (
-                                <span className="text-[9px] text-zinc-400 line-through font-light">
-                                  {hasOriginalRange ? (
-                                    <>{new Intl.NumberFormat("vi-VN").format(originalMin)}đ – {new Intl.NumberFormat("vi-VN").format(originalMax)}đ</>
-                                  ) : (
-                                    <>{new Intl.NumberFormat("vi-VN").format(originalMin)}đ</>
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex h-8 items-center gap-0.5 bg-brand-50 group-hover:bg-brand-500 group-hover:text-white text-brand-700 rounded-full px-3 text-[10px] font-semibold transition-all duration-300">
-                            Chi tiết <ChevronRight className="h-3 w-3" />
-                          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 py-4 animate-fade-in">
+                {creators.map(creator => (
+                  <div key={creator.id}
+                    className="group bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm hover:shadow-lg hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center text-center">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-brand-100 group-hover:border-brand-300 transition-colors bg-zinc-50">
+                      {creator.avatarUrl ? (
+                        <img src={creator.avatarUrl} alt={creator.fullName || creator.username} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-brand-500 font-black text-lg uppercase bg-brand-50">
+                          {creator.username.charAt(0)}
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoadingProducts}
-                  className="px-4 py-2 border border-zinc-200 hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-medium text-zinc-700 transition-colors">
-                  Trước
-                </button>
-                {(() => {
-                  const maxVis = 7;
-                  const pgs: (number | "...")[] = [];
-                  if (totalPages <= maxVis) { for (let i = 0; i < totalPages; i++) pgs.push(i); }
-                  else {
-                    pgs.push(0);
-                    const s = Math.max(1, page - 1), e = Math.min(totalPages - 2, page + 1);
-                    if (s > 1) pgs.push("...");
-                    for (let i = s; i <= e; i++) pgs.push(i);
-                    if (e < totalPages - 2) pgs.push("...");
-                    pgs.push(totalPages - 1);
-                  }
-                  return pgs.map((p, idx) => p === "..." ? (
-                    <span key={`e-${idx}`} className="h-8 w-8 flex items-center justify-center text-xs text-zinc-400">...</span>
-                  ) : (
-                    <button key={p} onClick={() => setPage(p as number)}
-                      className={`h-8 w-8 rounded-xl text-xs font-semibold transition-all ${page === p ? "bg-brand-500 text-white shadow-md shadow-brand-500/15" : "border border-zinc-200 hover:bg-zinc-100 text-zinc-700"}`}>
-                      {(p as number) + 1}
+                      )}
+                    </div>
+
+                    <h4 className="text-xs font-bold text-zinc-900 group-hover:text-brand-500 transition-colors line-clamp-1 leading-snug">
+                      {creator.fullName || "Creator VibeCart"}
+                    </h4>
+                    <span className="text-[10px] text-zinc-400 font-medium mt-0.5">@{creator.username}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-100 px-2.5 py-0.5 text-[9px] font-bold text-brand-600 uppercase tracking-wider mt-2.5">
+                      <Sparkles className="h-2.5 w-2.5" /> Creator
+                    </span>
+                    <p className="text-[10px] text-zinc-400 font-light mt-2">
+                      <span className="font-bold text-zinc-700">{(creator.followerCount || 0).toLocaleString("vi-VN")}</span> người theo dõi
+                    </p>
+                    <button onClick={() => handleFollowToggle(creator.id)}
+                      className={`w-full h-8 rounded-xl text-[10px] uppercase font-bold tracking-wider mt-4 transition-all duration-300 ${
+                        creator.isFollowing
+                          ? "bg-zinc-100 hover:bg-zinc-200 text-zinc-600"
+                          : "bg-brand-500 hover:bg-brand-600 text-white shadow-sm shadow-brand-500/15 active:scale-95"
+                      }`}>
+                      {creator.isFollowing ? (
+                        <span className="flex items-center justify-center gap-1"><UserCheck className="h-3 w-3" />Đang theo dõi</span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-1"><UserPlus className="h-3 w-3" />Theo dõi</span>
+                      )}
                     </button>
-                  ));
-                })()}
-                <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1 || isLoadingProducts}
-                  className="px-4 py-2 border border-zinc-200 hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none rounded-xl text-xs font-medium text-zinc-700 transition-colors">
-                  Sau
-                </button>
+                  </div>
+                ))}
               </div>
             )}
-          </main>
-        </div>
+          </div>
+        )}
       </div>
       {isFilterMobileOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden animate-fade-in">
@@ -816,5 +870,17 @@ export default function ShopPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-zinc-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-brand-500" />
+      </div>
+    }>
+      <ShopContent />
+    </Suspense>
   );
 }
