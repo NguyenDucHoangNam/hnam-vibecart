@@ -12,7 +12,8 @@ import {
   Info,
   User,
   ArrowRight,
-  Loader2
+  Loader2,
+  Play
 } from "lucide-react";
 import { productService } from "@/services/product.service";
 import { userService } from "@/services/user.service";
@@ -20,6 +21,17 @@ import { Product, ProductVariant } from "@/types";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
 import { ROUTES } from "@/constants/routes";
+
+const isVideoUrl = (url: string): boolean => {
+  if (!url) return false;
+  const cleanUrl = url.toLowerCase().split('?')[0];
+  return cleanUrl.endsWith('.mp4') || 
+         cleanUrl.endsWith('.webm') || 
+         cleanUrl.endsWith('.ogg') || 
+         cleanUrl.endsWith('.mov') || 
+         cleanUrl.endsWith('.mkv') ||
+         url.includes('video/');
+};
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -144,11 +156,19 @@ export default function ProductDetailsPage() {
           <div className="flex flex-col gap-4.5">
             <div className="relative w-full aspect-[4/3] rounded-[2rem] overflow-hidden bg-zinc-50 border border-zinc-200/50">
               {selectedImage ? (
-                <img
-                  src={selectedImage}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+                isVideoUrl(selectedImage) ? (
+                  <video 
+                    src={selectedImage} 
+                    controls 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src={selectedImage}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                  />
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-zinc-300">
                   <Package className="h-16 w-16" />
@@ -175,7 +195,16 @@ export default function ProductDetailsPage() {
                           : "border-zinc-200/70 hover:border-zinc-400"
                       }`}
                     >
-                      <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
+                      {isVideoUrl(img.imageUrl) ? (
+                        <div className="relative w-full h-full">
+                          <video src={img.imageUrl} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                            <Play className="h-4 w-4 text-white fill-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
+                      )}
                     </button>
                   ))}
               </div>

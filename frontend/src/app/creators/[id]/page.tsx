@@ -29,6 +29,17 @@ import { productService } from "@/services/product.service";
 import { Post, Product } from "@/types";
 import { ROUTES } from "@/constants/routes";
 
+const isVideoUrl = (url: string): boolean => {
+  if (!url) return false;
+  const cleanUrl = url.toLowerCase().split('?')[0];
+  return cleanUrl.endsWith('.mp4') || 
+         cleanUrl.endsWith('.webm') || 
+         cleanUrl.endsWith('.ogg') || 
+         cleanUrl.endsWith('.mov') || 
+         cleanUrl.endsWith('.mkv') ||
+         url.includes('video/');
+};
+
 export default function CreatorProfilePage() {
   const params = useParams();
   const router = useRouter();
@@ -39,7 +50,7 @@ export default function CreatorProfilePage() {
   const toast = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"posts" | "products" | "about">("posts");
+  const [activeTab, setActiveTab] = useState<"posts" | "products">("posts");
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -50,6 +61,7 @@ export default function CreatorProfilePage() {
   const [creatorFullName, setCreatorFullName] = useState("");
   const [creatorAvatar, setCreatorAvatar] = useState("");
   const [creatorJoinDate, setCreatorJoinDate] = useState("");
+
   const loadProfileData = useCallback(async () => {
     setLoading(true);
     try {
@@ -109,6 +121,7 @@ export default function CreatorProfilePage() {
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);
+
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để theo dõi nhà sáng tạo này!");
@@ -130,10 +143,12 @@ export default function CreatorProfilePage() {
       toast.error("Lỗi thao tác", err?.message || "Không thể gửi yêu cầu lên máy chủ.");
     }
   };
+
   const handleShareProfile = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success("Sao chép thành công", "Liên kết hồ sơ đã được lưu vào bộ nhớ tạm.");
   };
+
   const handleLikeToggle = async (postId: string) => {
     if (!isAuthenticated) {
       toast.warning("Yêu cầu đăng nhập", "Bạn cần đăng nhập để thích bài viết.");
@@ -167,6 +182,7 @@ export default function CreatorProfilePage() {
       toast.error("Lỗi tương tác", "Không thể cập nhật lượt thích bài viết.");
     }
   };
+
   const handleAddProductToCart = async (product: Product) => {
     if (!product.variants || product.variants.length === 0) {
       toast.warning("Sản phẩm chưa có biến thể", "Không thể thêm sản phẩm này vào giỏ hàng.");
@@ -247,6 +263,17 @@ export default function CreatorProfilePage() {
                   : "Thành viên VibeCart"
                 }
               </div>
+              <div className="flex items-center gap-5 mt-2.5 justify-center sm:justify-start text-xs text-zinc-500 font-medium">
+                <div>
+                  <span className="font-extrabold text-zinc-900 mr-1">{posts.length}</span> bài viết
+                </div>
+                <div>
+                  <span className="font-extrabold text-zinc-900 mr-1">{followerCount.toLocaleString("vi-VN")}</span> người theo dõi
+                </div>
+                <div>
+                  <span className="font-extrabold text-zinc-900 mr-1">{followingCount.toLocaleString("vi-VN")}</span> đang theo dõi
+                </div>
+              </div>
             </div>
           </div>
           {isAuthenticated && user?.id !== creatorId ? (
@@ -300,74 +327,33 @@ export default function CreatorProfilePage() {
           )}
         </div>
       </div>
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { label: "Bài viết", value: posts.length, icon: FileText },
-            { label: "Người theo dõi", value: followerCount, icon: Users },
-            { label: "Đang theo dõi", value: followingCount, icon: UserPlus }
-          ].map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <div 
-                key={idx} 
-                className="bg-white border border-zinc-150 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3.5 shadow-sm hover:border-brand-100 transition-colors"
-              >
-                <div className="h-10 w-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <span className="text-lg sm:text-2xl font-black text-zinc-800 tracking-tight block leading-none">
-                    {stat.value.toLocaleString("vi-VN")}
-                  </span>
-                  <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-1 block">
-                    {stat.label}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-3 flex flex-col gap-2 bg-white border border-zinc-150 p-3 rounded-2xl shadow-sm">
+
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="flex border-b border-zinc-200 mb-6 gap-8">
           <button
             onClick={() => setActiveTab("posts")}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left ${
+            className={`pb-3 text-sm font-extrabold relative transition-colors ${
               activeTab === "posts"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-zinc-600 hover:bg-zinc-50"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-500"
+                : "text-zinc-500 hover:text-zinc-800"
             }`}
           >
-            <Grid className="h-4 w-4" />
             Tất cả bài viết ({posts.length})
           </button>
           
           <button
             onClick={() => setActiveTab("products")}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left ${
+            className={`pb-3 text-sm font-extrabold relative transition-colors ${
               activeTab === "products"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-zinc-600 hover:bg-zinc-50"
+                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-500"
+                : "text-zinc-500 hover:text-zinc-800"
             }`}
           >
-            <ShoppingBag className="h-4 w-4" />
             Tất cả sản phẩm ({products.length})
           </button>
-
-          <button
-            onClick={() => setActiveTab("about")}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-bold transition-all text-left ${
-              activeTab === "about"
-                ? "bg-brand-500 text-white shadow-sm"
-                : "text-zinc-600 hover:bg-zinc-50"
-            }`}
-          >
-            <Info className="h-4 w-4" />
-            Giới thiệu Creator
-          </button>
         </div>
-        <div className="lg:col-span-9 flex flex-col gap-6">
+
+        <div className="w-full flex flex-col gap-6">
           {activeTab === "posts" ? (
             <>
               {posts.length === 0 ? (
@@ -391,102 +377,8 @@ export default function CreatorProfilePage() {
                   ))}
                 </div>
               )}
-              <div className="mt-8 pt-8 border-t border-zinc-200/60 flex flex-col gap-6">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-9 w-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center flex-shrink-0">
-                    <ShoppingBag className="h-4.5 w-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-zinc-800 uppercase tracking-wider">
-                      Sản phẩm của nhà sáng tạo ({products.length})
-                    </h3>
-                    <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
-                      Danh sách toàn bộ sản phẩm do Creator này đăng bán
-                    </p>
-                  </div>
-                </div>
-
-                {productsLoading ? (
-                  <div className="rounded-3xl bg-white border border-zinc-150 p-12 text-center flex flex-col items-center shadow-sm justify-center gap-3">
-                    <Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
-                    <p className="text-xs text-zinc-500 font-light">Đang tải danh sách sản phẩm...</p>
-                  </div>
-                ) : products.length === 0 ? (
-                  <div className="rounded-3xl bg-white border border-zinc-150 p-12 text-center flex flex-col items-center shadow-sm">
-                    <div className="h-12 w-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 mb-3">
-                      <ShoppingBag className="h-5 w-5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-zinc-700">Chưa có sản phẩm nào</h4>
-                    <p className="text-xs text-zinc-400 mt-0.5">Nhà sáng tạo này chưa đăng bán sản phẩm nào.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-toast-in">
-                    {products.map((product) => {
-                      const activeVariants = product.variants?.filter((v: any) => v.status === "ACTIVE") || [];
-                      const prices = activeVariants.map((v: any) => {
-                        const dp = v.discountPrice;
-                        return (dp && dp > 0 && dp < v.price) ? dp : v.price;
-                      }).filter((p: number) => p > 0);
-
-                      const minPrice_ = prices.length > 0 ? Math.min(...prices) : 0;
-                      const maxPrice_ = prices.length > 0 ? Math.max(...prices) : 0;
-                      const hasRange = minPrice_ !== maxPrice_ && maxPrice_ > 0;
-
-                      const thumbnail = product.images?.find((img) => img.isThumbnail)?.imageUrl || product.images?.[0]?.imageUrl || "";
-
-                      return (
-                        <Link
-                          href={ROUTES.PRODUCT_DETAILS(product.id)}
-                          key={product.id}
-                          className="group bg-white rounded-3xl border border-zinc-200/50 p-4 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-1 transition-all duration-300 flex flex-col h-full overflow-hidden cursor-pointer"
-                        >
-                          <div className="relative w-full h-[180px] rounded-2xl overflow-hidden bg-zinc-50 mb-4 border border-zinc-100">
-                            {thumbnail ? (
-                              <img
-                                src={thumbnail}
-                                alt={product.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-zinc-300">
-                                <ShoppingBag className="h-10 w-10" />
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex flex-col flex-1 min-w-0 px-1">
-                            <span className="text-[10px] font-semibold text-brand-600 uppercase tracking-widest mb-1.5 block">
-                              {product.categoryName || "Danh mục"}
-                            </span>
-                            <h4 className="text-sm font-extrabold text-zinc-800 line-clamp-1 group-hover:text-brand-650 transition-colors">
-                              {product.name}
-                            </h4>
-                            <p className="text-xs text-zinc-400 mt-1 line-clamp-2 font-light leading-relaxed">
-                              {product.description || "Chưa cập nhật mô tả..."}
-                            </p>
-
-                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-100">
-                              <div className="flex flex-col">
-                                {hasRange ? (
-                                  <span className="text-xs font-bold text-zinc-950">
-                                    {minPrice_.toLocaleString("vi-VN")}đ - {maxPrice_.toLocaleString("vi-VN")}đ
-                                  </span>
-                                ) : (
-                                  <span className="text-xs font-bold text-zinc-950">
-                                    {(minPrice_ || 0).toLocaleString("vi-VN")}đ
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </>
-          ) : activeTab === "products" ? (
+          ) : (
             productsLoading ? (
               <div className="rounded-3xl bg-white border border-zinc-150 p-12 text-center flex flex-col items-center shadow-sm justify-center gap-3">
                 <Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
@@ -521,13 +413,37 @@ export default function CreatorProfilePage() {
                       key={product.id}
                       className="group bg-white rounded-3xl border border-zinc-200/50 p-4 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-1 transition-all duration-300 flex flex-col h-full overflow-hidden cursor-pointer"
                     >
-                      <div className="relative w-full h-[180px] rounded-2xl overflow-hidden bg-zinc-50 mb-4 border border-zinc-100">
+                      <div 
+                        onMouseEnter={(e) => {
+                          const video = e.currentTarget.querySelector("video");
+                          if (video) video.play().catch(() => {});
+                        }}
+                        onMouseLeave={(e) => {
+                          const video = e.currentTarget.querySelector("video");
+                          if (video) {
+                            video.pause();
+                            video.currentTime = 0;
+                          }
+                        }}
+                        className="relative w-full h-[180px] rounded-2xl overflow-hidden bg-zinc-50 mb-4 border border-zinc-100"
+                      >
                         {thumbnail ? (
-                          <img
-                            src={thumbnail}
-                            alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
+                          isVideoUrl(thumbnail) ? (
+                            <video 
+                              src={thumbnail} 
+                              muted 
+                              loop 
+                              playsInline 
+                              preload="metadata"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <img
+                              src={thumbnail}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          )
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-zinc-300">
                             <ShoppingBag className="h-10 w-10" />
@@ -565,22 +481,6 @@ export default function CreatorProfilePage() {
                 })}
               </div>
             )
-          ) : (
-            <div className="bg-white border border-zinc-150 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col gap-5">
-              <h3 className="text-base font-extrabold text-zinc-850 pb-3 border-b border-zinc-100 flex items-center gap-2">
-                <Info className="h-5 w-5 text-brand-500" />
-                Hồ sơ thông tin Nhà sáng tạo
-              </h3>
-              
-              <div className="flex flex-col gap-4 text-sm text-zinc-650 leading-relaxed font-light">
-                <p>
-                  Xin chào! Tôi là <strong>@{finalName}</strong>. Một nhà sáng tạo đam mê và chuyên nghiệp, chuyên chia sẻ và đánh giá các giải pháp công nghệ đỉnh cao, tai nghe, thiết bị thông minh trên VibeCart.
-                </p>
-                <p>
-                  Mục tiêu của tôi là hỗ trợ cộng đồng VibeCart khám phá các dòng sản phẩm chất lượng cao với giá ưu đãi cực hấp dẫn. Hãy kết nối và theo dõi các bài viết để mua sắm chuẩn xác cùng nhận nhiều ưu đãi nhé!
-                </p>
-              </div>
-            </div>
           )}
         </div>
  
@@ -589,6 +489,7 @@ export default function CreatorProfilePage() {
     </div>
   );
 }
+
 interface PostCardMiniProps {
   post: Post;
   isAuthenticated: boolean;

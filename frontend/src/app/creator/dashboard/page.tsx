@@ -44,6 +44,17 @@ const formatNumberInputString = (val: string) => {
   return Number(clean).toLocaleString("vi-VN");
 };
 
+const isVideoUrl = (url: string): boolean => {
+  if (!url) return false;
+  const cleanUrl = url.toLowerCase().split('?')[0];
+  return cleanUrl.endsWith('.mp4') || 
+         cleanUrl.endsWith('.webm') || 
+         cleanUrl.endsWith('.ogg') || 
+         cleanUrl.endsWith('.mov') || 
+         cleanUrl.endsWith('.mkv') ||
+         url.includes('video/');
+};
+
 export default function CreatorDashboard() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const toast = useToast();
@@ -174,8 +185,12 @@ export default function CreatorDashboard() {
   const handleSpuImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Tải ảnh thất bại", "Kích thước ảnh vượt quá giới hạn cho phép (5MB).");
+    const isVideo = file.type.startsWith("video/");
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxSizeStr = isVideo ? "50MB" : "5MB";
+
+    if (file.size > maxSize) {
+      toast.error("Tải tệp thất bại", `Kích thước ${isVideo ? "video" : "ảnh"} vượt quá giới hạn cho phép (${maxSizeStr}).`);
       return;
     }
 
@@ -187,10 +202,10 @@ export default function CreatorDashboard() {
     try {
       const result = await uploadFilePresigned({ file, folder: "products" });
       setProductForm(prev => ({ ...prev, imageUrl: result.url }));
-      toast.success("Tải ảnh thành công", "Ảnh đại diện sản phẩm đã được cập nhật.");
+      toast.success("Tải tệp thành công", `${isVideo ? "Video" : "Ảnh"} đại diện sản phẩm đã được cập nhật.`);
     } catch (err: any) {
       console.error("SPU image upload error:", err);
-      toast.error("Tải ảnh thất bại", err.data?.message || err.message || "Không thể tải ảnh lên máy chủ.");
+      toast.error("Tải tệp thất bại", err.data?.message || err.message || "Không thể tải tệp lên máy chủ.");
     } finally {
       setIsUploadingImage(false);
     }
@@ -208,8 +223,11 @@ export default function CreatorDashboard() {
 
     const fileList = Array.from(files);
     for (const file of fileList) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Tải ảnh thất bại", `Ảnh "${file.name}" vượt quá kích thước cho phép (5MB).`);
+      const isVideo = file.type.startsWith("video/");
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+      const maxSizeStr = isVideo ? "50MB" : "5MB";
+      if (file.size > maxSize) {
+        toast.error("Tải tệp thất bại", `Tệp "${file.name}" (${isVideo ? "video" : "ảnh"}) vượt quá kích thước cho phép (${maxSizeStr}).`);
         return;
       }
     }
@@ -220,7 +238,7 @@ export default function CreatorDashboard() {
       const results = await uploadFilesPresigned(fileList, "products");
       const newUrls = results.map(item => item.url);
       setGalleryImages(prev => [...prev, ...newUrls]);
-      toast.success("Tải ảnh thành công", `Đã tải lên thêm ${newUrls.length} ảnh chi tiết.`);
+      toast.success("Tải tệp thành công", `Đã tải lên thêm ${newUrls.length} tệp chi tiết.`);
     } catch (err: any) {
       console.error("Batch image upload error:", err);
       toast.error("Tải ảnh thất bại", err.data?.message || err.message || "Không thể tải các ảnh chi tiết lên máy chủ.");
@@ -555,8 +573,36 @@ export default function CreatorDashboard() {
                       return (
                         <tr key={p.id} className="hover:bg-zinc-50/30 transition-colors">
                           <td className="px-5 py-3.5 flex items-center gap-3">
-                            <div className="w-10 h-10 bg-zinc-50 rounded-lg overflow-hidden border shrink-0">
-                              <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+                            <div 
+                              onMouseEnter={(e) => {
+                                const video = e.currentTarget.querySelector("video");
+                                if (video) video.play().catch(() => {});
+                              }}
+                              onMouseLeave={(e) => {
+                                const video = e.currentTarget.querySelector("video");
+                                if (video) {
+                                  video.pause();
+                                  video.currentTime = 0;
+                                }
+                              }}
+                              className="w-10 h-10 bg-zinc-50 rounded-lg overflow-hidden border shrink-0 flex items-center justify-center"
+                            >
+                              {thumbnail ? (
+                                isVideoUrl(thumbnail) ? (
+                                  <video 
+                                    src={thumbnail} 
+                                    muted 
+                                    loop 
+                                    playsInline 
+                                    preload="metadata"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+                                )
+                              ) : (
+                                <Package className="h-5 w-5 text-zinc-300" />
+                              )}
                             </div>
                             <span className="font-bold text-zinc-900 truncate max-w-xs">{p.name}</span>
                           </td>
@@ -1018,36 +1064,44 @@ export default function CreatorDashboard() {
                   type="file"
                   ref={spuImageInputRef}
                   onChange={handleSpuImageChange}
-                  accept="image/*"
+                  accept="image/*,video/*"
                   className="hidden"
                 />
 
                 {isUploadingImage ? (
                   <div className="w-full h-32 rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center">
                     <Loader2 className="h-6 w-6 text-brand-500 animate-spin mb-2" />
-                    <span className="text-xs text-zinc-500">Đang tải ảnh lên hệ thống...</span>
+                    <span className="text-xs text-zinc-500">Đang tải tệp lên hệ thống...</span>
                   </div>
                 ) : productForm.imageUrl ? (
                   <div className="relative group w-full h-32 rounded-2xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-50">
-                    <img 
-                      src={productForm.imageUrl} 
-                      alt="Thumbnail Preview" 
-                      className="w-full h-full object-cover"
-                    />
+                    {isVideoUrl(productForm.imageUrl) ? (
+                      <video 
+                        src={productForm.imageUrl} 
+                        className="w-full h-full object-cover"
+                        controls
+                      />
+                    ) : (
+                      <img 
+                        src={productForm.imageUrl} 
+                        alt="Thumbnail Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 gap-3">
                       <button
                         type="button"
                         onClick={handleSpuImageClick}
                         className="px-4 py-2 bg-white/95 hover:bg-white text-zinc-800 text-[10px] font-bold rounded-xl shadow active:scale-95 transition-all cursor-pointer"
                       >
-                        Thay ảnh khác
+                        Thay tệp khác
                       </button>
                       <button
                         type="button"
                         onClick={() => setProductForm(prev => ({ ...prev, imageUrl: "" }))}
                         className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded-xl shadow active:scale-95 transition-all cursor-pointer"
                       >
-                        Xóa ảnh
+                        Xóa tệp
                       </button>
                     </div>
                   </div>
@@ -1057,15 +1111,15 @@ export default function CreatorDashboard() {
                     className="w-full h-32 rounded-2xl border-2 border-dashed border-zinc-200 hover:border-brand-300 bg-zinc-50/50 hover:bg-brand-50/10 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 group"
                   >
                     <UploadCloud className="h-7 w-7 text-zinc-400 group-hover:text-brand-500 mb-2 transition-colors" />
-                    <span className="text-xs font-bold text-zinc-700 group-hover:text-brand-600 transition-colors">Tải ảnh đại diện lên</span>
-                    <span className="text-[10px] text-zinc-400 mt-1 font-light">Kéo thả hoặc nhấp để chọn tệp (Tối đa 5MB, định dạng JPG, PNG, WEBP)</span>
+                    <span className="text-xs font-bold text-zinc-700 group-hover:text-brand-600 transition-colors">Tải ảnh/video đại diện lên</span>
+                    <span className="text-[10px] text-zinc-400 mt-1 font-light">Kéo thả hoặc nhấp để chọn tệp (Ảnh dưới 5MB, Video dưới 50MB)</span>
                   </div>
                 )}
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="block text-[10px] font-bold text-zinc-700 uppercase tracking-wider">
-                    Bộ sưu tập ảnh chi tiết sản phẩm {galleryImages.length > 0 && `(${galleryImages.length} ảnh)`}
+                    Bộ sưu tập ảnh/video chi tiết sản phẩm {galleryImages.length > 0 && `(${galleryImages.length} tệp)`}
                   </label>
                   <span className="text-[9px] text-zinc-400 font-light">Không bắt buộc</span>
                 </div>
@@ -1074,7 +1128,7 @@ export default function CreatorDashboard() {
                   type="file"
                   ref={galleryImagesInputRef}
                   onChange={handleGalleryImagesChange}
-                  accept="image/*"
+                  accept="image/*,video/*"
                   multiple
                   className="hidden"
                 />
@@ -1082,17 +1136,25 @@ export default function CreatorDashboard() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {galleryImages.map((url, idx) => (
                     <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-zinc-200 shadow-sm bg-zinc-50">
-                      <img 
-                        src={url} 
-                        alt={`Gallery Preview ${idx + 1}`} 
-                        className="w-full h-full object-cover"
-                      />
+                      {isVideoUrl(url) ? (
+                        <video 
+                          src={url} 
+                          className="w-full h-full object-cover"
+                          controls
+                        />
+                      ) : (
+                        <img 
+                          src={url} 
+                          alt={`Gallery Preview ${idx + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                       <div className="absolute inset-0 bg-black/45 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
                           type="button"
                           onClick={() => handleRemoveGalleryImage(idx)}
                           className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow active:scale-90 transition-all cursor-pointer"
-                          title="Xóa ảnh"
+                          title="Xóa tệp"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -1103,7 +1165,7 @@ export default function CreatorDashboard() {
                   {isUploadingGallery ? (
                     <div className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center p-2 text-center">
                       <Loader2 className="h-5 w-5 text-brand-500 animate-spin mb-1" />
-                      <span className="text-[10px] text-zinc-400">Đang tải ảnh...</span>
+                      <span className="text-[10px] text-zinc-400">Đang tải tệp...</span>
                     </div>
                   ) : (
                     <div 
@@ -1111,7 +1173,7 @@ export default function CreatorDashboard() {
                       className="aspect-square rounded-xl border-2 border-dashed border-zinc-200 hover:border-brand-300 bg-zinc-50/50 hover:bg-brand-50/10 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 group text-center p-2"
                     >
                       <Plus className="h-5 w-5 text-zinc-400 group-hover:text-brand-500 mb-1 transition-colors" />
-                      <span className="text-[10px] font-bold text-zinc-700 group-hover:text-brand-600 transition-colors">Thêm ảnh chi tiết</span>
+                      <span className="text-[10px] font-bold text-zinc-700 group-hover:text-brand-600 transition-colors">Thêm ảnh/video chi tiết</span>
                       <span className="text-[8px] text-zinc-400 mt-0.5 leading-none">Nhiều tệp</span>
                     </div>
                   )}

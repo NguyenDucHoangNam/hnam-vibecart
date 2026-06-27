@@ -84,8 +84,8 @@ export function Header() {
   const navLinks = [
     { label: "Cửa hàng", href: ROUTES.PRODUCTS, icon: ShoppingBag },
     { label: "Bảng tin", href: ROUTES.FEED, icon: Compass },
-    ...(isAuthenticated && isCreator
-      ? [{ label: "Creator", href: ROUTES.CREATOR_DASHBOARD, icon: Leaf }]
+    ...(isAuthenticated && isCreator && user?.id
+      ? [{ label: "Trang cá nhân", href: ROUTES.CREATOR_PROFILE(user.id), icon: UserIcon }]
       : []),
   ];
 

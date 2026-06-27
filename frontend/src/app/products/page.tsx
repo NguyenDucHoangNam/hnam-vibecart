@@ -32,6 +32,17 @@ import { userService } from "@/services/user.service";
 import { ProductDocument, Category, UserSearchResponse } from "@/types";
 import { ROUTES } from "@/constants/routes";
 
+const isVideoUrl = (url: string): boolean => {
+  if (!url) return false;
+  const cleanUrl = url.toLowerCase().split('?')[0];
+  return cleanUrl.endsWith('.mp4') || 
+         cleanUrl.endsWith('.webm') || 
+         cleanUrl.endsWith('.ogg') || 
+         cleanUrl.endsWith('.mov') || 
+         cleanUrl.endsWith('.mkv') ||
+         url.includes('video/');
+};
+
 export default function ShopPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -594,10 +605,34 @@ export default function ShopPage() {
                   return (
                     <Link href={ROUTES.PRODUCT_DETAILS(product.id)} key={product.id}
                       className="group bg-white rounded-2xl border border-zinc-200/50 p-3.5 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden">
-                      <div className="relative w-full h-[190px] rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100">
+                      <div 
+                        onMouseEnter={(e) => {
+                          const video = e.currentTarget.querySelector("video");
+                          if (video) video.play().catch(() => {});
+                        }}
+                        onMouseLeave={(e) => {
+                          const video = e.currentTarget.querySelector("video");
+                          if (video) {
+                            video.pause();
+                            video.currentTime = 0;
+                          }
+                        }}
+                        className="relative w-full h-[190px] rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100"
+                      >
                         {product.thumbnailUrl ? (
-                          <img src={product.thumbnailUrl} alt={product.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          isVideoUrl(product.thumbnailUrl) ? (
+                            <video 
+                              src={product.thumbnailUrl} 
+                              muted 
+                              loop 
+                              playsInline 
+                              preload="metadata"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <img src={product.thumbnailUrl} alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          )
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-zinc-300">
                             <Package className="h-10 w-10" />

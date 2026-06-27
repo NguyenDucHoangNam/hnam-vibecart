@@ -48,6 +48,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -71,16 +72,13 @@ public class ProductServiceImpl implements ProductService {
         String currentUserId = SecurityUtils.getCurrentUserId();
         log.info("Creating product '{}' by user: {}", request.name(), currentUserId);
 
-
         String categoryId = request.categoryId();
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
 
-
         if (categoryRepository.existsByParentId(categoryId)) {
             throw new AppException(ErrorCode.CATEGORY_NOT_LEAF);
         }
-
 
         Product product = Product.builder()
                 .name(request.name())
@@ -92,7 +90,6 @@ public class ProductServiceImpl implements ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-
         if (request.variants() != null) {
             List<ProductVariant> variantsList = new ArrayList<>();
             for (ProductVariantRequest variantReq : request.variants()) {
@@ -102,15 +99,16 @@ public class ProductServiceImpl implements ProductService {
                         .variantName(variantReq.variantName())
                         .price(variantReq.price())
                         .discountPrice(variantReq.discountPrice() != null
-                                ? variantReq.discountPrice() : BigDecimal.ZERO)
+                                ? variantReq.discountPrice()
+                                : BigDecimal.ZERO)
                         .status(ProductStatus.ACTIVE)
                         .build();
                 ProductVariant savedVariant = productVariantRepository.save(variant);
                 variantsList.add(savedVariant);
 
                 int initialQty = variantReq.initialQuantity() != null
-                        ? variantReq.initialQuantity() : 0;
-
+                        ? variantReq.initialQuantity()
+                        : 0;
 
                 Inventory inventory = Inventory.builder()
                         .variant(savedVariant)
@@ -121,12 +119,11 @@ public class ProductServiceImpl implements ProductService {
 
                 if (initialQty > 0) {
                     inventoryService.importStock(savedVariant.getId(), initialQty,
-                             "Nhập tồn kho ban đầu khi tạo sản phẩm", currentUserId);
+                            "Nhập tồn kho ban đầu khi tạo sản phẩm", currentUserId);
                 }
             }
-            savedProduct.setVariants(variantsList);
+            savedProduct.getVariants().addAll(variantsList);
         }
-
 
         if (request.images() != null) {
             List<ProductImage> imagesList = new ArrayList<>();
@@ -140,11 +137,10 @@ public class ProductServiceImpl implements ProductService {
                 ProductImage savedImage = productImageRepository.save(image);
                 imagesList.add(savedImage);
             }
-            savedProduct.setImages(imagesList);
+            savedProduct.getImages().addAll(imagesList);
         }
 
         log.info("Product created successfully with ID: {}", savedProduct.getId());
-
 
         saveOutboxEvent("CREATED", savedProduct);
 
@@ -191,15 +187,12 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-
         if (!product.getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-
         product.setName(request.name());
         product.setDescription(request.description());
-
 
         if (request.categoryId() != null && !request.categoryId().equals(product.getCategory().getId())) {
             Category newCategory = categoryRepository.findById(request.categoryId())
@@ -211,7 +204,6 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product updatedProduct = productRepository.save(product);
-
 
         if (request.variants() != null) {
 
@@ -230,7 +222,8 @@ public class ProductServiceImpl implements ProductService {
                     existingVariant.setVariantName(variantReq.variantName());
                     existingVariant.setPrice(variantReq.price());
                     existingVariant.setDiscountPrice(variantReq.discountPrice() != null
-                            ? variantReq.discountPrice() : BigDecimal.ZERO);
+                            ? variantReq.discountPrice()
+                            : BigDecimal.ZERO);
                     productVariantRepository.save(existingVariant);
                     log.debug("Updated existing variant skuCode={}", variantReq.skuCode());
                 } else {
@@ -241,14 +234,15 @@ public class ProductServiceImpl implements ProductService {
                             .variantName(variantReq.variantName())
                             .price(variantReq.price())
                             .discountPrice(variantReq.discountPrice() != null
-                                    ? variantReq.discountPrice() : BigDecimal.ZERO)
+                                    ? variantReq.discountPrice()
+                                    : BigDecimal.ZERO)
                             .status(ProductStatus.ACTIVE)
                             .build();
                     ProductVariant savedVariant = productVariantRepository.save(newVariant);
 
                     int newInitialQty = variantReq.initialQuantity() != null
-                            ? variantReq.initialQuantity() : 0;
-
+                            ? variantReq.initialQuantity()
+                            : 0;
 
                     Inventory inventory = Inventory.builder()
                             .variant(savedVariant)
@@ -265,7 +259,6 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
 
-
             for (ProductVariant existing : existingVariants) {
                 if (!requestedSkuCodes.contains(existing.getSkuCode())) {
                     productVariantRepository.delete(existing);
@@ -273,7 +266,6 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
         }
-
 
         if (request.images() != null) {
             updatedProduct.getImages().clear();
@@ -294,7 +286,6 @@ public class ProductServiceImpl implements ProductService {
 
         log.info("Product updated successfully: {}", id);
 
-
         saveOutboxEvent("UPDATED", updatedProduct);
 
         return productMapper.toResponse(
@@ -310,21 +301,17 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-
         if (!product.getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-
 
         List<ProductVariant> variants = productVariantRepository.findByProductId(id);
         for (ProductVariant variant : variants) {
             productVariantRepository.delete(variant);
         }
 
-
         productRepository.delete(product);
         log.info("Product soft deleted: {}", id);
-
 
         saveDeletedOutboxEvent(id);
     }
@@ -336,10 +323,8 @@ public class ProductServiceImpl implements ProductService {
         log.info("Adjusting inventory for variant {}: {}, reason: {}",
                 variantId, request.adjustmentQuantity(), request.reason());
 
-
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
-
 
         if (!variant.getProduct().getCreatorId().equals(currentUserId) && !SecurityUtils.isAdmin()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
@@ -369,8 +354,7 @@ public class ProductServiceImpl implements ProductService {
                         h.getQuantityChanged(),
                         h.getReason(),
                         h.getCreatedBy(),
-                        h.getCreatedAt()
-                ))
+                        h.getCreatedAt()))
                 .toList();
     }
 
@@ -386,24 +370,24 @@ public class ProductServiceImpl implements ProductService {
                         .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
             }
 
-
             BigDecimal minPrice = BigDecimal.ZERO;
             BigDecimal maxPrice = BigDecimal.ZERO;
             if (product.getVariants() != null && !product.getVariants().isEmpty()) {
                 minPrice = product.getVariants().stream()
                         .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                ? v.getDiscountPrice() : v.getPrice())
+                                ? v.getDiscountPrice()
+                                : v.getPrice())
                         .min(BigDecimal::compareTo)
                         .orElse(BigDecimal.ZERO);
                 maxPrice = product.getVariants().stream()
                         .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                ? v.getDiscountPrice() : v.getPrice())
+                                ? v.getDiscountPrice()
+                                : v.getPrice())
                         .max(BigDecimal::compareTo)
                         .orElse(BigDecimal.ZERO);
             }
 
-            ProductSyncEvent syncEvent = 
-                ProductSyncEvent.builder()
+            ProductSyncEvent syncEvent = ProductSyncEvent.builder()
                     .eventType(eventType)
                     .timestamp(ZonedDateTime.now())
                     .productId(product.getId())
@@ -438,8 +422,7 @@ public class ProductServiceImpl implements ProductService {
 
     private void saveDeletedOutboxEvent(String productId) {
         try {
-            ProductSyncEvent syncEvent = 
-                ProductSyncEvent.builder()
+            ProductSyncEvent syncEvent = ProductSyncEvent.builder()
                     .eventType("DELETED")
                     .timestamp(ZonedDateTime.now())
                     .productId(productId)
