@@ -33,6 +33,7 @@ import { productService } from "@/services/product.service";
 import { orderService } from "@/services/order.service";
 import { ConversationResponse, MessageResponse, Product, Order } from "@/types";
 import { ROUTES } from "@/constants/routes";
+import { api } from "@/lib/api-client";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -206,6 +207,11 @@ export default function ChatPage() {
         file,
         (percent) => setUploadPercent(percent)
       );
+
+      // Confirm upload so the file transitions from PENDING to VERIFIED
+      // and is not cleaned up by the MediaCleanupScheduler
+      await api.post<void>("/media/confirm", null, { params: { key: presigned.fileKey } });
+
       const isImg = file.type.startsWith("image/");
       sendMessage(presigned.fileUrl, isImg ? "IMAGE" : "DOCUMENT");
       toast.success("Tải tệp lên thành công");

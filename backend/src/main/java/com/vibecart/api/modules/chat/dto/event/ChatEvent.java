@@ -1,8 +1,9 @@
-package com.vibecart.api.modules.chat.event;
+package com.vibecart.api.modules.chat.dto.event;
 
 import lombok.*;
 import java.io.Serializable;
 import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor

@@ -16,7 +16,8 @@ import com.vibecart.api.modules.ecommerce.entity.Product;
 import com.vibecart.api.modules.ecommerce.entity.ProductImage;
 import com.vibecart.api.modules.ecommerce.entity.ProductVariant;
 import com.vibecart.api.modules.ecommerce.enums.ProductStatus;
-import com.vibecart.api.modules.ecommerce.event.ProductSyncProducer;
+import com.vibecart.api.modules.ecommerce.messaging.producer.ProductSyncProducer;
+import com.vibecart.api.modules.ecommerce.dto.event.ProductSyncEvent;
 import com.vibecart.api.modules.ecommerce.mapper.ProductMapper;
 import com.vibecart.api.modules.ecommerce.repository.CategoryRepository;
 import com.vibecart.api.modules.ecommerce.repository.InventoryRepository;
@@ -93,6 +94,7 @@ public class ProductServiceImpl implements ProductService {
 
 
         if (request.variants() != null) {
+            List<ProductVariant> variantsList = new ArrayList<>();
             for (ProductVariantRequest variantReq : request.variants()) {
                 ProductVariant variant = ProductVariant.builder()
                         .product(savedProduct)
@@ -104,6 +106,7 @@ public class ProductServiceImpl implements ProductService {
                         .status(ProductStatus.ACTIVE)
                         .build();
                 ProductVariant savedVariant = productVariantRepository.save(variant);
+                variantsList.add(savedVariant);
 
                 int initialQty = variantReq.initialQuantity() != null
                         ? variantReq.initialQuantity() : 0;
@@ -121,10 +124,12 @@ public class ProductServiceImpl implements ProductService {
                              "Nhập tồn kho ban đầu khi tạo sản phẩm", currentUserId);
                 }
             }
+            savedProduct.setVariants(variantsList);
         }
 
 
         if (request.images() != null) {
+            List<ProductImage> imagesList = new ArrayList<>();
             for (ProductImageRequest imageReq : request.images()) {
                 ProductImage image = ProductImage.builder()
                         .product(savedProduct)
@@ -132,8 +137,10 @@ public class ProductServiceImpl implements ProductService {
                         .thumbnail(imageReq.isThumbnail())
                         .sortOrder(imageReq.sortOrder() != null ? imageReq.sortOrder() : 0)
                         .build();
-                productImageRepository.save(image);
+                ProductImage savedImage = productImageRepository.save(image);
+                imagesList.add(savedImage);
             }
+            savedProduct.setImages(imagesList);
         }
 
         log.info("Product created successfully with ID: {}", savedProduct.getId());
@@ -395,8 +402,8 @@ public class ProductServiceImpl implements ProductService {
                         .orElse(BigDecimal.ZERO);
             }
 
-            com.vibecart.api.modules.ecommerce.event.ProductSyncEvent syncEvent = 
-                com.vibecart.api.modules.ecommerce.event.ProductSyncEvent.builder()
+            ProductSyncEvent syncEvent = 
+                ProductSyncEvent.builder()
                     .eventType(eventType)
                     .timestamp(ZonedDateTime.now())
                     .productId(product.getId())
@@ -431,8 +438,8 @@ public class ProductServiceImpl implements ProductService {
 
     private void saveDeletedOutboxEvent(String productId) {
         try {
-            com.vibecart.api.modules.ecommerce.event.ProductSyncEvent syncEvent = 
-                com.vibecart.api.modules.ecommerce.event.ProductSyncEvent.builder()
+            ProductSyncEvent syncEvent = 
+                ProductSyncEvent.builder()
                     .eventType("DELETED")
                     .timestamp(ZonedDateTime.now())
                     .productId(productId)

@@ -29,6 +29,7 @@ import { productService } from "@/services/product.service";
 import { Post, Product } from "@/types";
 import { ROUTES } from "@/constants/routes";
 import { api } from "@/lib/api-client";
+import { uploadFilePresigned } from "@/services/media.service";
 
 export default function FeedPage() {
   const { user, isAuthenticated } = useAuth();
@@ -288,27 +289,27 @@ export default function FeedPage() {
 
     setIsUploadingMedia(true);
     try {
-      const uploadedUrls: string[] = [];
+      const validFiles: File[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (file.size > 20 * 1024 * 1024) {
-          toast.error("Tệp quá lớn", `Tệp ${file.name} vượt quá giới hạn cho phép (20MB).`);
+        if (file.size > 50 * 1024 * 1024) {
+          toast.error("Tệp quá lớn", `Tệp ${file.name} vượt quá giới hạn cho phép (50MB).`);
           continue;
         }
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("folder", "posts");
-        const response = await api.post<{ url: string }>("/media/upload", formData);
-        uploadedUrls.push(response.url);
+        validFiles.push(file);
       }
 
-      if (uploadedUrls.length > 0) {
+      if (validFiles.length > 0) {
+        const uploadPromises = validFiles.map((file) =>
+          uploadFilePresigned({ file, folder: "posts" })
+        );
+        const results = await Promise.all(uploadPromises);
+        const uploadedUrls = results.map((r) => r.url);
         setMediaUrls(prev => [...prev, ...uploadedUrls]);
         toast.success("Tải tệp thành công", `Đã tải lên ${uploadedUrls.length} tệp phương tiện.`);
       }
     } catch (err: any) {
-      console.error("Lỗi tải tệp lên server:", err);
+      console.error("Lỗi tải tệp lên storage:", err);
       toast.error("Tải tệp thất bại", err?.data?.message || err?.message || "Không thể kết nối máy chủ.");
     } finally {
       setIsUploadingMedia(false);
@@ -816,7 +817,7 @@ export default function FeedPage() {
                       className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-200 ${isOutOfStock ? "opacity-50 cursor-not-allowed border-zinc-100 bg-zinc-50" : "border-zinc-200 hover:border-brand-400 hover:bg-brand-50/30 hover:shadow-sm active:scale-[0.98]"}`}>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs font-bold text-zinc-800">{variant.variantName}</span>
-                        <span className="text-[10px] text-zinc-400">SKU: {variant.skuCode} · Kho: {variant.availableStock}</span>
+                        <span className="text-[10px] text-zinc-400">SKU: {variant.skuCode} · Kho: {variant.availableStock.toLocaleString("vi-VN")}</span>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         {variant.discountPrice > 0 && variant.discountPrice < variant.price ? (
@@ -1100,14 +1101,14 @@ function PostCard({
           }`}
         >
           <Heart className={`h-4 w-4 transition-transform ${post.likedByMe ? "fill-rose-600 scale-110" : ""}`} />
-          {post.likeCount} lượt thích
+          {post.likeCount.toLocaleString("vi-VN")} lượt thích
         </button>
         <Link
           href={ROUTES.POST_DETAILS(post.id)}
           className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-brand-500 px-3 py-1.5 rounded-full hover:bg-zinc-50 transition-all"
         >
           <MessageSquare className="h-4 w-4" />
-          {post.commentCount} bình luận
+          {post.commentCount.toLocaleString("vi-VN")} bình luận
         </Link>
         <button
           onClick={() => onShare(post)}

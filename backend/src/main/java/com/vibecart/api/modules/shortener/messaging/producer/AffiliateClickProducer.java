@@ -1,10 +1,12 @@
-package com.vibecart.api.modules.shortener.event;
+package com.vibecart.api.modules.shortener.messaging.producer;
 
 import com.vibecart.api.config.KafkaTopicConfig;
+import com.vibecart.api.modules.shortener.dto.event.ClickEventMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j

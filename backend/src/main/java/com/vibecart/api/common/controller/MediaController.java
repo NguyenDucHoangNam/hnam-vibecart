@@ -36,6 +36,7 @@ public class MediaController {
                                                 .result(response)
                                                 .build());
         }
+        @Deprecated(since = "2026-06-27", forRemoval = true)
         @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<ApiResponse<List<MediaUploadResponse>>> uploadFiles(
                         @RequestParam("files") List<MultipartFile> files,

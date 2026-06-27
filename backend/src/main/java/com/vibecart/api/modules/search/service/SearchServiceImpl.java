@@ -9,6 +9,7 @@ import com.vibecart.api.modules.ecommerce.entity.Product;
 import com.vibecart.api.modules.ecommerce.entity.ProductImage;
 import com.vibecart.api.modules.ecommerce.repository.ProductRepository;
 import com.vibecart.api.modules.ecommerce.repository.ProductSearchRepository;
+import com.vibecart.api.modules.search.dto.request.ProductSearchRequest;
 import com.vibecart.api.modules.search.dto.request.SearchMergeRequest;
 import com.vibecart.api.modules.search.dto.response.SearchHistoryResponse;
 import com.vibecart.api.modules.search.dto.response.SearchResultResponse;
@@ -21,6 +22,9 @@ import com.vibecart.api.modules.iam.repository.UserSearchRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.social.service.FollowService;
 import com.vibecart.api.modules.iam.entity.Role;
+import com.vibecart.api.modules.ecommerce.entity.Category;
+import com.vibecart.api.modules.ecommerce.repository.CategoryRepository;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -61,20 +65,21 @@ public class SearchServiceImpl implements SearchService {
     private final UserSearchRepository userSearchRepository;
     private final UserRepository userRepository;
     private final FollowService followService;
+    private final CategoryRepository categoryRepository;
 
     @Override
-    public SearchResultResponse search(String query, String categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-            String sort, int page, int size, String userId) {
+    public SearchResultResponse search(ProductSearchRequest request, String userId) {
         log.info(
-                "Searching products with query='{}', categoryId={}, minPrice={}, maxPrice={}, sort={}, page={}, size={}",
-                query, categoryId, minPrice, maxPrice, sort, page, size);
+                "Searching products with request={}, userId={}",
+                request, userId);
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
-        if (query != null && !query.isBlank()) {
+        String activeQuery = request.getActiveQuery();
+        if (activeQuery != null && !activeQuery.isBlank()) {
             boolQueryBuilder.must(m -> m
                     .multiMatch(mm -> mm
-                            .query(query)
+                            .query(activeQuery)
                             .fields("name^3", "description")
                             .fuzziness("AUTO")
                             .prefixLength(2)
@@ -83,31 +88,44 @@ public class SearchServiceImpl implements SearchService {
             boolQueryBuilder.must(m -> m.matchAll(ma -> ma));
         }
 
-        if (categoryId != null && !categoryId.isBlank()) {
-            boolQueryBuilder.filter(f -> f.term(t -> t.field("categoryId").value(categoryId)));
+        String activeCategoryId = request.getActiveCategoryId();
+        if (activeCategoryId != null && !activeCategoryId.isBlank()) {
+            List<String> categoryIds = getAllDescendantCategoryIds(activeCategoryId);
+            if (categoryIds.size() == 1) {
+                boolQueryBuilder.filter(f -> f.term(t -> t.field("categoryId").value(categoryIds.get(0))));
+            } else {
+                List<FieldValue> fieldValues = categoryIds.stream()
+                        .map(FieldValue::of)
+                        .toList();
+                boolQueryBuilder.filter(f -> f.terms(t -> t.field("categoryId").terms(v -> v.value(fieldValues))));
+            }
         }
 
-        if (minPrice != null) {
+        if (request.getMinPrice() != null) {
             boolQueryBuilder.filter(f -> f.range(r -> r
-                    .number(n -> n.field("maxPrice").gte(minPrice.doubleValue()))));
+                    .number(n -> n.field("maxPrice").gte(request.getMinPrice().doubleValue()))));
         }
-        if (maxPrice != null) {
+        if (request.getMaxPrice() != null) {
             boolQueryBuilder.filter(f -> f.range(r -> r
-                    .number(n -> n.field("minPrice").lte(maxPrice.doubleValue()))));
+                    .number(n -> n.field("minPrice").lte(request.getMaxPrice().doubleValue()))));
         }
 
         boolQueryBuilder.filter(f -> f.term(t -> t.field("status").value("ACTIVE")));
 
-        Sort sortSpec = switch (sort != null ? sort : "relevance") {
+        String activeSort = request.getActiveSort();
+        Sort sortSpec = switch (activeSort) {
             case "price_asc" -> Sort.by(Sort.Direction.ASC, "minPrice");
             case "price_desc" -> Sort.by(Sort.Direction.DESC, "maxPrice");
             case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
             default -> Sort.unsorted();
         };
 
+        int pageNum = request.getPage() != null ? request.getPage() : 0;
+        int pageSize = request.getSize() != null ? request.getSize() : 12;
+
         NativeQuery searchQuery = NativeQuery.builder()
                 .withQuery(q -> q.bool(boolQueryBuilder.build()))
-                .withPageable(PageRequest.of(page, Math.min(size, 50)))
+                .withPageable(PageRequest.of(pageNum, Math.min(pageSize, 50)))
                 .withSort(sortSpec)
                 .build();
 
@@ -117,27 +135,27 @@ public class SearchServiceImpl implements SearchService {
                 .toList();
 
         long totalElements = searchHits.getTotalHits();
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-        boolean last = (page + 1) >= totalPages;
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        boolean last = (pageNum + 1) >= totalPages;
 
         String suggestion = null;
 
-        if (totalElements == 0 && query != null && !query.isBlank()) {
-            suggestion = getSpellcheckSuggestion(query);
+        if (totalElements == 0 && activeQuery != null && !activeQuery.isBlank()) {
+            suggestion = getSpellcheckSuggestion(activeQuery);
         }
 
-        if (totalElements > 0 && query != null && !query.isBlank()) {
-            recordSearchKeyword(query, userId);
+        if (totalElements > 0 && activeQuery != null && !activeQuery.isBlank()) {
+            recordSearchKeyword(activeQuery, userId);
             if (userId != null && !userId.isBlank()) {
-                recordPersonalHistory(userId, query.trim());
+                recordPersonalHistory(userId, activeQuery.trim());
             }
         }
 
         return SearchResultResponse.builder()
                 .content(items)
                 .suggestion(suggestion)
-                .page(page)
-                .size(size)
+                .page(pageNum)
+                .size(pageSize)
                 .totalElements(totalElements)
                 .totalPages(totalPages)
                 .last(last)
@@ -642,6 +660,21 @@ public class SearchServiceImpl implements SearchService {
             log.info("Successfully deleted user from ES: {}", userId);
         } catch (Exception e) {
             log.error("Failed to delete user from ES: {}", userId, e);
+        }
+    }
+
+    private List<String> getAllDescendantCategoryIds(String categoryId) {
+        List<String> ids = new ArrayList<>();
+        ids.add(categoryId);
+        fetchChildCategoryIdsRecursively(categoryId, ids);
+        return ids;
+    }
+
+    private void fetchChildCategoryIdsRecursively(String parentId, List<String> accumulator) {
+        List<Category> children = categoryRepository.findByParentIdAndDeletedFalseOrderBySortOrderAsc(parentId);
+        for (Category child : children) {
+            accumulator.add(child.getId());
+            fetchChildCategoryIdsRecursively(child.getId(), accumulator);
         }
     }
 }

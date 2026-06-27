@@ -23,6 +23,9 @@ public class MediaMetadata extends BaseEntity {
     @Column(name = "file_size", nullable = false)
     private long fileSize;
 
+    @Column(name = "content_type", length = 100)
+    private String contentType;
+
     @Column(name = "status", length = 20, nullable = false)
     @Builder.Default
     private String status = "PENDING";

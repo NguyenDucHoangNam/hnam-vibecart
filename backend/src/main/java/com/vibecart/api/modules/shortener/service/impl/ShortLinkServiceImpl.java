@@ -10,7 +10,8 @@ import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.shortener.dto.request.ShortlinkCreateRequest;
 import com.vibecart.api.modules.shortener.dto.response.ShortlinkResponse;
 import com.vibecart.api.modules.shortener.entity.ShortLink;
-import com.vibecart.api.modules.shortener.event.AffiliateClickProducer;
+import com.vibecart.api.modules.shortener.messaging.producer.AffiliateClickProducer;
+import com.vibecart.api.modules.shortener.dto.event.ClickEventMessage;
 import com.vibecart.api.modules.shortener.repository.ShortLinkRepository;
 import com.vibecart.api.modules.shortener.service.ShortLinkService;
 import com.vibecart.api.modules.shortener.util.Base62Encoder;
@@ -187,7 +188,7 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         String deviceType = parseDeviceType(userAgent);
         String country = "Vietnam";
 
-        com.vibecart.api.modules.shortener.event.ClickEventMessage clickMsg = com.vibecart.api.modules.shortener.event.ClickEventMessage
+        ClickEventMessage clickMsg = ClickEventMessage
                 .builder()
                 .shortLinkId(shortLinkId)
                 .ipAddress(ipAddress)

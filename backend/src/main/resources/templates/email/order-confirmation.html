@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Xác nhận đơn hàng VibeCart</title>
+</head>
+<body>
+<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+        <h1 style="color: white; margin: 0;">🎉 Đặt hàng thành công!</h1>
+    </div>
+    <div style="padding: 30px; background: #f9f9f9;">
+        <p style="font-size: 16px;">Cảm ơn bạn đã mua hàng tại <strong>VibeCart</strong>!</p>
+        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Mã đơn hàng:</strong> <span th:text="${orderId}">OD123456</span></p>
+            <p><strong>Tổng thanh toán:</strong> <span style="color: #667eea; font-size: 20px;" th:text="${amount}">100.000đ</span></p>
+            <p><strong>Mã giao dịch:</strong> <span th:text="${transactionId}">TX123456</span></p>
+        </div>
+        <p style="color: #666;">Đơn hàng đang được xử lý. Chúng tôi sẽ thông báo khi đơn hàng được giao cho đơn vị vận chuyển.</p>
+    </div>
+    <div style="background: #333; padding: 15px; text-align: center; color: #999;">
+        <p>© 2026 VibeCart - Social E-Commerce Platform</p>
+    </div>
+</div>
+</body>
+</html>

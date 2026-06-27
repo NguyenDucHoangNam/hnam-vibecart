@@ -19,7 +19,7 @@ import com.vibecart.api.modules.chat.dto.response.TypingResponse;
 import com.vibecart.api.modules.chat.entity.Conversation;
 import com.vibecart.api.modules.chat.entity.Message;
 import com.vibecart.api.modules.chat.mapper.ChatMapper;
-import com.vibecart.api.modules.chat.event.ChatEvent;
+import com.vibecart.api.modules.chat.dto.event.ChatEvent;
 import com.vibecart.api.modules.chat.repository.ConversationRepository;
 import com.vibecart.api.modules.chat.repository.MessageRepository;
 import com.vibecart.api.modules.chat.service.ChatService;
@@ -54,7 +54,11 @@ public class ChatServiceImpl implements ChatService {
     private final ObjectMapper objectMapper;
 
     private static final long MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-    private static final Set<String> FORBIDDEN_EXTENSIONS = Set.of(".exe", ".bat", ".sh");
+    private static final Set<String> FORBIDDEN_EXTENSIONS = Set.of(
+            ".exe", ".bat", ".sh", ".cmd", ".msi", ".ps1", ".vbs", ".vbe",
+            ".scr", ".pif", ".com", ".dll", ".jar", ".cpl", ".hta", ".inf",
+            ".reg", ".ws", ".wsf", ".sct", ".lnk", ".app", ".action", ".command"
+    );
     private static final String CHANNEL_PREFIX = "chat:user:";
     @Override
     public ConversationResponse createOrGetConversation(ConversationRequest request, String currentUsername) {
@@ -312,6 +316,7 @@ public class ChatServiceImpl implements ChatService {
                 .s3Key(fileKey)
                 .uploadedBy(currentUsername)
                 .fileSize(request.getFileSize())
+                .contentType(request.getContentType())
                 .status("PENDING")
                 .build();
         mediaMetadataRepository.save(metadata);
@@ -322,6 +327,7 @@ public class ChatServiceImpl implements ChatService {
         return PresignedUrlResponse.builder()
                 .uploadUrl(uploadUrl)
                 .fileUrl(fileUrl)
+                .fileKey(fileKey)
                 .build();
     }
     private User findUserByUsername(String username) {

@@ -34,6 +34,12 @@ interface AdminProduct {
   updatedAt: string;
 }
 
+const formatNumberInputString = (val: string) => {
+  const clean = val.replace(/\D/g, "");
+  if (!clean) return "";
+  return Number(clean).toLocaleString("vi-VN");
+};
+
 export default function AdminProductsPage() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const toast = useToast();
@@ -125,10 +131,10 @@ export default function AdminProductsPage() {
     setFormData({
       name: product.name,
       description: product.description,
-      price: product.price.toString(),
-      discountPrice: product.discountPrice.toString(),
+      price: formatNumberInputString(product.price.toString()),
+      discountPrice: formatNumberInputString(product.discountPrice.toString()),
       status: product.status,
-      initialStock: product.quantity.toString()
+      initialStock: formatNumberInputString(product.quantity.toString())
     });
     setIsEditOpen(true);
   };
@@ -156,10 +162,10 @@ export default function AdminProductsPage() {
         const payload = {
           name: formData.name.trim(),
           description: formData.description.trim(),
-          price: Number(formData.price),
-          discountPrice: Number(formData.discountPrice),
+          price: Number(formData.price.replace(/\D/g, "")),
+          discountPrice: Number(formData.discountPrice ? formData.discountPrice.replace(/\D/g, "") : 0),
           status: formData.status,
-          quantity: Number(formData.initialStock)
+          quantity: Number(formData.initialStock ? formData.initialStock.replace(/\D/g, "") : 0)
         };
         await productService.createProduct(payload as any);
         toast.success("Tạo thành công", `Sản phẩm "${formData.name}" đã được tạo.`);
@@ -185,8 +191,8 @@ export default function AdminProductsPage() {
         const payload = {
           name: formData.name.trim(),
           description: formData.description.trim(),
-          price: Number(formData.price),
-          discountPrice: Number(formData.discountPrice),
+          price: Number(formData.price.replace(/\D/g, "")),
+          discountPrice: Number(formData.discountPrice ? formData.discountPrice.replace(/\D/g, "") : 0),
           status: formData.status
         };
         await productService.updateProduct(selectedProduct.id, payload as any);
@@ -384,7 +390,7 @@ export default function AdminProductsPage() {
                                 ? "bg-amber-500" 
                                 : "bg-emerald-500"
                           }`} />
-                          <span className="font-semibold text-zinc-950 ">{product.quantity}</span>
+                          <span className="font-semibold text-zinc-950 ">{product.quantity.toLocaleString("vi-VN")}</span>
                           <span className="text-zinc-400 text-xs font-light">cái</span>
                         </div>
                       </td>
@@ -500,23 +506,23 @@ export default function AdminProductsPage() {
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 mb-1.5 uppercase tracking-wider">Giá gốc (VND) *</label>
                   <input
-                    type="number"
+                    type="text"
                     required
                     min={0}
                     placeholder="Ví dụ: 150000"
                     value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    onChange={(e) => setFormData({...formData, price: formatNumberInputString(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-950 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 mb-1.5 uppercase tracking-wider">Giá giảm (VND)</label>
                   <input
-                    type="number"
+                    type="text"
                     min={0}
                     placeholder="Ví dụ: 120000"
                     value={formData.discountPrice}
-                    onChange={(e) => setFormData({...formData, discountPrice: e.target.value})}
+                    onChange={(e) => setFormData({...formData, discountPrice: formatNumberInputString(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-950 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
                   />
                 </div>
@@ -526,12 +532,12 @@ export default function AdminProductsPage() {
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 mb-1.5 uppercase tracking-wider">Tồn kho ban đầu *</label>
                   <input
-                    type="number"
+                    type="text"
                     required
                     min={0}
                     placeholder="Ví dụ: 100"
                     value={formData.initialStock}
-                    onChange={(e) => setFormData({...formData, initialStock: e.target.value})}
+                    onChange={(e) => setFormData({...formData, initialStock: formatNumberInputString(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-950 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
                   />
                 </div>
@@ -615,23 +621,23 @@ export default function AdminProductsPage() {
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 mb-1.5 uppercase tracking-wider">Giá gốc (VND) *</label>
                   <input
-                    type="number"
+                    type="text"
                     required
                     min={0}
                     placeholder="Ví dụ: 150000"
                     value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    onChange={(e) => setFormData({...formData, price: formatNumberInputString(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-950 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-zinc-700 mb-1.5 uppercase tracking-wider">Giá giảm (VND)</label>
                   <input
-                    type="number"
+                    type="text"
                     min={0}
                     placeholder="Ví dụ: 120000"
                     value={formData.discountPrice}
-                    onChange={(e) => setFormData({...formData, discountPrice: e.target.value})}
+                    onChange={(e) => setFormData({...formData, discountPrice: formatNumberInputString(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-zinc-50 border border-zinc-200 text-sm text-zinc-950 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
                   />
                 </div>
@@ -689,7 +695,7 @@ export default function AdminProductsPage() {
             <p className="text-xs text-zinc-400 font-light mb-6">
               Sản phẩm: <span className="font-bold text-zinc-850 ">{selectedProduct.name}</span>
               <br />
-              Tồn kho hiện tại: <span className="font-bold text-brand-600">{selectedProduct.quantity} cái</span>
+              Tồn kho hiện tại: <span className="font-bold text-brand-600">{selectedProduct.quantity.toLocaleString("vi-VN")} cái</span>
             </p>
 
             <form onSubmit={handleAdjustInventory} className="space-y-4.5">

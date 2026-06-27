@@ -31,11 +31,18 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/context/ToastContext";
 import { Forbidden } from "@/components/common/Forbidden";
 import { api } from "@/lib/api-client";
+import { uploadFilePresigned, uploadFilesPresigned } from "@/services/media.service";
 import { productService } from "@/services/product.service";
 import { categoryService } from "@/services/category.service";
 import { orderService } from "@/services/order.service";
 import { ROUTES } from "@/constants/routes";
 import { Product, ProductVariant, Category, Order, InventoryHistoryResponse } from "@/types";
+
+const formatNumberInputString = (val: string) => {
+  const clean = val.replace(/\D/g, "");
+  if (!clean) return "";
+  return Number(clean).toLocaleString("vi-VN");
+};
 
 export default function CreatorDashboard() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -89,7 +96,7 @@ export default function CreatorDashboard() {
       if (!isAuthenticated) {
         toast.warning("Yêu cầu đăng nhập", "Vui lòng đăng nhập để truy cập không gian Creator.");
         router.push(ROUTES.LOGIN);
-      } else if (!user?.roles?.includes("ROLE_CREATOR") && !user?.roles?.includes("ROLE_ADMIN")) {
+      } else if (!user?.roles?.includes("ROLE_CREATOR")) {
         toast.error("Không có quyền truy cập", "Tài khoản của bạn chưa kích hoạt vai trò Creator.");
         router.push(ROUTES.HOME);
       }
@@ -141,7 +148,11 @@ export default function CreatorDashboard() {
   }, [prodPage, searchQuery, isAuthenticated, activeTab, fetchProducts]);
   const handleVariantFormChange = (index: number, field: string, val: string) => {
     const updated = [...variantForms];
-    (updated[index] as any)[field] = val;
+    if (field === "price" || field === "discountPrice" || field === "initialQuantity") {
+      (updated[index] as any)[field] = formatNumberInputString(val);
+    } else {
+      (updated[index] as any)[field] = val;
+    }
     setVariantForms(updated);
   };
 
@@ -174,8 +185,8 @@ export default function CreatorDashboard() {
     formData.append("folder", "products");
 
     try {
-      const response = await api.post<{ url: string }>("/media/upload", formData);
-      setProductForm(prev => ({ ...prev, imageUrl: response.url }));
+      const result = await uploadFilePresigned({ file, folder: "products" });
+      setProductForm(prev => ({ ...prev, imageUrl: result.url }));
       toast.success("Tải ảnh thành công", "Ảnh đại diện sản phẩm đã được cập nhật.");
     } catch (err: any) {
       console.error("SPU image upload error:", err);
@@ -204,15 +215,10 @@ export default function CreatorDashboard() {
     }
 
     setIsUploadingGallery(true);
-    const formData = new FormData();
-    fileList.forEach(file => {
-      formData.append("files", file);
-    });
-    formData.append("folder", "products");
 
     try {
-      const response = await api.post<Array<{ url: string }>>("/media/upload/batch", formData);
-      const newUrls = response.map(item => item.url);
+      const results = await uploadFilesPresigned(fileList, "products");
+      const newUrls = results.map(item => item.url);
       setGalleryImages(prev => [...prev, ...newUrls]);
       toast.success("Tải ảnh thành công", `Đã tải lên thêm ${newUrls.length} ảnh chi tiết.`);
     } catch (err: any) {
@@ -267,9 +273,9 @@ export default function CreatorDashboard() {
           variants: variantForms.map((v) => ({
             skuCode: v.skuCode.trim(),
             variantName: v.variantName.trim(),
-            price: Number(v.price),
-            discountPrice: Number(v.discountPrice || 0),
-            initialQuantity: (selectedProduct && !v.isNew) ? 0 : Number(v.initialQuantity || 0)
+            price: Number(v.price.replace(/\D/g, "")),
+            discountPrice: Number(v.discountPrice ? v.discountPrice.replace(/\D/g, "") : 0),
+            initialQuantity: (selectedProduct && !v.isNew) ? 0 : Number(v.initialQuantity ? v.initialQuantity.replace(/\D/g, "") : 0)
           }))
         };
 
@@ -432,7 +438,7 @@ export default function CreatorDashboard() {
     );
   }
 
-  if (!isAuthenticated || (!user?.roles?.includes("ROLE_CREATOR") && !user?.roles?.includes("ROLE_ADMIN"))) {
+  if (!isAuthenticated || !user?.roles?.includes("ROLE_CREATOR")) {
     return <Forbidden />;
   }
 
@@ -580,9 +586,9 @@ export default function CreatorDashboard() {
                                 setVariantForms(p.variants.map((v) => ({
                                   skuCode: v.skuCode,
                                   variantName: v.variantName,
-                                  price: v.price.toString(),
-                                  discountPrice: v.discountPrice.toString(),
-                                  initialQuantity: v.quantity.toString(),
+                                  price: formatNumberInputString(v.price.toString()),
+                                  discountPrice: formatNumberInputString(v.discountPrice.toString()),
+                                  initialQuantity: formatNumberInputString(v.quantity.toString()),
                                   isNew: false,
                                 })));
                                 setIsCreateOpen(true);
@@ -670,7 +676,7 @@ export default function CreatorDashboard() {
                           Tồn kho vật lý
                           <Info className="h-3.5 w-3.5 text-zinc-400 cursor-help" />
                         </span>
-                        <div className="text-xl font-black text-zinc-900 mt-1">{selectedVariant.quantity} cái</div>
+                        <div className="text-xl font-black text-zinc-900 mt-1">{selectedVariant.quantity.toLocaleString("vi-VN")} cái</div>
                         <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 bg-zinc-900 text-white text-[10px] p-3.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl leading-relaxed">
                           Tổng số lượng sản phẩm thực tế đang nằm trong kho hàng của bạn.
                         </div>
@@ -680,7 +686,7 @@ export default function CreatorDashboard() {
                           Tồn kho giữ chỗ
                           <Info className="h-3.5 w-3.5 text-zinc-400 cursor-help" />
                         </span>
-                        <div className="text-xl font-black text-amber-500 mt-1">{selectedVariant.reservedQuantity} cái</div>
+                        <div className="text-xl font-black text-amber-500 mt-1">{selectedVariant.reservedQuantity.toLocaleString("vi-VN")} cái</div>
                         <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 bg-zinc-900 text-white text-[10px] p-3.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl leading-relaxed">
                           Số lượng hàng khách đã đặt mua nhưng chưa gửi đi (đang chờ xử lý giao nhận).
                         </div>
@@ -690,7 +696,7 @@ export default function CreatorDashboard() {
                           Tồn kho khả dụng
                           <Info className="h-3.5 w-3.5 text-zinc-400 cursor-help" />
                         </span>
-                        <div className="text-xl font-black text-emerald-600 mt-1">{selectedVariant.availableStock} cái</div>
+                        <div className="text-xl font-black text-emerald-600 mt-1">{selectedVariant.availableStock.toLocaleString("vi-VN")} cái</div>
                         <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 bg-zinc-900 text-white text-[10px] p-3.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none shadow-xl leading-relaxed">
                           Số lượng hàng sẵn sàng để bán trên website (Bằng Tồn kho vật lý trừ Hàng giữ chỗ).
                         </div>
@@ -788,7 +794,7 @@ export default function CreatorDashboard() {
                                   <td className={`px-4 py-2.5 text-center font-bold ${
                                     h.quantityChanged > 0 ? "text-emerald-600" : "text-red-500"
                                   }`}>
-                                    {h.quantityChanged > 0 ? "+" : ""}{h.quantityChanged}
+                                    {h.quantityChanged > 0 ? "+" : ""}{h.quantityChanged.toLocaleString("vi-VN")}
                                   </td>
                                   <td className="px-4 py-2.5 max-w-xs truncate" title={h.reason === "Initial stock import on product creation" ? "Nhập tồn kho ban đầu khi tạo sản phẩm" : h.reason === "Initial stock import for new variant added during product update" ? "Nhập tồn kho ban đầu cho phiên bản mới" : h.reason}>
                                     {h.reason === "Initial stock import on product creation" 
@@ -1159,9 +1165,9 @@ export default function CreatorDashboard() {
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">Giá bán lẻ (VND) *</label>
                         <input
-                          type="number"
+                          type="text"
                           required
-                          placeholder="180000"
+                          placeholder="Ví dụ: 180.000"
                           value={v.price}
                           onChange={(e) => handleVariantFormChange(idx, "price", e.target.value)}
                           className="w-full h-9 px-2 bg-white rounded-lg border text-xs focus:outline-none"
@@ -1170,7 +1176,7 @@ export default function CreatorDashboard() {
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider h-8 flex items-end pb-1">Giá khuyến mãi (VND)</label>
                         <input
-                          type="number"
+                          type="text"
                           placeholder="Nhập 0 nếu không giảm giá"
                           value={v.discountPrice}
                           onChange={(e) => handleVariantFormChange(idx, "discountPrice", e.target.value)}
@@ -1182,7 +1188,7 @@ export default function CreatorDashboard() {
                           {selectedProduct && !v.isNew ? "Tồn kho hiện tại" : "Số lượng ban đầu *"}
                         </label>
                         <input
-                          type="number"
+                          type="text"
                           placeholder="0"
                           disabled={!!selectedProduct && !v.isNew}
                           value={v.initialQuantity}

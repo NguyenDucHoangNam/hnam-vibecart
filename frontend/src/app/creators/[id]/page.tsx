@@ -318,7 +318,7 @@ export default function CreatorProfilePage() {
                 </div>
                 <div className="text-center sm:text-left">
                   <span className="text-lg sm:text-2xl font-black text-zinc-800 tracking-tight block leading-none">
-                    {stat.value}
+                    {stat.value.toLocaleString("vi-VN")}
                   </span>
                   <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mt-1 block">
                     {stat.label}
@@ -691,14 +691,14 @@ function PostCardMini({
           }`}
         >
           <Heart className={`h-3.5 w-3.5 ${post.likedByMe ? "fill-rose-600" : ""}`} />
-          {post.likeCount} thích
+          {post.likeCount.toLocaleString("vi-VN")} thích
         </button>
         <Link
           href={ROUTES.POST_DETAILS(post.id)}
           className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-500 hover:text-brand-500 px-3 py-1 rounded-full hover:bg-zinc-50"
         >
           <MessageSquare className="h-3.5 w-3.5" />
-          {post.commentCount} bình luận
+          {post.commentCount.toLocaleString("vi-VN")} bình luận
         </Link>
         <button
           onClick={handleShare}

@@ -55,6 +55,7 @@ public class MediaServiceImpl implements MediaService {
                     .s3Key(key)
                     .uploadedBy(username)
                     .fileSize(file.getSize())
+                    .contentType(file.getContentType())
                     .status("VERIFIED")
                     .build();
             mediaMetadataRepository.save(metadata);
@@ -93,6 +94,7 @@ public class MediaServiceImpl implements MediaService {
                         .s3Key(key)
                         .uploadedBy(username)
                         .fileSize(file.getSize())
+                        .contentType(file.getContentType())
                         .status("VERIFIED")
                         .build());
 
@@ -146,6 +148,7 @@ public class MediaServiceImpl implements MediaService {
                 .s3Key(key)
                 .uploadedBy(username)
                 .fileSize(fileSize)
+                .contentType(contentType)
                 .status("PENDING")
                 .build();
         mediaMetadataRepository.save(metadata);
@@ -193,10 +196,16 @@ public class MediaServiceImpl implements MediaService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        boolean isValid = storageService.verifyFile(key, metadata.getFileSize());
-        if (!isValid) {
-            log.warn("File verification failed for key: {} (declared size: {} bytes). Cleaning up zombie resources...",
-                    key, metadata.getFileSize());
+        boolean isSizeValid = storageService.verifyFile(key, metadata.getFileSize());
+        String actualContentType = storageService.getFileContentType(key);
+
+        boolean isContentTypeValid = metadata.getContentType() == null
+                || actualContentType == null
+                || actualContentType.equals(metadata.getContentType());
+
+        if (!isSizeValid || !isContentTypeValid) {
+            log.warn("File verification failed for key: {} (declared size: {} bytes, declared type: {}, actual type: {}). Cleaning up...",
+                    key, metadata.getFileSize(), metadata.getContentType(), actualContentType);
 
             try {
                 storageService.deleteFile(key);

@@ -1,9 +1,9 @@
-package com.vibecart.api.modules.shortener.event;
+package com.vibecart.api.modules.shortener.messaging.consumer;
 
 import com.vibecart.api.config.KafkaTopicConfig;
-import com.vibecart.api.modules.ecommerce.event.OrderPaidEvent;
-import com.vibecart.api.modules.ecommerce.event.OrderDeliveredEvent;
-import com.vibecart.api.modules.ecommerce.event.OrderCancelledEvent;
+import com.vibecart.api.modules.ecommerce.dto.event.OrderPaidEvent;
+import com.vibecart.api.modules.ecommerce.dto.event.OrderDeliveredEvent;
+import com.vibecart.api.modules.ecommerce.dto.event.OrderCancelledEvent;
 import com.vibecart.api.modules.shortener.entity.Commission;
 import com.vibecart.api.modules.shortener.repository.CommissionRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j

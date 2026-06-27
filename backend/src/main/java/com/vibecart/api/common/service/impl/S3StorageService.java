@@ -129,4 +129,22 @@ public class S3StorageService implements StorageService {
             return false;
         }
     }
+
+    @Override
+    public String getFileContentType(String key) {
+        try {
+            HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
+                    .bucket(storageProperties.getBucketName())
+                    .key(key)
+                    .build();
+            HeadObjectResponse headObjectResponse = s3Client.headObject(headObjectRequest);
+            return headObjectResponse.contentType();
+        } catch (NoSuchKeyException e) {
+            log.warn("File '{}' not found in S3 for content-type check.", key);
+            return null;
+        } catch (Exception e) {
+            log.error("Failed to get content type for file '{}' in S3: {}", key, e.getMessage(), e);
+            return null;
+        }
+    }
 }

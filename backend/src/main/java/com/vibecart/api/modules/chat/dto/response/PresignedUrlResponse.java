@@ -9,4 +9,5 @@ import lombok.*;
 public class PresignedUrlResponse {
     private String uploadUrl;
     private String fileUrl;
+    private String fileKey;
 }

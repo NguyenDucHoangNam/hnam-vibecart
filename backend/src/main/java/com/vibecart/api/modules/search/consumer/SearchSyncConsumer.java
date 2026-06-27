@@ -1,15 +1,17 @@
-package com.vibecart.api.modules.ecommerce.event;
+package com.vibecart.api.modules.search.consumer;
 
 import com.vibecart.api.config.KafkaTopicConfig;
 import com.vibecart.api.modules.ecommerce.document.ProductDocument;
 import com.vibecart.api.modules.ecommerce.repository.ProductSearchRepository;
 import com.vibecart.api.modules.ecommerce.repository.ProductRepository;
+import com.vibecart.api.modules.ecommerce.dto.event.ProductSyncEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor

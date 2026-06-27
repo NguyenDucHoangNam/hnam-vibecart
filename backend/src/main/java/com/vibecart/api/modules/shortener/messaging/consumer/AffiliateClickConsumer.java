@@ -1,6 +1,7 @@
-package com.vibecart.api.modules.shortener.event;
+package com.vibecart.api.modules.shortener.messaging.consumer;
 
 import com.vibecart.api.config.KafkaTopicConfig;
+import com.vibecart.api.modules.shortener.dto.event.ClickEventMessage;
 import com.vibecart.api.modules.shortener.entity.ClickEvent;
 import com.vibecart.api.modules.shortener.entity.ShortLink;
 import com.vibecart.api.modules.shortener.repository.ClickEventRepository;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j

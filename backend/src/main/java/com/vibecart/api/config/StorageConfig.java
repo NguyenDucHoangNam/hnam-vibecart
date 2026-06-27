@@ -43,6 +43,10 @@ public class StorageConfig {
     }
     @Bean
     public S3Presigner s3Presigner() {
+        S3Configuration s3Configuration = S3Configuration.builder()
+                .pathStyleAccessEnabled(true)
+                .build();
+
         AwsBasicCredentials credentials = AwsBasicCredentials.create(
                 storageProperties.getAccessKey(),
                 storageProperties.getSecretKey()
@@ -50,7 +54,8 @@ public class StorageConfig {
 
         S3Presigner.Builder builder = S3Presigner.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                .region(Region.of(storageProperties.getRegion()));
+                .region(Region.of(storageProperties.getRegion()))
+                .serviceConfiguration(s3Configuration);
 
         if (storageProperties.getEndpoint() != null && !storageProperties.getEndpoint().isEmpty()) {
             builder.endpointOverride(URI.create(storageProperties.getEndpoint()));

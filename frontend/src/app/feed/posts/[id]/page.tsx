@@ -425,12 +425,12 @@ export default function PostDetailPage() {
                 }`}
               >
                 <Heart className={`h-4 w-4 ${post.likedByMe ? "fill-rose-600" : ""}`} />
-                {post.likeCount} lượt thích
+                {post.likeCount.toLocaleString("vi-VN")} lượt thích
               </button>
 
               <div className="flex items-center gap-1.5 text-xs font-bold px-4 py-2">
                 <MessageSquare className="h-4 w-4 text-brand-400" />
-                {post.commentCount} bình luận
+                {post.commentCount.toLocaleString("vi-VN")} bình luận
               </div>
 
               <button
@@ -447,7 +447,7 @@ export default function PostDetailPage() {
         <div className="lg:col-span-5 flex flex-col gap-6 sticky top-20">
           <div className="rounded-3xl border border-zinc-150/70 bg-white p-6 shadow-sm flex flex-col max-h-[85vh]">
             <h2 className="text-base font-extrabold text-zinc-800 pb-3.5 border-b border-zinc-100 tracking-wider">
-              BÌNH LUẬN ({post.commentCount})
+              BÌNH LUẬN ({post.commentCount.toLocaleString("vi-VN")})
             </h2>
             <div className="flex-1 overflow-y-auto no-scrollbar py-4 flex flex-col gap-5">
               {comments.length === 0 ? (
@@ -540,7 +540,7 @@ export default function PostDetailPage() {
                       className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-200 ${isOutOfStock ? "opacity-50 cursor-not-allowed border-zinc-100 bg-zinc-50" : "border-zinc-200 hover:border-brand-400 hover:bg-brand-50/30 hover:shadow-sm active:scale-[0.98]"}`}>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs font-bold text-zinc-800">{variant.variantName}</span>
-                        <span className="text-[10px] text-zinc-400">SKU: {variant.skuCode} · Kho: {variant.availableStock}</span>
+                        <span className="text-[10px] text-zinc-400">SKU: {variant.skuCode} · Kho: {variant.availableStock.toLocaleString("vi-VN")}</span>
                       </div>
                       <div className="flex flex-col items-end gap-0.5">
                         {variant.discountPrice > 0 && variant.discountPrice < variant.price ? (

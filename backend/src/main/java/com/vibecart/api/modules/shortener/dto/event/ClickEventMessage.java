@@ -1,4 +1,4 @@
-package com.vibecart.api.modules.shortener.event;
+package com.vibecart.api.modules.shortener.dto.event;
 
 import lombok.*;
 

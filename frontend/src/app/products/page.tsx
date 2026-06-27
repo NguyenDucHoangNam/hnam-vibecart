@@ -55,10 +55,12 @@ export default function ShopPage() {
   const [maxPrice, setMaxPrice] = useState<number | "">("");
   const [sortBy, setSortBy] = useState("relevance");
   const [isFilterMobileOpen, setIsFilterMobileOpen] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState(true);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [trendingKeywords, setTrendingKeywords] = useState<string[]>([]);
   const [recentKeywords, setRecentKeywords] = useState<{ keyword: string; searchedAt: string }[]>([]);
+  const [creatorMap, setCreatorMap] = useState<Record<string, { username: string; fullName: string; avatarUrl?: string }>>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +68,38 @@ export default function ShopPage() {
     categoryService.getCategoriesTree().then(d => setCategories(d || [])).catch(() => {});
     searchService.getTrending().then(d => setTrendingKeywords(d || [])).catch(() => {});
   }, []);
+  useEffect(() => {
+    if (products.length === 0) return;
+    const uniqueCreatorIds = Array.from(new Set(products.map(p => p.creatorId).filter(Boolean)));
+    const fetchMissingCreators = async () => {
+      const missingIds = uniqueCreatorIds.filter(id => !creatorMap[id]);
+      if (missingIds.length === 0) return;
+
+      const newProfiles = await Promise.all(
+        missingIds.map(async (id) => {
+          try {
+            const profile = await userService.getUserProfile(id);
+            return { id, profile };
+          } catch (e) {
+            console.error("Failed to fetch profile for", id, e);
+            return { id, profile: null };
+          }
+        })
+      );
+
+      setCreatorMap(prev => {
+        const next = { ...prev };
+        newProfiles.forEach(({ id, profile }) => {
+          if (profile) {
+            next[id] = profile;
+          }
+        });
+        return next;
+      });
+    };
+
+    fetchMissingCreators();
+  }, [products]);
   useEffect(() => {
     setSearchVal(searchParams.get("q") || searchParams.get("query") || "");
     setSelectedCategory(searchParams.get("categoryId") || searchParams.get("category") || "");
@@ -261,8 +295,8 @@ export default function ShopPage() {
   return (
     <div className="flex-1 bg-zinc-50 min-h-screen transition-colors duration-300 relative">
       <div className="bg-white border-b border-zinc-200/60">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <h1 className="text-center text-xl sm:text-2xl font-extrabold text-zinc-900 mb-6 tracking-tight">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+          <h1 className="text-center text-lg sm:text-xl font-extrabold text-zinc-900 mb-4 tracking-tight">
             Tìm sản phẩm & Creators trên <span className="text-brand-500">VibeCart</span>
           </h1>
           <div className="relative max-w-2xl mx-auto">
@@ -415,7 +449,7 @@ export default function ShopPage() {
                     <Sparkles className="h-2.5 w-2.5" /> Creator
                   </span>
                   <p className="text-[10px] text-zinc-400 font-light mt-1.5">
-                    <span className="font-bold text-zinc-700">{creator.followerCount || 0}</span> người theo dõi
+                    <span className="font-bold text-zinc-700">{(creator.followerCount || 0).toLocaleString("vi-VN")}</span> người theo dõi
                   </p>
                   <button onClick={() => handleFollowToggle(creator.id)}
                     className={`w-full h-8 rounded-xl text-[10px] uppercase font-bold tracking-wider mt-3 transition-all duration-300 ${
@@ -435,7 +469,7 @@ export default function ShopPage() {
           </div>
         )}
         <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="hidden lg:block w-60 shrink-0 bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm h-fit sticky top-24">
+          <aside className={`${isFilterVisible ? "lg:block" : "lg:hidden"} hidden w-60 shrink-0 bg-white rounded-2xl border border-zinc-200/60 p-5 shadow-sm h-fit sticky top-24`}>
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-5">
               <h3 className="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Filter className="h-3.5 w-3.5 text-brand-500" /> Bộ lọc
@@ -505,9 +539,16 @@ export default function ShopPage() {
                   <span className="text-[10px] text-zinc-400 font-light">({totalProducts} kết quả)</span>
                 )}
               </div>
+              <button 
+                onClick={() => setIsFilterVisible(!isFilterVisible)}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-600 hover:text-zinc-800 text-[10px] font-bold transition-all shadow-sm active:scale-95"
+              >
+                <SlidersHorizontal className="h-3 w-3 text-brand-500" />
+                {isFilterVisible ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
+              </button>
             </div>
             {isLoadingProducts ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 min-h-[400px]">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 min-h-[400px] ${isFilterVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
                 {Array.from({ length: 6 }).map((_, idx) => (
                   <div key={idx} className="bg-white rounded-2xl border border-zinc-200/40 p-4 shadow-sm animate-pulse flex flex-col h-[340px]">
                     <div className="w-full h-[180px] bg-zinc-100 rounded-xl mb-3" />
@@ -545,7 +586,7 @@ export default function ShopPage() {
               </div>
 
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${isFilterVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
                 {products.map(product => {
                   const min = product.minPrice || 0;
                   const max = product.maxPrice || 0;
@@ -569,6 +610,22 @@ export default function ShopPage() {
                         )}
                       </div>
                       <div className="flex-1 flex flex-col">
+                        {creatorMap[product.creatorId] && (
+                          <div className="flex items-center gap-1.5 mb-2 shrink-0">
+                            <div className="h-5 w-5 rounded-full bg-brand-50 border border-brand-200/60 overflow-hidden flex items-center justify-center shrink-0">
+                              {creatorMap[product.creatorId].avatarUrl ? (
+                                <img src={creatorMap[product.creatorId].avatarUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[8px] font-bold text-brand-600 uppercase">
+                                  {creatorMap[product.creatorId].username.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-bold text-zinc-500 truncate">
+                              {creatorMap[product.creatorId].fullName || creatorMap[product.creatorId].username}
+                            </span>
+                          </div>
+                        )}
                         <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-semibold">{product.categoryName || "Danh mục"}</span>
                         <h4 className="text-xs font-bold text-zinc-900 mt-1 group-hover:text-brand-500 transition-colors line-clamp-2 leading-snug">
                           {product.name}

@@ -1,4 +1,4 @@
-package com.vibecart.api.modules.ecommerce.event;
+package com.vibecart.api.modules.ecommerce.dto.event;
 
 import lombok.*;
 import java.math.BigDecimal;

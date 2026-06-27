@@ -1,6 +1,7 @@
-package com.vibecart.api.modules.ecommerce.event;
+package com.vibecart.api.modules.ecommerce.messaging.producer;
 
 import com.vibecart.api.config.KafkaTopicConfig;
+import com.vibecart.api.modules.ecommerce.dto.event.OrderCancelledEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;

@@ -379,15 +379,26 @@ public class PostServiceImpl implements PostService {
         }
     }
     private String extractS3Key(String url) {
-        if (url == null) return "";
+        if (url == null || url.isBlank()) return "";
 
+        // If it's not a URL (no scheme), treat it as a raw key
         int schemeEnd = url.indexOf("://");
-        if (schemeEnd != -1) {
-            int pathStart = url.indexOf('/', schemeEnd + 3);
-            if (pathStart != -1) {
-                return url.substring(pathStart + 1);
-            }
+        if (schemeEnd == -1) return url;
+
+        // Extract the path portion after the host
+        int pathStart = url.indexOf('/', schemeEnd + 3);
+        if (pathStart == -1) return url;
+
+        String path = url.substring(pathStart + 1);
+
+        // For S3 path-style URLs (endpoint/bucket/key), the first segment is the bucket name.
+        // Key format is always: folder/year/month/uuid.ext (at least 4 segments).
+        // Bucket name is a single segment, so if path has > 4 segments, strip the first one.
+        String[] segments = path.split("/");
+        if (segments.length > 4) {
+            return path.substring(path.indexOf('/') + 1);
         }
-        return url;
+
+        return path;
     }
 }

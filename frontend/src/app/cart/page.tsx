@@ -234,7 +234,7 @@ export default function CartPage() {
                               {item.status === "INSUFFICIENT_STOCK" && (
                                 <div className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded-lg font-bold w-fit bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30">
                                   <AlertTriangle className="h-3 w-3" />
-                                  Số lượng vượt quá tồn kho khả dụng ({item.availableStock})
+                                  Số lượng vượt quá tồn kho khả dụng ({item.availableStock.toLocaleString("vi-VN")})
                                 </div>
                               )}
                               {isOutOfStock && (

@@ -24,6 +24,7 @@ export interface ConversationResponse {
 export interface PresignedUrlResponse {
   uploadUrl: string;
   fileUrl: string;
+  fileKey: string;
 }
 
 export interface AttachmentMetadataResponse {

@@ -15,6 +15,7 @@ import {
   Loader2
 } from "lucide-react";
 import { productService } from "@/services/product.service";
+import { userService } from "@/services/user.service";
 import { Product, ProductVariant } from "@/types";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
@@ -31,6 +32,12 @@ export default function ProductDetailsPage() {
   const [selectedImage, setSelectedImage] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [creator, setCreator] = useState<{
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl?: string;
+  } | null>(null);
   useEffect(() => {
     async function loadProduct() {
       setIsLoading(true);
@@ -44,6 +51,14 @@ export default function ProductDetailsPage() {
         const thumb = data.images?.find((img) => img.isThumbnail)?.imageUrl || data.images?.[0]?.imageUrl || "";
         setSelectedImage(thumb);
 
+        if (data.creatorId) {
+          try {
+            const profile = await userService.getUserProfile(data.creatorId);
+            setCreator(profile);
+          } catch (cErr) {
+            console.error("Failed to fetch creator profile:", cErr);
+          }
+        }
       } catch (err) {
         console.error("Failed to load product:", err);
         toast.error("Lỗi lấy dữ liệu", "Không thể hiển thị thông tin sản phẩm này.");
@@ -175,8 +190,12 @@ export default function ProductDetailsPage() {
               {product.name}
             </h1>
             <div className="mt-3.5 flex items-center gap-2.5 py-3 border-y border-zinc-100">
-              <div className="h-8.5 w-8.5 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-200">
-                <User className="h-4.5 w-4.5" />
+              <div className="h-8.5 w-8.5 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 border border-brand-200 overflow-hidden">
+                {creator?.avatarUrl ? (
+                  <img src={creator.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-4.5 w-4.5" />
+                )}
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-400">Được đăng bán bởi</span>
@@ -184,7 +203,7 @@ export default function ProductDetailsPage() {
                   href={ROUTES.CREATOR_PROFILE(product.creatorId)}
                   className="text-xs font-bold text-zinc-800 hover:text-brand-500 transition-colors flex items-center gap-1"
                 >
-                  {product.creatorName || "Creator"}
+                  {creator?.fullName || creator?.username || product.creatorName || "Creator"}
                   <ArrowRight className="h-3.5 w-3.5 text-zinc-400" />
                 </Link>
               </div>
@@ -228,7 +247,7 @@ export default function ProductDetailsPage() {
                             v.discountPrice > 0 ? v.discountPrice : v.price
                           )}
                         </span>
-                        <span className="text-[10px] font-normal text-zinc-400">Tồn: {v.availableStock}</span>
+                        <span className="text-[10px] font-normal text-zinc-400">Tồn: {v.availableStock.toLocaleString("vi-VN")}</span>
                       </div>
                     </button>
                   );
@@ -279,7 +298,7 @@ export default function ProductDetailsPage() {
                   </div>
                   
                   <span className="text-xs text-zinc-400 font-light">
-                    ({availableStock} cái có sẵn trong kho)
+                    ({availableStock.toLocaleString("vi-VN")} cái có sẵn trong kho)
                   </span>
                 </div>
               </div>

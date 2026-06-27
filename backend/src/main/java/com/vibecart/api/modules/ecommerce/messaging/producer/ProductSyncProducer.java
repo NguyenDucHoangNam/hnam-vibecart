@@ -1,6 +1,7 @@
-package com.vibecart.api.modules.ecommerce.event;
+package com.vibecart.api.modules.ecommerce.messaging.producer;
 
 import com.vibecart.api.config.KafkaTopicConfig;
+import com.vibecart.api.modules.ecommerce.dto.event.ProductSyncEvent;
 import com.vibecart.api.modules.ecommerce.entity.Product;
 import com.vibecart.api.modules.ecommerce.entity.ProductImage;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor

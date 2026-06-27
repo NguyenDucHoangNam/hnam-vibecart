@@ -1,6 +1,7 @@
 package com.vibecart.api.modules.search.controller;
 
 import com.vibecart.api.common.dto.ApiResponse;
+import com.vibecart.api.modules.search.dto.request.ProductSearchRequest;
 import com.vibecart.api.modules.search.dto.request.SearchMergeRequest;
 import com.vibecart.api.modules.search.dto.response.SearchHistoryResponse;
 import com.vibecart.api.modules.search.dto.response.SearchResultResponse;
@@ -26,20 +27,11 @@ public class SearchController {
         this.searchService = searchService;
     }
     @GetMapping
-    public ResponseEntity<ApiResponse<SearchResultResponse>> search(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) String categoryId,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(required = false, defaultValue = "relevance") String sort,
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @RequestParam(required = false, defaultValue = "20") int size) {
-
-        log.info("REST request to search products. Query='{}'", q);
+    public ResponseEntity<ApiResponse<SearchResultResponse>> search(ProductSearchRequest request) {
+        log.info("REST request to search products. Query='{}'", request.getActiveQuery());
 
         String userId = SecurityUtils.getOptionalUsername();
-
-        SearchResultResponse result = searchService.search(q, categoryId, minPrice, maxPrice, sort, page, size, userId);
+        SearchResultResponse result = searchService.search(request, userId);
 
         ApiResponse<SearchResultResponse> response = ApiResponse.<SearchResultResponse>builder()
                 .code(1000)
