@@ -1,35 +1,4 @@
 services:
-  # --- Dịch vụ API Backend ---
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: vibecart-api
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-      mongodb:
-        condition: service_started
-      elasticsearch:
-        condition: service_started
-      kafka:
-        condition: service_started
-      minio:
-        condition: service_started
-    env_file:
-      - .env
-    environment:
-      # Ghi đè cấu hình kết nối local sang hostname nội bộ của Docker Network
-      - DB_URL=jdbc:postgresql://postgres:5432/${DB_NAME:-vibecart}?options=-c%20timezone=UTC
-      - MONGODB_URI=mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DB:-vibecart_db}?authSource=admin
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - STORAGE_ENDPOINT=http://minio:9000
 
   # --- Các dịch vụ hạ tầng bổ trợ ---
   elasticsearch:

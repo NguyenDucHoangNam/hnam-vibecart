@@ -4,6 +4,10 @@
 
 spring:
 
+  docker:
+    compose:
+      lifecycle-management: start-only
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
