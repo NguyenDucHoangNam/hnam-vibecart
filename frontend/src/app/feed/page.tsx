@@ -34,6 +34,8 @@ import { Post, Product } from "@/types";
 import { ROUTES } from "@/constants/routes";
 import { api } from "@/lib/api-client";
 import { uploadFilePresigned } from "@/services/media.service";
+import { PostSkeleton, CreatorListSkeleton } from "@/components/skeletons/LoadingSkeletons";
+
 
 export default function FeedPage() {
   const { user, isAuthenticated } = useAuth();
@@ -423,9 +425,10 @@ export default function FeedPage() {
             </span>
           </div>
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="h-10 w-10 text-brand-500 animate-spin" />
-              <p className="text-sm text-zinc-500 animate-pulse font-medium">Đang tải bảng tin...</p>
+            <div className="flex flex-col gap-6">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <PostSkeleton key={index} />
+              ))}
             </div>
           ) : posts.length === 0 ? (
             <div className="rounded-2xl bg-white border border-zinc-100 p-12 text-center flex flex-col items-center shadow-sm">
@@ -476,8 +479,10 @@ export default function FeedPage() {
               </h2>
 
               {loadingFollowed ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-5 w-5 text-brand-500 animate-spin" />
+                <div className="flex flex-col gap-2">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <CreatorListSkeleton key={index} />
+                  ))}
                 </div>
               ) : followedCreators.length === 0 ? (
                 <p className="text-xs text-zinc-400 py-2 pl-2">Bạn chưa theo dõi Creator nào.</p>
@@ -531,8 +536,10 @@ export default function FeedPage() {
               </h2>
 
               {loadingActive ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-5 w-5 text-brand-500 animate-spin" />
+                <div className="flex flex-col gap-2">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <CreatorListSkeleton key={index} />
+                  ))}
                 </div>
               ) : activeUsers.length === 0 ? (
                 <p className="text-xs text-zinc-400 py-2 pl-2">Không có ai đang hoạt động.</p>
@@ -1170,8 +1177,25 @@ function PostCard({
           </div>
 
           {loadingProducts ? (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-6 w-6 text-brand-500 animate-spin" />
+            <div className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth" style={{ scrollbarWidth: "none" }}>
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <div 
+                  key={idx} 
+                  className="flex-shrink-0 w-60 rounded-xl bg-white border border-zinc-150 p-2.5 flex flex-col justify-between shadow-sm animate-pulse"
+                >
+                  <div className="flex gap-3 items-center">
+                    <div className="h-14 w-14 rounded-lg bg-zinc-200" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-full rounded bg-zinc-200" />
+                      <div className="h-3 w-1/2 rounded bg-zinc-200" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2.5 pt-2 border-t border-zinc-100">
+                    <div className="flex-1 h-7.5 rounded-lg bg-zinc-100" />
+                    <div className="h-7.5 w-7.5 rounded-lg bg-zinc-100" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div 

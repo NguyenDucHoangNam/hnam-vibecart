@@ -38,6 +38,8 @@ import { Post, Product } from "@/types";
 import { ROUTES } from "@/constants/routes";
 import { api } from "@/lib/api-client";
 import { uploadFilePresigned } from "@/services/media.service";
+import { CreatorProfileSkeleton } from "@/components/skeletons/LoadingSkeletons";
+
 
 const isVideoUrl = (url: string): boolean => {
   if (!url) return false;
@@ -334,15 +336,14 @@ export default function CreatorProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
-        <Loader2 className="h-10 w-10 text-brand-500 animate-spin" />
-        <p className="text-sm text-zinc-500 animate-pulse font-medium">Đang tải hồ sơ nhà sáng tạo...</p>
-      </div>
-    );
+    return <CreatorProfileSkeleton />;
   }
 
   const finalName = creatorName || `Creator_${creatorId.substring(0, 6)}`;
+  const isProfileCreator = creatorRoles.length === 0 || creatorRoles.some(r => {
+    const roleUpper = r.toUpperCase();
+    return roleUpper.includes("CREATOR") || roleUpper === "ROLE_CREATOR";
+  });
 
   return (
     <div className="min-h-screen bg-zinc-50/50 pb-16">
@@ -381,9 +382,11 @@ export default function CreatorProfilePage() {
                   {finalName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="absolute bottom-1 right-1 h-5 w-5 bg-brand-500 border-2 border-white rounded-full flex items-center justify-center" title="Đã xác thực Creator">
-                <span className="h-2 w-2 bg-white rounded-full animate-ping" />
-              </span>
+              {isProfileCreator && (
+                <span className="absolute bottom-1 right-1 h-5 w-5 bg-brand-500 border-2 border-white rounded-full flex items-center justify-center" title="Đã xác thực Creator">
+                  <span className="h-2 w-2 bg-white rounded-full animate-ping" />
+                </span>
+              )}
             </div>
  
             <div className="flex flex-col gap-1.5">
@@ -410,7 +413,7 @@ export default function CreatorProfilePage() {
                 )}
               </div>
               <p className="text-xs text-zinc-400 font-medium">
-                {creatorFullName || "Thành viên sáng tạo chính thức của mạng lưới VibeCart"}
+                {creatorFullName || (isProfileCreator ? "Thành viên sáng tạo chính thức của mạng lưới VibeCart" : "Thành viên chính thức của mạng lưới VibeCart")}
               </p>
               <div className="flex items-center gap-1.5 justify-center sm:justify-start text-[10px] text-zinc-400 font-semibold mt-1">
                 <Calendar className="h-3.5 w-3.5" />
@@ -485,32 +488,34 @@ export default function CreatorProfilePage() {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="flex border-b border-zinc-200 mb-6 gap-8">
-          <button
-            onClick={() => setActiveTab("posts")}
-            className={`pb-3 text-sm font-extrabold relative transition-colors ${
-              activeTab === "posts"
-                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-500"
-                : "text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Tất cả bài viết ({posts.length})
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("products")}
-            className={`pb-3 text-sm font-extrabold relative transition-colors ${
-              activeTab === "products"
-                ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-500"
-                : "text-zinc-500 hover:text-zinc-800"
-            }`}
-          >
-            Tất cả sản phẩm ({products.length})
-          </button>
-        </div>
+        {isProfileCreator && (
+          <div className="flex border-b border-zinc-200 mb-6 gap-8">
+            <button
+              onClick={() => setActiveTab("posts")}
+              className={`pb-3 text-sm font-extrabold relative transition-colors ${
+                activeTab === "posts"
+                  ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-500"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              Tất cả bài viết ({posts.length})
+            </button>
+            
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`pb-3 text-sm font-extrabold relative transition-colors ${
+                activeTab === "products"
+                  ? "text-brand-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-brand-500"
+                  : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              Tất cả sản phẩm ({products.length})
+            </button>
+          </div>
+        )}
 
         <div className="w-full flex flex-col gap-6">
-          {activeTab === "posts" ? (
+          {(activeTab === "posts" || !isProfileCreator) ? (
             <>
               {isAuthenticated && user?.id === creatorId && user?.roles?.includes("ROLE_CREATOR") && (
                 <div className="rounded-2xl border border-brand-100/60 bg-white p-5 shadow-sm hover:border-brand-200/80 transition-all duration-300 mb-6 w-full">
@@ -546,13 +551,15 @@ export default function CreatorProfilePage() {
                 </div>
               )}
               {posts.length === 0 ? (
-                <div className="rounded-3xl bg-white border border-zinc-150 p-12 text-center flex flex-col items-center shadow-sm">
-                  <div className="h-12 w-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 mb-3">
-                    <Grid className="h-5 w-5" />
+                isProfileCreator ? (
+                  <div className="rounded-3xl bg-white border border-zinc-150 p-12 text-center flex flex-col items-center shadow-sm">
+                    <div className="h-12 w-12 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 mb-3">
+                      <Grid className="h-5 w-5" />
+                    </div>
+                    <h4 className="text-sm font-bold text-zinc-700">Chưa có bài đăng nào</h4>
+                    <p className="text-xs text-zinc-400 mt-0.5">Nhà sáng tạo này chưa chia sẻ nội dung nào trên sàn.</p>
                   </div>
-                  <h4 className="text-sm font-bold text-zinc-700">Chưa có bài đăng nào</h4>
-                  <p className="text-xs text-zinc-400 mt-0.5">Nhà sáng tạo này chưa chia sẻ nội dung nào trên sàn.</p>
-                </div>
+                ) : null
               ) : (
                 <div className="flex flex-col gap-6">
                   {posts.map((post) => (

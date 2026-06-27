@@ -21,6 +21,8 @@ import { orderService } from "@/services/order.service";
 import { Order } from "@/types";
 import { useToast } from "@/context/ToastContext";
 import { ROUTES } from "@/constants/routes";
+import { OrderListSkeleton } from "@/components/skeletons/LoadingSkeletons";
+
 
 const STATUS_TABS = [
   { value: "", label: "Tất cả" },
@@ -139,10 +141,7 @@ export default function MyOrdersPage() {
         {isLoading ? (
           <div className="space-y-6">
             {Array.from({ length: 3 }).map((_, idx) => (
-              <div 
-                key={idx} 
-                className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/40 p-6 shadow-sm animate-pulse h-48"
-              />
+              <OrderListSkeleton key={idx} />
             ))}
           </div>
         ) : orders.length === 0 ? (

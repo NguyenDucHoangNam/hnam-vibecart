@@ -28,6 +28,8 @@ import { userService } from "@/services/user.service";
 import { productService } from "@/services/product.service";
 import { Post, Comment, Product } from "@/types";
 import { ROUTES } from "@/constants/routes";
+import { PostSkeleton } from "@/components/skeletons/LoadingSkeletons";
+
 
 export default function PostDetailPage() {
   const params = useParams();
@@ -259,9 +261,30 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-3">
-        <Loader2 className="h-10 w-10 text-brand-500 animate-spin" />
-        <p className="text-sm text-zinc-500 animate-pulse font-medium">Đang tải chi tiết bài viết...</p>
+      <div className="min-h-screen bg-zinc-50/50 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl mb-6">
+          <div className="h-4 w-32 rounded bg-zinc-200 animate-pulse" />
+        </div>
+        <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            <PostSkeleton />
+          </div>
+          <div className="lg:col-span-5 bg-white rounded-2xl border border-zinc-150 p-5 space-y-4 animate-pulse">
+            <div className="h-5 w-28 rounded bg-zinc-200" />
+            <div className="h-10 w-full rounded-xl bg-zinc-100" />
+            <div className="space-y-3 pt-4 border-t border-zinc-150">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="h-8 w-8 rounded-full bg-zinc-200 shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 w-20 rounded bg-zinc-200" />
+                    <div className="h-3.5 w-full rounded bg-zinc-150" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

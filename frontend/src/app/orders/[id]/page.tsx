@@ -27,6 +27,8 @@ import { orderService } from "@/services/order.service";
 import { Order } from "@/types";
 import { useToast } from "@/context/ToastContext";
 import { ROUTES } from "@/constants/routes";
+import { OrderDetailSkeleton } from "@/components/skeletons/LoadingSkeletons";
+
 
 export default function OrderDetailsPage() {
   const params = useParams();
@@ -72,12 +74,7 @@ export default function OrderDetailsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] bg-zinc-50 dark:bg-zinc-950">
-        <Loader2 className="h-10 w-10 text-brand-500 animate-spin mb-4" />
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 font-light">Đang lấy chi tiết đơn hàng...</p>
-      </div>
-    );
+    return <OrderDetailSkeleton />;
   }
 
   if (!order) {

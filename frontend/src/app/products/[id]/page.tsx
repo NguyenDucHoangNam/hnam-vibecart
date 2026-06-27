@@ -21,6 +21,8 @@ import { Product, ProductVariant } from "@/types";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
 import { ROUTES } from "@/constants/routes";
+import { ProductDetailsSkeleton } from "@/components/skeletons/LoadingSkeletons";
+
 
 const isVideoUrl = (url: string): boolean => {
   if (!url) return false;
@@ -105,12 +107,7 @@ export default function ProductDetailsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] bg-zinc-50">
-        <Loader2 className="h-10 w-10 text-brand-500 animate-spin mb-4" />
-        <p className="text-sm text-zinc-500 font-light">Đang tải thông tin sản phẩm...</p>
-      </div>
-    );
+    return <ProductDetailsSkeleton />;
   }
 
   if (!product) {
