@@ -66,6 +66,7 @@ public class SearchServiceImpl implements SearchService {
     private final UserRepository userRepository;
     private final FollowService followService;
     private final CategoryRepository categoryRepository;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     @Override
     public SearchResultResponse search(ProductSearchRequest request, String userId) {
@@ -132,6 +133,10 @@ public class SearchServiceImpl implements SearchService {
         SearchHits<ProductDocument> searchHits = elasticsearchOperations.search(searchQuery, ProductDocument.class);
         List<ProductDocument> items = searchHits.getSearchHits().stream()
                 .map(SearchHit::getContent)
+                .map(doc -> {
+                    doc.setDescription(null);
+                    return doc;
+                })
                 .toList();
 
         long totalElements = searchHits.getTotalHits();
@@ -370,74 +375,87 @@ public class SearchServiceImpl implements SearchService {
     public void reindexAll() {
         log.info("Reindexing all PostgreSQL product records into Elasticsearch...");
         try {
-            List<Product> products = productRepository.findAll();
-            List<ProductDocument> documents = products.stream().map(product -> {
-                String thumbnailUrl = null;
-                if (product.getImages() != null) {
-                    thumbnailUrl = product.getImages().stream()
-                            .filter(ProductImage::isThumbnail)
-                            .map(ProductImage::getImageUrl)
-                            .findFirst()
-                            .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
-                }
+            transactionTemplate.executeWithoutResult(status -> {
+                List<Product> products = productRepository.findAll();
+                List<ProductDocument> documents = products.stream().map(product -> {
+                    String thumbnailUrl = null;
+                    if (product.getImages() != null) {
+                        thumbnailUrl = product.getImages().stream()
+                                .filter(ProductImage::isThumbnail)
+                                .map(ProductImage::getImageUrl)
+                                .findFirst()
+                                .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
+                    }
 
-                BigDecimal minPrice = BigDecimal.ZERO;
-                BigDecimal maxPrice = BigDecimal.ZERO;
-                if (product.getVariants() != null && !product.getVariants().isEmpty()) {
-                    minPrice = product.getVariants().stream()
-                            .map(v -> v.getDiscountPrice() != null
-                                    && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                            ? v.getDiscountPrice()
-                                            : v.getPrice())
-                            .min(BigDecimal::compareTo)
-                            .orElse(BigDecimal.ZERO);
-                    maxPrice = product.getVariants().stream()
-                            .map(v -> v.getDiscountPrice() != null
-                                    && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                            ? v.getDiscountPrice()
-                                            : v.getPrice())
-                            .max(BigDecimal::compareTo)
-                            .orElse(BigDecimal.ZERO);
-                }
+                    BigDecimal minPrice = BigDecimal.ZERO;
+                    BigDecimal maxPrice = BigDecimal.ZERO;
+                    BigDecimal minOriginalPrice = BigDecimal.ZERO;
+                    BigDecimal maxOriginalPrice = BigDecimal.ZERO;
+                    if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                        minPrice = product.getVariants().stream()
+                                .map(v -> v.getDiscountPrice() != null
+                                        && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                                ? v.getDiscountPrice()
+                                                : v.getPrice())
+                                .min(BigDecimal::compareTo)
+                                .orElse(BigDecimal.ZERO);
+                        maxPrice = product.getVariants().stream()
+                                .map(v -> v.getDiscountPrice() != null
+                                        && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                                ? v.getDiscountPrice()
+                                                : v.getPrice())
+                                .max(BigDecimal::compareTo)
+                                .orElse(BigDecimal.ZERO);
+                        minOriginalPrice = product.getVariants().stream()
+                                .map(v -> v.getPrice())
+                                .min(BigDecimal::compareTo)
+                                .orElse(BigDecimal.ZERO);
+                        maxOriginalPrice = product.getVariants().stream()
+                                .map(v -> v.getPrice())
+                                .max(BigDecimal::compareTo)
+                                .orElse(BigDecimal.ZERO);
+                    }
 
-                return ProductDocument.builder()
-                        .id(product.getId())
-                        .name(product.getName())
-                        .description(product.getDescription())
-                        .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
-                        .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
-                        .creatorId(product.getCreatorId())
-                        .thumbnailUrl(thumbnailUrl)
-                        .minPrice(minPrice)
-                        .maxPrice(maxPrice)
-                        .status(product.getStatus().name())
-                        .build();
-            }).toList();
+                    return ProductDocument.builder()
+                            .id(product.getId())
+                            .name(product.getName())
+                            .description(product.getDescription())
+                            .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
+                            .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
+                            .creatorId(product.getCreatorId())
+                            .thumbnailUrl(thumbnailUrl)
+                            .minPrice(minPrice)
+                            .maxPrice(maxPrice)
+                            .minOriginalPrice(minOriginalPrice)
+                            .maxOriginalPrice(maxOriginalPrice)
+                            .status(product.getStatus().name())
+                            .build();
+                }).toList();
 
-            productSearchRepository.saveAll(documents);
-            log.info("Successfully reindexed {} product documents in Elasticsearch", documents.size());
+                productSearchRepository.saveAll(documents);
+                log.info("Successfully reindexed {} product documents in Elasticsearch", documents.size());
 
-            log.info("Reindexing all PostgreSQL user records into Elasticsearch...");
-            List<com.vibecart.api.modules.iam.entity.User> users = userRepository.findAll();
-            List<UserDocument> userDocs = users.stream().map(user -> {
-                Set<String> roles = user.getRole() == null ? Collections.emptySet()
-                        : Set.of(user.getRole().getName());
+                log.info("Reindexing all PostgreSQL user records into Elasticsearch...");
+                List<com.vibecart.api.modules.iam.entity.User> users = userRepository.findAll();
+                List<UserDocument> userDocs = users.stream().map(user -> {
+                    Set<String> roles = user.getRole() == null ? Collections.emptySet()
+                            : Set.of(user.getRole().getName());
 
-                return UserDocument.builder()
-                        .id(user.getId())
-                        .username(user.getUsername())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .avatarUrl(user.getAvatarUrl())
-                        .status(user.getStatus())
-                        .roles(roles)
-                        .createdAt(user.getCreatedAt())
-                        .updatedAt(user.getUpdatedAt())
-                        .build();
-            }).toList();
-            userSearchRepository.saveAll(userDocs);
-            log.info("Successfully reindexed {} user documents in Elasticsearch", userDocs.size());
-
+                    return UserDocument.builder()
+                            .id(user.getId())
+                            .username(user.getUsername())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .avatarUrl(user.getAvatarUrl())
+                            .status(user.getStatus())
+                            .roles(roles)
+                            .createdAt(user.getCreatedAt())
+                            .updatedAt(user.getUpdatedAt())
+                            .build();
+                }).toList();
+                userSearchRepository.saveAll(userDocs);
+                log.info("Successfully reindexed {} user documents in Elasticsearch", userDocs.size());
+            });
         } catch (Exception e) {
             log.error("Failed during bulk records reindex", e);
             throw new RuntimeException("Reindex failed", e);
@@ -675,6 +693,17 @@ public class SearchServiceImpl implements SearchService {
         for (Category child : children) {
             accumulator.add(child.getId());
             fetchChildCategoryIdsRecursively(child.getId(), accumulator);
+        }
+    }
+
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        log.info("Application is ready. Triggering automatic index synchronization...");
+        try {
+            this.reindexAll();
+            log.info("Automatic index synchronization completed successfully.");
+        } catch (Exception e) {
+            log.error("Failed to run automatic index synchronization on startup", e);
         }
     }
 }

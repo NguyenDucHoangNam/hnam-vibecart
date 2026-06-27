@@ -61,9 +61,12 @@ export default function ShopPage() {
   const [size] = useState(12);
   const [productSuggestion, setProductSuggestion] = useState<string | null>(null);
   const [searchVal, setSearchVal] = useState(urlQuery);
+  const [debouncedSearchVal, setDebouncedSearchVal] = useState(urlQuery);
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
   const [minPrice, setMinPrice] = useState<number | "">("");
+  const [debouncedMinPrice, setDebouncedMinPrice] = useState<number | "">("");
   const [maxPrice, setMaxPrice] = useState<number | "">("");
+  const [debouncedMaxPrice, setDebouncedMaxPrice] = useState<number | "">("");
   const [sortBy, setSortBy] = useState("relevance");
   const [isFilterMobileOpen, setIsFilterMobileOpen] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(true);
@@ -112,7 +115,9 @@ export default function ShopPage() {
     fetchMissingCreators();
   }, [products]);
   useEffect(() => {
-    setSearchVal(searchParams.get("q") || searchParams.get("query") || "");
+    const q = searchParams.get("q") || searchParams.get("query") || "";
+    setSearchVal(q);
+    setDebouncedSearchVal(q);
     setSelectedCategory(searchParams.get("categoryId") || searchParams.get("category") || "");
     setPage(0);
   }, [searchParams]);
@@ -159,14 +164,29 @@ export default function ShopPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchVal]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearchVal(searchVal);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [searchVal]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedMinPrice(minPrice);
+      setDebouncedMaxPrice(maxPrice);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [minPrice, maxPrice]);
   const executeProductSearch = useCallback(async () => {
     setIsLoadingProducts(true);
     try {
       const res = await searchService.search({
-        q: searchVal || undefined,
+        q: debouncedSearchVal || undefined,
         categoryId: selectedCategory || undefined,
-        minPrice: minPrice !== "" ? minPrice : undefined,
-        maxPrice: maxPrice !== "" ? maxPrice : undefined,
+        minPrice: debouncedMinPrice !== "" ? debouncedMinPrice : undefined,
+        maxPrice: debouncedMaxPrice !== "" ? debouncedMaxPrice : undefined,
         page, size,
         sort: sortBy
       });
@@ -178,7 +198,7 @@ export default function ShopPage() {
     } finally {
       setIsLoadingProducts(false);
     }
-  }, [page, size, searchVal, selectedCategory, minPrice, maxPrice, sortBy]);
+  }, [page, size, debouncedSearchVal, selectedCategory, debouncedMinPrice, debouncedMaxPrice, sortBy]);
 
   useEffect(() => { executeProductSearch(); }, [executeProductSearch]);
   const executeCreatorSearch = useCallback(async () => {
@@ -217,6 +237,8 @@ export default function ShopPage() {
     const kw = overrideKw !== undefined ? overrideKw : searchVal;
     setIsDropdownOpen(false);
     setPage(0);
+    setSearchVal(kw);
+    setDebouncedSearchVal(kw);
     const params = new URLSearchParams();
     if (kw) params.set("q", kw);
     if (selectedCategory) params.set("categoryId", selectedCategory);
@@ -248,7 +270,15 @@ export default function ShopPage() {
   };
 
   const handleResetFilters = () => {
-    setSearchVal(""); setSelectedCategory(""); setMinPrice(""); setMaxPrice(""); setSortBy("relevance"); setPage(0);
+    setSearchVal("");
+    setDebouncedSearchVal("");
+    setSelectedCategory("");
+    setMinPrice("");
+    setDebouncedMinPrice("");
+    setMaxPrice("");
+    setDebouncedMaxPrice("");
+    setSortBy("relevance");
+    setPage(0);
     router.push(ROUTES.PRODUCTS);
   };
 
@@ -510,10 +540,6 @@ export default function ShopPage() {
                   onChange={(e) => setMaxPrice(e.target.value ? Number(e.target.value) : "")}
                   className="w-full h-9 px-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs focus:outline-none focus:border-brand-500" />
               </div>
-              <button onClick={() => { setPage(0); executeProductSearch(); }}
-                className="w-full h-8 rounded-xl bg-zinc-900 hover:bg-black text-white text-[10px] uppercase font-bold tracking-wider mt-2.5 transition-colors">
-                Áp dụng
-              </button>
             </div>
             <div>
               <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Sắp xếp</h4>
@@ -597,14 +623,21 @@ export default function ShopPage() {
               </div>
 
             ) : (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${isFilterVisible ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
+              <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3.5 ${isFilterVisible ? 'lg:grid-cols-4' : 'lg:grid-cols-5'}`}>
                 {products.map(product => {
                   const min = product.minPrice || 0;
                   const max = product.maxPrice || 0;
                   const hasRange = max > min;
+
+                  const originalMin = product.minOriginalPrice || min;
+                  const originalMax = product.maxOriginalPrice || max;
+                  const hasOriginalRange = originalMax > originalMin;
+                  const hasDiscount = originalMin > min || originalMax > max;
+                  const discountPercent = originalMax > 0 ? Math.round(((originalMax - max) / originalMax) * 100) : 0;
+
                   return (
                     <Link href={ROUTES.PRODUCT_DETAILS(product.id)} key={product.id}
-                      className="group bg-white rounded-2xl border border-zinc-200/50 p-3.5 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden">
+                      className="group bg-white rounded-2xl border border-zinc-200/50 p-3 shadow-sm hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-0.5 transition-all duration-300 flex flex-col h-full overflow-hidden">
                       <div 
                         onMouseEnter={(e) => {
                           const video = e.currentTarget.querySelector("video");
@@ -617,7 +650,7 @@ export default function ShopPage() {
                             video.currentTime = 0;
                           }
                         }}
-                        className="relative w-full h-[190px] rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100"
+                        className="relative w-full aspect-square rounded-xl overflow-hidden bg-zinc-50 mb-3 border border-zinc-100"
                       >
                         {product.thumbnailUrl ? (
                           isVideoUrl(product.thumbnailUrl) ? (
@@ -643,6 +676,11 @@ export default function ShopPage() {
                             Tạm ngưng
                           </div>
                         )}
+                        {hasDiscount && discountPercent > 0 && (
+                          <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-lg shadow-md z-10">
+                            -{discountPercent}%
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 flex flex-col">
                         {creatorMap[product.creatorId] && (
@@ -665,19 +703,27 @@ export default function ShopPage() {
                         <h4 className="text-xs font-bold text-zinc-900 mt-1 group-hover:text-brand-500 transition-colors line-clamp-2 leading-snug">
                           {product.name}
                         </h4>
-                        <p className="text-[11px] text-zinc-400 mt-1 line-clamp-2 leading-relaxed font-light">
-                          {product.description || "Không có mô tả..."}
-                        </p>
                         <div className="flex items-center justify-between mt-auto pt-3 border-t border-zinc-100">
                           <div>
                             <span className="text-[9px] text-zinc-400 font-light block mb-0.5">Giá từ</span>
-                            <span className="text-xs font-bold text-zinc-900">
-                              {hasRange ? (
-                                <>{new Intl.NumberFormat("vi-VN").format(min)}đ – {new Intl.NumberFormat("vi-VN").format(max)}đ</>
-                              ) : (
-                                <>{new Intl.NumberFormat("vi-VN").format(min)}đ</>
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`text-xs font-bold ${hasDiscount && discountPercent > 0 ? 'text-rose-600' : 'text-zinc-900'}`}>
+                                {hasRange ? (
+                                  <>{new Intl.NumberFormat("vi-VN").format(min)}đ – {new Intl.NumberFormat("vi-VN").format(max)}đ</>
+                                ) : (
+                                  <>{new Intl.NumberFormat("vi-VN").format(min)}đ</>
+                                )}
+                              </span>
+                              {hasDiscount && discountPercent > 0 && (
+                                <span className="text-[9px] text-zinc-400 line-through font-light">
+                                  {hasOriginalRange ? (
+                                    <>{new Intl.NumberFormat("vi-VN").format(originalMin)}đ – {new Intl.NumberFormat("vi-VN").format(originalMax)}đ</>
+                                  ) : (
+                                    <>{new Intl.NumberFormat("vi-VN").format(originalMin)}đ</>
+                                  )}
+                                </span>
                               )}
-                            </span>
+                            </div>
                           </div>
                           <div className="flex h-8 items-center gap-0.5 bg-brand-50 group-hover:bg-brand-500 group-hover:text-white text-brand-700 rounded-full px-3 text-[10px] font-semibold transition-all duration-300">
                             Chi tiết <ChevronRight className="h-3 w-3" />
@@ -760,10 +806,6 @@ export default function ShopPage() {
                   onChange={(e) => setMaxPrice(e.target.value ? Number(e.target.value) : "")}
                   className="w-full h-9 px-3 bg-zinc-50 border border-zinc-200 rounded-xl text-xs" />
               </div>
-              <button onClick={() => { setPage(0); executeProductSearch(); setIsFilterMobileOpen(false); }}
-                className="w-full h-9 rounded-xl bg-zinc-900 text-white text-xs font-semibold mt-2.5">
-                Áp dụng
-              </button>
             </div>
 
             <button onClick={() => { handleResetFilters(); setIsFilterMobileOpen(false); }}

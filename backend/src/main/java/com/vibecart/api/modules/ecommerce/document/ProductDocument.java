@@ -49,6 +49,12 @@ public class ProductDocument {
     @Field(type = FieldType.Double)
     private BigDecimal maxPrice;
 
+    @Field(type = FieldType.Double)
+    private BigDecimal minOriginalPrice;
+
+    @Field(type = FieldType.Double)
+    private BigDecimal maxOriginalPrice;
+
     @Field(type = FieldType.Keyword)
     private String status;
 

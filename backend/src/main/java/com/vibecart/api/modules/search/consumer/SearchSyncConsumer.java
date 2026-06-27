@@ -19,6 +19,7 @@ public class SearchSyncConsumer {
 
     private final ProductSearchRepository productSearchRepository;
     private final ProductRepository productRepository;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
     @KafkaListener(
             topics = KafkaTopicConfig.PRODUCT_SYNC_TOPIC,
@@ -43,37 +44,57 @@ public class SearchSyncConsumer {
     }
 
     private void indexProduct(ProductSyncEvent event) {
-        BigDecimal minPrice = event.getMinPrice();
-        BigDecimal maxPrice = event.getMaxPrice();
+        BigDecimal[] prices = new BigDecimal[4];
+        prices[0] = event.getMinPrice();
+        prices[1] = event.getMaxPrice();
+        prices[2] = prices[0];
+        prices[3] = prices[1];
 
         try {
-            var productOpt = productRepository.findById(event.getProductId());
-            if (productOpt.isPresent()) {
-                var product = productOpt.get();
-                if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            transactionTemplate.executeWithoutResult(status -> {
+                var productOpt = productRepository.findById(event.getProductId());
+                if (productOpt.isPresent()) {
+                    var product = productOpt.get();
+                    if (product.getVariants() != null && !product.getVariants().isEmpty()) {
 
-                    var activeVariants = product.getVariants().stream()
-                            .filter(v -> !v.isDeleted() && "ACTIVE".equals(v.getStatus().name()))
-                            .toList();
-                    
-                    if (!activeVariants.isEmpty()) {
-                        minPrice = activeVariants.stream()
-                                .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                        ? v.getDiscountPrice() : v.getPrice())
-                                .min(BigDecimal::compareTo)
-                                .orElse(BigDecimal.ZERO);
-                                
-                        maxPrice = activeVariants.stream()
-                                .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                        ? v.getDiscountPrice() : v.getPrice())
-                                .max(BigDecimal::compareTo)
-                                .orElse(BigDecimal.ZERO);
+                        var activeVariants = product.getVariants().stream()
+                                .filter(v -> !v.isDeleted() && "ACTIVE".equals(v.getStatus().name()))
+                                .toList();
+                        
+                        if (!activeVariants.isEmpty()) {
+                            prices[0] = activeVariants.stream()
+                                    .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                            ? v.getDiscountPrice() : v.getPrice())
+                                    .min(BigDecimal::compareTo)
+                                    .orElse(BigDecimal.ZERO);
+                                    
+                            prices[1] = activeVariants.stream()
+                                    .map(v -> v.getDiscountPrice() != null && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                            ? v.getDiscountPrice() : v.getPrice())
+                                    .max(BigDecimal::compareTo)
+                                    .orElse(BigDecimal.ZERO);
+
+                            prices[2] = activeVariants.stream()
+                                    .map(v -> v.getPrice())
+                                    .min(BigDecimal::compareTo)
+                                    .orElse(BigDecimal.ZERO);
+                                    
+                            prices[3] = activeVariants.stream()
+                                    .map(v -> v.getPrice())
+                                    .max(BigDecimal::compareTo)
+                                    .orElse(BigDecimal.ZERO);
+                        }
                     }
                 }
-            }
+            });
         } catch (Exception e) {
             log.error("Failed to recalculate price bounds from database for product: {}. Using event payload bounds.", event.getProductId(), e);
         }
+
+        BigDecimal minPrice = prices[0];
+        BigDecimal maxPrice = prices[1];
+        BigDecimal minOriginalPrice = prices[2];
+        BigDecimal maxOriginalPrice = prices[3];
 
         ProductDocument document = ProductDocument.builder()
                 .id(event.getProductId())
@@ -85,12 +106,15 @@ public class SearchSyncConsumer {
                 .thumbnailUrl(event.getThumbnailUrl())
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
+                .minOriginalPrice(minOriginalPrice)
+                .maxOriginalPrice(maxOriginalPrice)
                 .status(event.getStatus())
                 .updatedAt(event.getTimestamp())
                 .build();
 
         productSearchRepository.save(document);
-        log.info("Indexed product in Elasticsearch: {} (minPrice={}, maxPrice={})", event.getProductId(), minPrice, maxPrice);
+        log.info("Indexed product in Elasticsearch: {} (minPrice={}, maxPrice={}, minOriginalPrice={}, maxOriginalPrice={})", 
+                event.getProductId(), minPrice, maxPrice, minOriginalPrice, maxOriginalPrice);
     }
 
     private void deleteProduct(String productId) {

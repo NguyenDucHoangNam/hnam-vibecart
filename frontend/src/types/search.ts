@@ -8,6 +8,8 @@ export interface ProductDocument {
   thumbnailUrl: string;
   minPrice: number;
   maxPrice: number;
+  minOriginalPrice?: number;
+  maxOriginalPrice?: number;
   status: string;
   createdAt: string;
   updatedAt: string;
