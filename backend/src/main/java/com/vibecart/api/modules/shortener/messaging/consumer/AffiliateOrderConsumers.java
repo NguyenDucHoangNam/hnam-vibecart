@@ -5,6 +5,7 @@ import com.vibecart.api.modules.ecommerce.dto.event.OrderPaidEvent;
 import com.vibecart.api.modules.ecommerce.dto.event.OrderDeliveredEvent;
 import com.vibecart.api.modules.ecommerce.dto.event.OrderCancelledEvent;
 import com.vibecart.api.modules.shortener.entity.Commission;
+import com.vibecart.api.modules.shortener.entity.CommissionStatus;
 import com.vibecart.api.modules.shortener.repository.CommissionRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -70,7 +71,7 @@ public class AffiliateOrderConsumers {
                 .subtotalAmount(subtotal)
                 .commissionRate(DEFAULT_COMMISSION_RATE)
                 .commissionAmount(commissionAmount)
-                .status("PENDING")
+                .status(CommissionStatus.PENDING)
                 .build();
 
         commissionRepository.save(commission);
@@ -87,8 +88,8 @@ public class AffiliateOrderConsumers {
         log.info("Affiliate: Received ORDER_DELIVERED event for order: {}", event.getOrderId());
 
         commissionRepository.findByOrderId(event.getOrderId()).ifPresent(commission -> {
-            if ("PENDING".equals(commission.getStatus())) {
-                commission.setStatus("APPROVED");
+            if (commission.getStatus() == CommissionStatus.PENDING) {
+                commission.setStatus(CommissionStatus.APPROVED);
                 commissionRepository.save(commission);
                 log.info("Commission of {} VND for Creator {} has been APPROVED due to successful delivery of order {}.",
                         commission.getCommissionAmount(), commission.getCreatorId(), event.getOrderId());
@@ -105,8 +106,8 @@ public class AffiliateOrderConsumers {
         log.info("Affiliate: Received ORDER_CANCELLED event for order: {}", event.getOrderId());
 
         commissionRepository.findByOrderId(event.getOrderId()).ifPresent(commission -> {
-            if ("PENDING".equals(commission.getStatus())) {
-                commission.setStatus("REJECTED");
+            if (commission.getStatus() == CommissionStatus.PENDING) {
+                commission.setStatus(CommissionStatus.REJECTED);
                 commissionRepository.save(commission);
                 log.info("Commission of {} VND for Creator {} has been REJECTED due to cancellation/refund of order {}.",
                         commission.getCommissionAmount(), commission.getCreatorId(), event.getOrderId());

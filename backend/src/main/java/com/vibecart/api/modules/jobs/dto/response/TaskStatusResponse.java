@@ -1,4 +1,4 @@
-package com.vibecart.api.modules.jobs.dto;
+package com.vibecart.api.modules.jobs.dto.response;
 
 import lombok.*;
 import java.time.ZonedDateTime;

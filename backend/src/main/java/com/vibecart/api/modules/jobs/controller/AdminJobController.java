@@ -56,7 +56,7 @@ public class AdminJobController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Failed to execute manual batch job trigger", e);
-            throw new RuntimeException("Lỗi kích hoạt Batch Job thủ công: " + e.getMessage(), e);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
     }
 }

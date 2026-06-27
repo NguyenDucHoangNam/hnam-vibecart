@@ -39,14 +39,7 @@ public class ReportWorkerServiceImpl implements ReportWorkerService {
         updateTaskStatus(taskId, TaskStatus.RUNNING, null, null);
 
         try {
-            List<Order> orders = orderRepository.findByCreatorIdWithItems(creatorId);
-
-            if (startDate != null) {
-                orders = orders.stream().filter(o -> o.getCreatedAt().isAfter(startDate)).toList();
-            }
-            if (endDate != null) {
-                orders = orders.stream().filter(o -> o.getCreatedAt().isBefore(endDate)).toList();
-            }
+            List<Order> orders = orderRepository.findByCreatorIdAndDateRangeWithItems(creatorId, startDate, endDate);
 
             ByteArrayOutputStream outputStream = generateExcelReport(orders);
 

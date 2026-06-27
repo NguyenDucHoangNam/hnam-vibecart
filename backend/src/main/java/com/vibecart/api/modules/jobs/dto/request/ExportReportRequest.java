@@ -1,5 +1,6 @@
-package com.vibecart.api.modules.jobs.dto;
+package com.vibecart.api.modules.jobs.dto.request;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.ZonedDateTime;
 
@@ -7,6 +8,8 @@ import java.time.ZonedDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExportReportRequest {
+    @NotNull
     private ZonedDateTime startDate;
+    @NotNull
     private ZonedDateTime endDate;
 }

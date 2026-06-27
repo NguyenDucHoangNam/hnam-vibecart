@@ -3,13 +3,14 @@ package com.vibecart.api.modules.jobs.controller;
 import com.vibecart.api.common.dto.ApiResponse;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
-import com.vibecart.api.modules.jobs.dto.ExportReportRequest;
-import com.vibecart.api.modules.jobs.dto.TaskStatusResponse;
+import com.vibecart.api.modules.jobs.dto.request.ExportReportRequest;
+import com.vibecart.api.modules.jobs.dto.response.TaskStatusResponse;
 import com.vibecart.api.modules.jobs.entity.BackgroundTask;
 import com.vibecart.api.modules.jobs.entity.TaskStatus;
 import com.vibecart.api.modules.jobs.repository.BackgroundTaskRepository;
 import com.vibecart.api.modules.jobs.service.ReportWorkerService;
 import com.vibecart.api.common.util.SecurityUtils;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -38,7 +39,7 @@ public class ReportController {
 
         @PostMapping("/export")
         @PreAuthorize("hasRole('CREATOR')")
-        public ResponseEntity<ApiResponse<Map<String, Object>>> exportReport(@RequestBody ExportReportRequest request) {
+        public ResponseEntity<ApiResponse<Map<String, Object>>> exportReport(@Valid @RequestBody ExportReportRequest request) {
                 String creatorId = SecurityUtils.getCurrentUserId();
                 log.info("REST request to export report for creator: {}", creatorId);
 

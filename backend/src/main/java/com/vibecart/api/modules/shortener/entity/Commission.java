@@ -1,9 +1,7 @@
 package com.vibecart.api.modules.shortener.entity;
 
 import com.vibecart.api.common.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -36,7 +34,16 @@ public class Commission extends BaseEntity {
     @Column(name = "commission_amount", precision = 12, scale = 2, nullable = false)
     private BigDecimal commissionAmount;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     @Builder.Default
-    private String status = "PENDING";
+    private CommissionStatus status = CommissionStatus.PENDING;
+
+    @Transient
+    private String orderStatusRaw;
+
+    public String getStatusName() {
+        return status != null ? status.name() : null;
+    }
 }
+

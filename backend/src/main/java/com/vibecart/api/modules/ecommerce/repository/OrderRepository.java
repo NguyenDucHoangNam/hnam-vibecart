@@ -50,4 +50,12 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.creatorId = :creatorId ORDER BY o.createdAt DESC")
     List<Order> findByCreatorIdWithItems(@Param("creatorId") String creatorId);
+
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items " +
+           "WHERE o.creatorId = :creatorId AND o.createdAt >= :startDate AND o.createdAt <= :endDate " +
+           "ORDER BY o.createdAt DESC")
+    List<Order> findByCreatorIdAndDateRangeWithItems(
+            @Param("creatorId") String creatorId,
+            @Param("startDate") ZonedDateTime startDate,
+            @Param("endDate") ZonedDateTime endDate);
 }

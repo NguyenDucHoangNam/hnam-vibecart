@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
-import com.vibecart.api.modules.jobs.dto.NotificationEvent;
+import com.vibecart.api.modules.jobs.dto.event.NotificationEvent;
 import com.vibecart.api.config.KafkaTopicConfig;
 
 import java.security.SecureRandom;

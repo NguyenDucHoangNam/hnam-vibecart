@@ -2,7 +2,7 @@ package com.vibecart.api.modules.iam.job;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vibecart.api.config.KafkaTopicConfig;
-import com.vibecart.api.modules.jobs.dto.NotificationEvent;
+import com.vibecart.api.modules.jobs.dto.event.NotificationEvent;
 import com.vibecart.api.modules.search.entity.OutboxEvent;
 import com.vibecart.api.modules.search.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
