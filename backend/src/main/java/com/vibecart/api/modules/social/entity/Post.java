@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
+import com.vibecart.api.modules.social.enums.PostVisibility;
 import java.util.Set;
 
 @Entity
@@ -29,6 +30,11 @@ public class Post extends BaseEntity {
 
     @Column(name = "media_urls")
     private String mediaUrls;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false)
+    @Builder.Default
+    private PostVisibility visibility = PostVisibility.PUBLIC;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

@@ -115,6 +115,9 @@ export function Header() {
         } else if (n.type === "PRODUCT_NEW" && n.referenceId) {
           router.push(ROUTES.PRODUCT_DETAILS(n.referenceId));
           setIsNotifDropdownOpen(false);
+        } else if ((n.type === "LIKE" || n.type === "COMMENT") && n.referenceId) {
+          router.push(ROUTES.POST_DETAILS(n.referenceId));
+          setIsNotifDropdownOpen(false);
         }
       }}
     >

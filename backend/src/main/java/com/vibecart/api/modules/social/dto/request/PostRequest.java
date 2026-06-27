@@ -1,5 +1,6 @@
 package com.vibecart.api.modules.social.dto.request;
 
+import com.vibecart.api.modules.social.enums.PostVisibility;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -12,5 +13,7 @@ public record PostRequest(
 
     List<String> mediaUrls,
 
-    Set<String> taggedProductIds
+    Set<String> taggedProductIds,
+
+    PostVisibility visibility
 ) {}

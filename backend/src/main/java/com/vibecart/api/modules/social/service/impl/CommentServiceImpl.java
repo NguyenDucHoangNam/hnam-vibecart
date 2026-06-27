@@ -22,6 +22,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.kafka.core.KafkaTemplate;
+import com.vibecart.api.modules.notification.dto.event.InAppNotificationEvent;
+import com.vibecart.api.config.KafkaTopicConfig;
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,6 +41,7 @@ public class CommentServiceImpl implements CommentService {
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
     private final ProfanityFilter profanityFilter;
+    private final KafkaTemplate<String, InAppNotificationEvent> notificationKafkaTemplate;
     private static final int MAX_NESTING_DEPTH = 2;
 
 
@@ -76,6 +81,46 @@ public class CommentServiceImpl implements CommentService {
 
         PostComment savedComment = commentRepository.save(comment);
         log.info("Comment added by {} on post {}", username, postId);
+
+        try {
+            User postCreator = post.getCreator();
+            if (!postCreator.getId().equals(user.getId())) {
+                InAppNotificationEvent event = InAppNotificationEvent.builder()
+                        .eventId(UUID.randomUUID().toString())
+                        .recipientId(postCreator.getId())
+                        .recipientUsername(postCreator.getUsername())
+                        .actorId(user.getId())
+                        .actorUsername(user.getUsername())
+                        .actorFullName(user.getFullName())
+                        .actorAvatarUrl(user.getAvatarUrl())
+                        .type("COMMENT")
+                        .referenceId(post.getId())
+                        .content(user.getFullName() + " đã bình luận về bài viết của bạn")
+                        .build();
+                notificationKafkaTemplate.send(KafkaTopicConfig.IN_APP_NOTIFICATION_TOPIC, event);
+            }
+
+            if (comment.getParent() != null) {
+                User parentUser = comment.getParent().getUser();
+                if (!parentUser.getId().equals(user.getId()) && !parentUser.getId().equals(postCreator.getId())) {
+                    InAppNotificationEvent event = InAppNotificationEvent.builder()
+                            .eventId(UUID.randomUUID().toString())
+                            .recipientId(parentUser.getId())
+                            .recipientUsername(parentUser.getUsername())
+                            .actorId(user.getId())
+                            .actorUsername(user.getUsername())
+                            .actorFullName(user.getFullName())
+                            .actorAvatarUrl(user.getAvatarUrl())
+                            .type("COMMENT")
+                            .referenceId(post.getId())
+                            .content(user.getFullName() + " đã phản hồi bình luận của bạn")
+                            .build();
+                    notificationKafkaTemplate.send(KafkaTopicConfig.IN_APP_NOTIFICATION_TOPIC, event);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to send COMMENT notification for post {}: {}", postId, e.getMessage());
+        }
 
         return commentMapper.toCommentResponse(savedComment, List.of());
     }

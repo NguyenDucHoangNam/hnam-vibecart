@@ -23,6 +23,7 @@ export interface Post {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  visibility: "PUBLIC" | "FOLLOWERS" | "PRIVATE";
   createdAt: string;
   updatedAt?: string;
 }

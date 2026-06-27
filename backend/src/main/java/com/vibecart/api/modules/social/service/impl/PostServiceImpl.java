@@ -28,9 +28,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import com.vibecart.api.modules.social.repository.FollowRepository;
+import com.vibecart.api.modules.social.enums.PostVisibility;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.kafka.core.KafkaTemplate;
+import com.vibecart.api.modules.notification.dto.event.InAppNotificationEvent;
+import com.vibecart.api.config.KafkaTopicConfig;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -48,6 +53,8 @@ public class PostServiceImpl implements PostService {
     private final MediaMetadataRepository mediaMetadataRepository;
     private final FeedFanoutService feedFanoutService;
     private final StringRedisTemplate redisTemplate;
+    private final FollowRepository followRepository;
+    private final KafkaTemplate<String, InAppNotificationEvent> notificationKafkaTemplate;
 
     private static final int MAX_MEDIA_URLS = 10;
     private static final int MAX_TAGGED_PRODUCTS = 5;
@@ -73,6 +80,7 @@ public class PostServiceImpl implements PostService {
                 .creator(creator)
                 .content(request.content())
                 .mediaUrls(joinMediaUrls(request.mediaUrls()))
+                .visibility(request.visibility() != null ? request.visibility() : PostVisibility.PUBLIC)
                 .build();
 
         if (request.taggedProductIds() != null && !request.taggedProductIds().isEmpty()) {
@@ -106,9 +114,23 @@ public class PostServiceImpl implements PostService {
 
         Page<Post> postPage;
         if (creatorId != null && !creatorId.isBlank()) {
-            postPage = postRepository.findByCreatorIdOrderByCreatedAtDesc(creatorId, pageable);
+            boolean isFollower = false;
+            String viewerId = "";
+            if (currentUsername != null) {
+                try {
+                    User viewer = findUserByUsername(currentUsername);
+                    viewerId = viewer.getId();
+                    isFollower = followRepository.existsByIdFollowerIdAndIdFollowingId(viewerId, creatorId);
+                } catch (Exception ignored) {}
+            }
+            postPage = postRepository.findPostsForViewer(creatorId, viewerId, isFollower, pageable);
         } else {
-            postPage = postRepository.findAllByOrderByCreatedAtDesc(pageable);
+            if (currentUsername != null) {
+                User viewer = findUserByUsername(currentUsername);
+                postPage = postRepository.findAllPublicOrOwnPosts(viewer.getId(), pageable);
+            } else {
+                postPage = postRepository.findAllPublicPosts(pageable);
+            }
         }
 
         List<PostResponse> content = toBatchPostResponses(postPage.getContent(), currentUsername);
@@ -170,6 +192,10 @@ public class PostServiceImpl implements PostService {
             post.setTaggedProducts(products);
         } else {
             post.setTaggedProducts(new HashSet<>());
+        }
+
+        if (request.visibility() != null) {
+            post.setVisibility(request.visibility());
         }
 
         Post updatedPost = postRepository.save(post);
@@ -271,7 +297,8 @@ public class PostServiceImpl implements PostService {
             log.info("User {} unliked post {}", username, postId);
             return false;
         } else {
-            Post post = postRepository.getReferenceById(postId);
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
             PostLike like = PostLike.builder()
                     .id(likeId)
                     .post(post)
@@ -279,6 +306,27 @@ public class PostServiceImpl implements PostService {
                     .build();
             postLikeRepository.save(like);
             log.info("User {} liked post {}", username, postId);
+
+            try {
+                if (!post.getCreator().getId().equals(user.getId())) {
+                    InAppNotificationEvent event = InAppNotificationEvent.builder()
+                            .eventId(UUID.randomUUID().toString())
+                            .recipientId(post.getCreator().getId())
+                            .recipientUsername(post.getCreator().getUsername())
+                            .actorId(user.getId())
+                            .actorUsername(user.getUsername())
+                            .actorFullName(user.getFullName())
+                            .actorAvatarUrl(user.getAvatarUrl())
+                            .type("LIKE")
+                            .referenceId(post.getId())
+                            .content(user.getFullName() + " đã thích bài viết của bạn")
+                            .build();
+                    notificationKafkaTemplate.send(KafkaTopicConfig.IN_APP_NOTIFICATION_TOPIC, event);
+                }
+            } catch (Exception e) {
+                log.error("Failed to send LIKE notification for post {}: {}", postId, e.getMessage());
+            }
+
             return true;
         }
     }

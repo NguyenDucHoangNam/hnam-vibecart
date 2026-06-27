@@ -26,7 +26,7 @@ export const postService = {
     return api.get<PageResponse<Post>>(ENDPOINTS.POSTS.LIST, { params });
   },
 
-  createPost: async (postData: { content: string; mediaUrls?: string[]; taggedProductIds?: string[] }) => {
+  createPost: async (postData: { content: string; mediaUrls?: string[]; taggedProductIds?: string[]; visibility?: "PUBLIC" | "FOLLOWERS" | "PRIVATE" }) => {
     return api.post<Post>(ENDPOINTS.POSTS.CREATE, postData);
   },
 
@@ -34,7 +34,7 @@ export const postService = {
     return api.get<Post>(ENDPOINTS.POSTS.DETAILS(id));
   },
 
-  updatePost: async (id: string, postData: { content: string; mediaUrls?: string[]; taggedProductIds?: string[] }) => {
+  updatePost: async (id: string, postData: { content: string; mediaUrls?: string[]; taggedProductIds?: string[]; visibility?: "PUBLIC" | "FOLLOWERS" | "PRIVATE" }) => {
     return api.put<Post>(ENDPOINTS.POSTS.DETAILS(id), postData);
   },
 

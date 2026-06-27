@@ -76,6 +76,8 @@ export default function NotificationsPage() {
           router.push(ROUTES.CREATOR_PROFILE(n.actor.id));
         } else if (n.type === "PRODUCT_NEW" && n.referenceId) {
           router.push(ROUTES.PRODUCT_DETAILS(n.referenceId));
+        } else if ((n.type === "LIKE" || n.type === "COMMENT") && n.referenceId) {
+          router.push(ROUTES.POST_DETAILS(n.referenceId));
         }
       }}
     >

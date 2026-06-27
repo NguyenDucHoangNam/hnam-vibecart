@@ -32,16 +32,24 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
     @Async("feedFanoutExecutor")
     public void fanoutNewPost(String creatorId, String postId) {
         try {
-            List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(creatorId);
-            log.info("Fan-out post {} from creator {} to {} followers", postId, creatorId, followerIds.size());
+            Post post = postRepository.findById(postId).orElse(null);
+            if (post == null) {
+                log.warn("Post not found for fan-out: {}", postId);
+                return;
+            }
 
             pushToTimeline(creatorId, postId);
 
-            for (String followerId : followerIds) {
-                pushToTimeline(followerId, postId);
+            if (post.getVisibility() != com.vibecart.api.modules.social.enums.PostVisibility.PRIVATE) {
+                List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(creatorId);
+                log.info("Fan-out post {} from creator {} to {} followers", postId, creatorId, followerIds.size());
+                for (String followerId : followerIds) {
+                    pushToTimeline(followerId, postId);
+                }
+                log.info("Fan-out completed for post {}: {} timelines updated", postId, followerIds.size() + 1);
+            } else {
+                log.info("Skipping fan-out for private post {}", postId);
             }
-
-            log.info("Fan-out completed for post {}: {} timelines updated", postId, followerIds.size() + 1);
         } catch (Exception e) {
             log.error("Fan-out failed for post {} from creator {}: {}", postId, creatorId, e.getMessage(), e);
         }
@@ -68,7 +76,7 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
     @Async("feedFanoutExecutor")
     public void onFollow(String followerId, String followingId) {
         try {
-            List<Post> recentPosts = postRepository.findByCreatorIdOrderByCreatedAtDesc(
+            List<Post> recentPosts = postRepository.findNonPrivatePostsByCreatorId(
                     followingId, PageRequest.of(0, BACKFILL_SIZE)
             ).getContent();
 
@@ -97,7 +105,7 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
     @Async("feedFanoutExecutor")
     public void onUnfollow(String followerId, String followingId) {
         try {
-            List<Post> posts = postRepository.findByCreatorIdOrderByCreatedAtDesc(
+            List<Post> posts = postRepository.findNonPrivatePostsByCreatorId(
                     followingId, PageRequest.of(0, MAX_TIMELINE_SIZE)
             ).getContent();
 
