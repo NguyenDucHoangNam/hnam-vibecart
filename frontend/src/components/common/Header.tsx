@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -8,34 +8,67 @@ import {
   ShoppingBag,
   Compass,
   MessageSquare,
+  Bell,
   ChevronDown,
   LogOut,
   User as UserIcon,
   ShieldAlert,
   LayoutDashboard,
   Menu,
-  X
+  X,
+  MoreHorizontal,
+  Check,
+  CheckCheck,
+  Trash2,
+  Settings
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { ROUTES } from "@/constants/routes";
 import { useChat } from "@/context/ChatContext";
+import { useNotification } from "@/context/NotificationContext";
+import { NotificationResponse } from "@/types/notification";
 
 export function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const { totalQuantity } = useCart();
   const { globalUnreadCount } = useChat();
+  const {
+    notifications,
+    unreadCount: notifUnreadCount,
+    recentNotifications,
+    earlierNotifications,
+    activeTab: notifActiveTab,
+    hasMore: notifHasMore,
+    isLoading: notifIsLoading,
+    setActiveTab: setNotifActiveTab,
+    loadMore: loadMoreNotifications,
+    markAsRead: markNotifAsRead,
+    markAllAsRead: markAllNotifsAsRead,
+    deleteNotification: deleteNotif,
+    deleteAllNotifications: deleteAllNotifs,
+  } = useNotification();
   const pathname = usePathname();
   const router = useRouter();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotifDropdownOpen, setIsNotifDropdownOpen] = useState(false);
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [itemMenuId, setItemMenuId] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+  const notifScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsProfileDropdownOpen(false);
+      }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
+        setIsNotifDropdownOpen(false);
+        setNotifMenuOpen(false);
+        setItemMenuId(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -45,7 +78,104 @@ export function Header() {
   }, []);
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsNotifDropdownOpen(false);
   }, [pathname]);
+
+  const handleNotifScroll = useCallback(() => {
+    const el = notifScrollRef.current;
+    if (!el || notifIsLoading || !notifHasMore) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) {
+      loadMoreNotifications();
+    }
+  }, [notifIsLoading, notifHasMore, loadMoreNotifications]);
+
+  const formatTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Vừa xong";
+    if (minutes < 60) return `${minutes} phút trước`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} giờ trước`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} ngày trước`;
+    return `${Math.floor(days / 30)} tháng trước`;
+  };
+
+  const renderNotificationItem = (n: NotificationResponse) => (
+    <div
+      key={n.id}
+      className={`group flex items-start gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 relative ${
+        !n.read ? "bg-brand-50/60 hover:bg-brand-50" : "hover:bg-zinc-50"
+      }`}
+      onClick={() => {
+        if (!n.read) markNotifAsRead(n.id);
+        if (n.type === "FOLLOW" && n.actor?.id) {
+          router.push(ROUTES.CREATOR_PROFILE(n.actor.id));
+          setIsNotifDropdownOpen(false);
+        }
+      }}
+    >
+      <div className="relative h-10 w-10 rounded-full bg-zinc-100 shrink-0 overflow-hidden">
+        {n.actor?.avatarUrl ? (
+          <img src={n.actor.avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-brand-400 to-brand-500 text-white font-bold text-xs">
+            {n.actor?.fullName?.[0]?.toUpperCase() || "?"}
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs leading-relaxed ${!n.read ? "font-semibold text-zinc-800" : "text-zinc-600"}`}>
+          {n.content}
+        </p>
+        <p className={`text-[11px] mt-0.5 ${!n.read ? "text-brand-500 font-semibold" : "text-zinc-400"}`}>
+          {formatTimeAgo(n.createdAt)}
+        </p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setItemMenuId(itemMenuId === n.id ? null : n.id);
+            }}
+            className="h-7 w-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-zinc-200 transition-all"
+          >
+            <MoreHorizontal className="h-4 w-4 text-zinc-500" />
+          </button>
+          {itemMenuId === n.id && (
+            <div className="absolute right-0 top-8 z-50 w-48 bg-white rounded-xl border border-zinc-100 shadow-lg py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+              {!n.read && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markNotifAsRead(n.id);
+                    setItemMenuId(null);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50"
+                >
+                  <Check className="h-3.5 w-3.5" /> Đánh dấu đã đọc
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteNotif(n.id);
+                  setItemMenuId(null);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Xóa thông báo
+              </button>
+            </div>
+          )}
+        </div>
+        {!n.read && (
+          <div className="h-2.5 w-2.5 rounded-full bg-brand-500 shrink-0" />
+        )}
+      </div>
+    </div>
+  );
 
   const handleLogout = async () => {
     setIsProfileDropdownOpen(false);
@@ -144,6 +274,129 @@ export function Header() {
               )}
             </Link>
           )}
+          {isAuthenticated && (
+            <div className="relative" ref={notifDropdownRef}>
+              <button
+                onClick={() => {
+                  setIsNotifDropdownOpen(!isNotifDropdownOpen);
+                  setIsProfileDropdownOpen(false);
+                }}
+                className="relative flex h-11 w-11 items-center justify-center rounded-full text-zinc-700 hover:bg-zinc-50 transition-all duration-200"
+              >
+                <Bell className="h-5.5 w-5.5" />
+                {notifUnreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-brand-500 text-[9px] font-bold text-white flex items-center justify-center shadow-sm">
+                    {notifUnreadCount > 99 ? "99+" : notifUnreadCount}
+                  </span>
+                )}
+              </button>
+              {isNotifDropdownOpen && (
+                <div className="absolute right-0 mt-2.5 w-[380px] rounded-2xl border border-zinc-100 bg-white shadow-xl shadow-zinc-200/50 animate-in fade-in slide-in-from-top-3 duration-250 z-50">
+                  <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                    <h3 className="text-lg font-bold text-zinc-800">Thông báo</h3>
+                    <div className="relative">
+                      <button
+                        onClick={() => setNotifMenuOpen(!notifMenuOpen)}
+                        className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-zinc-100 transition-colors"
+                      >
+                        <MoreHorizontal className="h-5 w-5 text-zinc-500" />
+                      </button>
+                      {notifMenuOpen && (
+                        <div className="absolute right-0 top-9 w-56 bg-white rounded-xl border border-zinc-100 shadow-lg py-1.5 z-50 animate-in fade-in duration-150">
+                          <button
+                            onClick={() => { markAllNotifsAsRead(); setNotifMenuOpen(false); }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
+                          >
+                            <CheckCheck className="h-4 w-4" /> Đánh dấu tất cả đã đọc
+                          </button>
+                          <button
+                            onClick={() => { deleteAllNotifs(); setNotifMenuOpen(false); }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" /> Xóa tất cả thông báo
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 px-4 pb-3">
+                    <button
+                      onClick={() => setNotifActiveTab("ALL")}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        notifActiveTab === "ALL"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      }`}
+                    >
+                      Tất cả
+                    </button>
+                    <button
+                      onClick={() => setNotifActiveTab("UNREAD")}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        notifActiveTab === "UNREAD"
+                          ? "bg-brand-500 text-white shadow-sm"
+                          : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                      }`}
+                    >
+                      Chưa đọc
+                    </button>
+                  </div>
+                  <div
+                    ref={notifScrollRef}
+                    onScroll={handleNotifScroll}
+                    className="max-h-[420px] overflow-y-auto px-2 pb-2"
+                  >
+                    {notifications.length === 0 && !notifIsLoading && (
+                      <div className="py-10 text-center">
+                        <Bell className="h-10 w-10 text-zinc-200 mx-auto mb-3" />
+                        <p className="text-sm text-zinc-400">Chưa có thông báo nào</p>
+                      </div>
+                    )}
+                    {recentNotifications.length > 0 && (
+                      <>
+                        <div className="flex items-center justify-between px-3 pt-1 pb-1.5">
+                          <span className="text-xs font-bold text-zinc-700">Mới</span>
+                          <Link
+                            href={ROUTES.NOTIFICATIONS}
+                            onClick={() => setIsNotifDropdownOpen(false)}
+                            className="text-xs font-semibold text-brand-500 hover:text-brand-600"
+                          >
+                            Xem tất cả
+                          </Link>
+                        </div>
+                        {recentNotifications.map(renderNotificationItem)}
+                      </>
+                    )}
+                    {earlierNotifications.length > 0 && (
+                      <>
+                        <div className="px-3 pt-3 pb-1.5">
+                          <span className="text-xs font-bold text-zinc-700">Trước đó</span>
+                        </div>
+                        {earlierNotifications.map(renderNotificationItem)}
+                      </>
+                    )}
+                    {recentNotifications.length === 0 && earlierNotifications.length === 0 && notifications.length > 0 && (
+                      <>{notifications.map(renderNotificationItem)}</>
+                    )}
+                    {notifIsLoading && (
+                      <div className="py-4 text-center">
+                        <div className="h-5 w-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-t border-zinc-100">
+                    <Link
+                      href={ROUTES.NOTIFICATIONS}
+                      onClick={() => setIsNotifDropdownOpen(false)}
+                      className="block text-center py-3 text-xs font-bold text-brand-500 hover:bg-zinc-50 rounded-b-2xl transition-colors"
+                    >
+                      Xem tất cả thông báo
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             {isAuthenticated && user ? (
               <div className="relative" ref={dropdownRef}>
@@ -199,12 +452,21 @@ export function Header() {
                     </div>
 
                     <Link
-                      href={ROUTES.PROFILE}
+                      href={ROUTES.CREATOR_PROFILE(user.id)}
                       onClick={() => setIsProfileDropdownOpen(false)}
                       className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-brand-50 hover:text-brand-600 transition-all duration-200"
                     >
                       <UserIcon className="h-4 w-4 text-zinc-400" />
                       Trang cá nhân
+                    </Link>
+
+                    <Link
+                      href={ROUTES.PROFILE}
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-brand-50 hover:text-brand-600 transition-all duration-200"
+                    >
+                      <Settings className="h-4 w-4 text-zinc-400" />
+                      Cài đặt tài khoản
                     </Link>
 
                     <Link

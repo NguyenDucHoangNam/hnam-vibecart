@@ -50,6 +50,7 @@ export const userService = {
       fullName: string;
       avatarUrl?: string;
       createdAt: string;
+      roles?: string[];
     }>(ENDPOINTS.USERS.PROFILE(userId));
   },
 };

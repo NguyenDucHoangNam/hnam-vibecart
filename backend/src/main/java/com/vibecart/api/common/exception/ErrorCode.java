@@ -109,6 +109,9 @@ public enum ErrorCode {
 
         CONVERSATION_NOT_FOUND(5001, "Cuộc hội thoại không tồn tại hoặc đã bị xóa", HttpStatus.NOT_FOUND),
         CONVERSATION_ACCESS_DENIED(5002, "Bạn không có quyền truy cập cuộc hội thoại này", HttpStatus.FORBIDDEN),
+
+        NOTIFICATION_NOT_FOUND(6001, "Thông báo không tồn tại", HttpStatus.NOT_FOUND),
+        NOTIFICATION_ACCESS_DENIED(6002, "Bạn không có quyền truy cập thông báo này", HttpStatus.FORBIDDEN),
         ;
 
         private final int code;

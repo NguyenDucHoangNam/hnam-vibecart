@@ -47,7 +47,8 @@ public class SecurityConfig {
                         "/api/v1/search",
                         "/actuator/**",
                         "/v/**",
-                        "/ws-chat/**"
+                        "/ws-chat/**",
+                        "/ws/**"
                 ).permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/products", "/api/v1/products/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/categories", "/api/v1/categories/**").permitAll()

@@ -18,6 +18,7 @@ export const ROUTES = {
   CREATOR_DASHBOARD: "/creator/dashboard",
   AFFILIATE_LINKS: "/creator/affiliate-links",
   MESSAGES: "/messages",
+  NOTIFICATIONS: "/notifications",
   CHAT_ROOM: (id: string) => `/messages/${id}`,
   ADMIN: "/admin",
   ADMIN_PRODUCTS: "/admin/products",

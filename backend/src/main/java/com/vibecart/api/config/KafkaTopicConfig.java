@@ -13,6 +13,7 @@ public class KafkaTopicConfig {
     public static final String ORDER_DELIVERED_TOPIC = "order-delivered-topic";
     public static final String ORDER_CANCELLED_TOPIC = "order-cancelled-topic";
     public static final String NOTIFICATION_EVENTS_TOPIC = "notification-events";
+    public static final String IN_APP_NOTIFICATION_TOPIC = "in-app-notification-events";
     @Bean
     public NewTopic productSyncTopic() {
         return TopicBuilder.name(PRODUCT_SYNC_TOPIC)
@@ -51,6 +52,13 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic notificationEventsTopic() {
         return TopicBuilder.name(NOTIFICATION_EVENTS_TOPIC)
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+    @Bean
+    public NewTopic inAppNotificationTopic() {
+        return TopicBuilder.name(IN_APP_NOTIFICATION_TOPIC)
                 .partitions(3)
                 .replicas(1)
                 .build();

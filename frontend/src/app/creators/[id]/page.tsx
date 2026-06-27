@@ -61,6 +61,27 @@ export default function CreatorProfilePage() {
   const [creatorFullName, setCreatorFullName] = useState("");
   const [creatorAvatar, setCreatorAvatar] = useState("");
   const [creatorJoinDate, setCreatorJoinDate] = useState("");
+  const [creatorRoles, setCreatorRoles] = useState<string[]>([]);
+
+  const getRoleBadgeStyle = (role: string) => {
+    const r = role.toUpperCase();
+    if (r === "ROLE_ADMIN" || r === "ADMIN") {
+      return {
+        label: "Admin",
+        className: "bg-rose-50 text-rose-600 border border-rose-200",
+      };
+    }
+    if (r === "ROLE_CREATOR" || r === "CREATOR") {
+      return {
+        label: "Creator",
+        className: "bg-emerald-50 text-emerald-650 border border-emerald-200",
+      };
+    }
+    return {
+      label: "Thành viên",
+      className: "bg-blue-50 text-blue-600 border border-blue-200",
+    };
+  };
 
   const loadProfileData = useCallback(async () => {
     setLoading(true);
@@ -72,6 +93,7 @@ export default function CreatorProfilePage() {
           setCreatorFullName(profile.fullName || "");
           setCreatorAvatar(profile.avatarUrl || "");
           setCreatorJoinDate(profile.createdAt || "");
+          setCreatorRoles(profile.roles || []);
         }
       } catch (err) {
         console.error("Lỗi lấy profile, fallback từ bài viết:", err);
@@ -249,9 +271,23 @@ export default function CreatorProfilePage() {
                 <h1 className="text-xl sm:text-2xl font-black text-zinc-900 leading-tight">
                   @{finalName}
                 </h1>
-                <span className="text-[9px] bg-brand-50 text-brand-600 border border-brand-100 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                  ROLE_CREATOR
-                </span>
+                {creatorRoles.length > 0 ? (
+                  creatorRoles.map((role) => {
+                    const badge = getRoleBadgeStyle(role);
+                    return (
+                      <span
+                        key={role}
+                        className={`text-[9px] border px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="text-[9px] bg-brand-50 text-brand-650 border border-brand-100 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    Creator
+                  </span>
+                )}
               </div>
               <p className="text-xs text-zinc-400 font-medium">
                 {creatorFullName || "Thành viên sáng tạo chính thức của mạng lưới VibeCart"}

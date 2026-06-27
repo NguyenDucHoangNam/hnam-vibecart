@@ -5,6 +5,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { ChatProvider } from "@/context/ChatContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { LayoutWrapper } from "@/components/common/LayoutWrapper";
@@ -33,9 +34,11 @@ export default function RootLayout({
     <ToastProvider>
       <AuthProvider>
         <ChatProvider>
-          <CartProvider>
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </CartProvider>
+          <NotificationProvider>
+            <CartProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </CartProvider>
+          </NotificationProvider>
         </ChatProvider>
       </AuthProvider>
     </ToastProvider>

@@ -1,5 +1,5 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
-export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws-chat";
+export const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
 
 export const ENDPOINTS = {
   AUTH: {
@@ -86,5 +86,13 @@ export const ENDPOINTS = {
     CLEAR_HISTORY: "/search/history/clear",
     MERGE_HISTORY: "/search/history/merge",
     SYNC: "/search/sync",
+  },
+  NOTIFICATIONS: {
+    LIST: "/notifications",
+    UNREAD_COUNT: "/notifications/unread-count",
+    READ: (id: string) => `/notifications/${id}/read`,
+    READ_ALL: "/notifications/read-all",
+    DELETE: (id: string) => `/notifications/${id}`,
+    DELETE_ALL: "/notifications",
   },
 };
