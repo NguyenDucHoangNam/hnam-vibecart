@@ -22,10 +22,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import java.util.concurrent.TimeUnit;
 @RestController
 @RequestMapping("/api/v1/orders")
+@Slf4j
 @RequiredArgsConstructor
 public class OrderController {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OrderController.class);
 
     private final OrderService orderService;
     private final StringRedisTemplate redisTemplate;

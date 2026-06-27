@@ -15,10 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 @RestController
 @RequestMapping("/api/v1/categories")
+@Slf4j
 @RequiredArgsConstructor
 public class CategoryController {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CategoryController.class);
 
     private final CategoryService categoryService;
 

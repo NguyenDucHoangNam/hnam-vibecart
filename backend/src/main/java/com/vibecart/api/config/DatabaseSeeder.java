@@ -14,10 +14,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class DatabaseSeeder implements CommandLineRunner {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DatabaseSeeder.class);
 
     private final DatabaseSeedingProperties seedingProperties;
     private final UserRepository userRepository;

@@ -7,10 +7,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class OrderPaidProducer {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OrderPaidProducer.class);
 
     private final KafkaTemplate<String, OrderPaidEvent> kafkaTemplate;
 

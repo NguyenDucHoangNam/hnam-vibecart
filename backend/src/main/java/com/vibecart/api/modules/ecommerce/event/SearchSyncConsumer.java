@@ -11,10 +11,9 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class SearchSyncConsumer {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SearchSyncConsumer.class);
 
     private final ProductSearchRepository productSearchRepository;
     private final ProductRepository productRepository;

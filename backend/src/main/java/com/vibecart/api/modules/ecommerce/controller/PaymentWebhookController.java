@@ -10,10 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/payments")
+@Slf4j
 @RequiredArgsConstructor
 public class PaymentWebhookController {
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentWebhookController.class);
 
     private final PayOSService payOSService;
     private final OrderService orderService;
