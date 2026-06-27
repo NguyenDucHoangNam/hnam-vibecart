@@ -13,10 +13,8 @@ import java.util.Set;
 public class ConversationRequest {
 
     @NotBlank(message = "Conversation type must not be blank")
-    @Pattern(regexp = "DIRECT|GROUP", message = "Type must be either DIRECT or GROUP")
+    @Pattern(regexp = "DIRECT", message = "Type must be DIRECT")
     private String type;
-
-    private String name;
 
     @NotEmpty(message = "memberIds must not be empty")
     private Set<String> memberIds;

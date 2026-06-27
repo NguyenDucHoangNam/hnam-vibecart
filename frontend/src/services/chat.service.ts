@@ -20,11 +20,10 @@ export const chatService = {
     return res;
   },
 
-  createConversation: async (memberIds: string[], type: "DIRECT" | "GROUP", name?: string) => {
+  createConversation: async (memberIds: string[]) => {
     const res = await api.post<ConversationResponse>(ENDPOINTS.CHAT.CONVERSATIONS, {
       memberIds,
-      type,
-      name
+      type: "DIRECT"
     });
     return res;
   },

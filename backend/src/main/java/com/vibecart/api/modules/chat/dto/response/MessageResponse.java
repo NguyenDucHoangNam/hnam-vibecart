@@ -29,7 +29,6 @@ public class MessageResponse {
         private String fileName;
         private Long fileSize;
         private String mimeType;
-        private String cardId;
     }
 
     @Data

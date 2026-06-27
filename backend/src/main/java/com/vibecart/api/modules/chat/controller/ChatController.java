@@ -143,7 +143,7 @@ public class ChatController {
     public void typing(@Valid TypingRequest request, Principal principal) {
         if (principal != null) {
             String username = principal.getName();
-            log.debug("STOMP: typing state in room '{}' isTyping={} by '{}'", request.getConversationId(),
+            log.info("STOMP: typing state in room '{}' isTyping={} by '{}'", request.getConversationId(),
                     request.isTyping(), username);
             chatService.broadcastTyping(request, username);
         }

@@ -73,24 +73,18 @@ public class ChatServiceImpl implements ChatService {
             throw new AppException(ErrorCode.USER_NOT_EXISTED);
         }
 
-        if ("DIRECT".equals(request.getType())) {
-            if (memberIds.size() != 2) {
-                throw new AppException(ErrorCode.INVALID_INPUT);
-            }
+        if (memberIds.size() != 2) {
+            throw new AppException(ErrorCode.INVALID_INPUT);
+        }
 
-            List<Conversation> directList = conversationRepository.findDirectConversationsBetween(memberIds);
-            if (directList != null && !directList.isEmpty()) {
-                directList.sort((c1, c2) -> {
-                    Instant u1 = c1.getUpdatedAt() != null ? c1.getUpdatedAt() : Instant.EPOCH;
-                    Instant u2 = c2.getUpdatedAt() != null ? c2.getUpdatedAt() : Instant.EPOCH;
-                    return u2.compareTo(u1);
-                });
-                return toConversationResponse(directList.get(0));
-            }
-        } else if ("GROUP".equals(request.getType())) {
-            if (request.getName() == null || request.getName().trim().isEmpty()) {
-                throw new AppException(ErrorCode.INVALID_INPUT);
-            }
+        List<Conversation> directList = conversationRepository.findDirectConversationsBetween(memberIds);
+        if (directList != null && !directList.isEmpty()) {
+            directList.sort((c1, c2) -> {
+                Instant u1 = c1.getUpdatedAt() != null ? c1.getUpdatedAt() : Instant.EPOCH;
+                Instant u2 = c2.getUpdatedAt() != null ? c2.getUpdatedAt() : Instant.EPOCH;
+                return u2.compareTo(u1);
+            });
+            return toConversationResponse(directList.get(0));
         }
 
         Map<String, Integer> unreadCounts = new HashMap<>();
@@ -99,8 +93,7 @@ public class ChatServiceImpl implements ChatService {
         }
 
         Conversation conversation = Conversation.builder()
-                .type(request.getType())
-                .name("GROUP".equals(request.getType()) ? request.getName() : null)
+                .type("DIRECT")
                 .memberIds(memberIds)
                 .unreadCounts(unreadCounts)
                 .createdAt(Instant.now())
@@ -192,7 +185,6 @@ public class ChatServiceImpl implements ChatService {
                     .fileName(request.getAttachmentMetadata().getFileName())
                     .fileSize(request.getAttachmentMetadata().getFileSize())
                     .mimeType(request.getAttachmentMetadata().getMimeType())
-                    .cardId(request.getAttachmentMetadata().getCardId())
                     .build();
         }
 
@@ -335,14 +327,10 @@ public class ChatServiceImpl implements ChatService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
     }
     private List<String> getTargetUsernames(Set<String> memberIds, String senderId) {
-        Set<String> targetIds = memberIds.stream()
-                .filter(id -> !id.equals(senderId))
-                .collect(Collectors.toSet());
-
-        if (targetIds.isEmpty())
+        if (memberIds.isEmpty())
             return Collections.emptyList();
 
-        return userRepository.findAllById(targetIds).stream()
+        return userRepository.findAllById(memberIds).stream()
                 .map(User::getUsername)
                 .collect(Collectors.toList());
     }
@@ -355,21 +343,7 @@ public class ChatServiceImpl implements ChatService {
                 .collect(Collectors.toList());
         response.setMembers(memberProfiles);
 
-        Pageable pageable = PageRequest.of(0, 1);
-        Page<Message> latestMsgPage = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversation.getId(),
-                pageable);
-        if (latestMsgPage != null && latestMsgPage.hasContent()) {
-            Message latestMsg = latestMsgPage.getContent().get(0);
-            ConversationResponse.LastMessageResponse lastMsgResponse = ConversationResponse.LastMessageResponse
-                    .builder()
-                    .messageId(latestMsg.getId())
-                    .senderId(latestMsg.getSenderId())
-                    .content(latestMsg.getContent())
-                    .type(latestMsg.getType())
-                    .createdAt(latestMsg.getCreatedAt())
-                    .build();
-            response.setLastMessage(lastMsgResponse);
-        } else if (conversation.getLastMessage() != null) {
+        if (conversation.getLastMessage() != null) {
             ConversationResponse.LastMessageResponse lastMsgResponse = ConversationResponse.LastMessageResponse
                     .builder()
                     .messageId(conversation.getLastMessage().getMessageId())

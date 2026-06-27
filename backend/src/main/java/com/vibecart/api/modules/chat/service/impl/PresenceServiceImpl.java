@@ -6,8 +6,13 @@ import com.vibecart.api.modules.iam.entity.User;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.social.repository.FollowRepository;
 import com.vibecart.api.modules.social.dto.response.FollowResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vibecart.api.modules.chat.entity.Conversation;
+import com.vibecart.api.modules.chat.repository.ConversationRepository;
+import com.vibecart.api.modules.chat.dto.event.ChatEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +31,9 @@ public class PresenceServiceImpl implements PresenceService {
     private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final ConversationRepository conversationRepository;
+    private final RedisTemplate<String, ChatEvent> chatRedisTemplate;
+    private final ObjectMapper objectMapper;
 
     private static final String PRESENCE_KEY_PREFIX = "presence:user:";
     private static final String LAST_ACTIVE_KEY_PREFIX = "presence:last_active:";
@@ -44,6 +52,8 @@ public class PresenceServiceImpl implements PresenceService {
             redisTemplate.opsForSet().add(ACTIVE_USERS_SET, userId);
 
             log.debug("Set user presence to ONLINE: username={}, userId={}", username, userId);
+
+            broadcastPresenceStatus(userId, "ONLINE");
         });
     }
     @Override
@@ -59,7 +69,48 @@ public class PresenceServiceImpl implements PresenceService {
             redisTemplate.opsForSet().remove(ACTIVE_USERS_SET, userId);
 
             log.debug("Set user presence to OFFLINE: username={}, userId={}", username, userId);
+
+            broadcastPresenceStatus(userId, "OFFLINE");
         });
+    }
+
+    private void broadcastPresenceStatus(String userId, String status) {
+        List<Conversation> conversations = conversationRepository.findByMemberIdsContainingOrderByUpdatedAtDesc(userId);
+        if (conversations.isEmpty()) return;
+
+        Set<String> memberIds = conversations.stream()
+                .flatMap(c -> c.getMemberIds().stream())
+                .filter(id -> !id.equals(userId))
+                .collect(Collectors.toSet());
+
+        if (memberIds.isEmpty()) return;
+
+        List<User> members = userRepository.findAllById(memberIds);
+        List<String> targetUsernames = members.stream()
+                .map(User::getUsername)
+                .collect(Collectors.toList());
+
+        PresenceResponse presenceResponse = PresenceResponse.builder()
+                .userId(userId)
+                .status(status)
+                .lastActiveAt(Instant.now())
+                .build();
+
+        try {
+            ChatEvent event = ChatEvent.builder()
+                    .type("PRESENCE")
+                    .conversationId("")
+                    .payloadJson(objectMapper.writeValueAsString(presenceResponse))
+                    .targetUsernames(targetUsernames)
+                    .build();
+
+            for (String targetUsername : targetUsernames) {
+                chatRedisTemplate.convertAndSend("chat:user:" + targetUsername, event);
+            }
+            log.info("Broadcast presence update: userId={}, status={} to {} users", userId, status, targetUsernames.size());
+        } catch (Exception e) {
+            log.error("Failed to broadcast presence update for user {}", userId, e);
+        }
     }
     @Override
     public PresenceResponse getUserPresence(String userId) {

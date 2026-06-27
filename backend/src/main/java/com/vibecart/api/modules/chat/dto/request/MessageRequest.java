@@ -1,6 +1,7 @@
 package com.vibecart.api.modules.chat.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 @Data
@@ -15,6 +16,7 @@ public class MessageRequest {
     private String content;
 
     @NotBlank(message = "Message type must not be blank")
+    @Pattern(regexp = "TEXT|IMAGE|VIDEO|DOCUMENT", message = "Type must be TEXT, IMAGE, VIDEO or DOCUMENT")
     private String type;
 
     private AttachmentMetadataRequest attachmentMetadata;
@@ -28,6 +30,5 @@ public class MessageRequest {
         private String fileName;
         private Long fileSize;
         private String mimeType;
-        private String cardId;
     }
 }

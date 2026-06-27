@@ -9,8 +9,7 @@ import {
   ConversationResponse, 
   MessageResponse, 
   PresenceResponse, 
-  TypingResponse,
-  ReadReceiptResponse 
+  TypingResponse 
 } from "@/types";
 
 interface ChatContextType {
@@ -29,7 +28,7 @@ interface ChatContextType {
   setActiveConversation: (conv: ConversationResponse | null) => void;
   fetchConversations: () => Promise<void>;
   loadMoreMessages: () => Promise<void>;
-  sendMessage: (content: string, type?: MessageResponse["type"], cardId?: string) => Promise<void>;
+  sendMessage: (content: string, type?: MessageResponse["type"], attachmentMeta?: { fileUrl: string; fileName: string; fileSize: number; mimeType: string }) => Promise<void>;
   sendTypingState: (isTyping: boolean) => void;
   startDirectChat: (targetUserId: string) => Promise<string>;
 }
@@ -165,10 +164,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setIsLoadingMessages(false);
     }
   }, [user, isConnected, send]);
+
   const sendMessage = useCallback(async (
     content: string, 
     type: MessageResponse["type"] = "TEXT",
-    cardId?: string
+    attachmentMeta?: { fileUrl: string; fileName: string; fileSize: number; mimeType: string }
   ) => {
     if (!activeConversation || !isConnected) return;
 
@@ -178,18 +178,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       type
     };
 
-    if (type !== "TEXT" && cardId) {
-      messagePayload.attachmentMetadata = {
-        fileUrl: type === "IMAGE" ? content : undefined,
-        fileName: type === "IMAGE" ? "Image_attachment.jpg" : `Card_${cardId}`,
-        fileSize: 0,
-        mimeType: type === "IMAGE" ? "image/jpeg" : "application/json",
-        cardId
-      };
+    if (attachmentMeta) {
+      messagePayload.attachmentMetadata = attachmentMeta;
     }
 
     send("/app/chat.sendMessage", messagePayload);
   }, [activeConversation, isConnected, send]);
+
   const sendTypingState = useCallback((isTyping: boolean) => {
     if (!activeConversation || !isConnected) return;
     send("/app/chat.typing", {
@@ -197,9 +192,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       isTyping
     });
   }, [activeConversation, isConnected, send]);
+
   const startDirectChat = useCallback(async (targetUserId: string): Promise<string> => {
     try {
-      const response = await chatService.createConversation([targetUserId], "DIRECT");
+      const response = await chatService.createConversation([targetUserId]);
       await fetchConversations();
       setActiveConversation(response);
       return response.id;
@@ -208,6 +204,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [fetchConversations, setActiveConversation, toast]);
+
+  // Subscribe to personal queues only (no topic subscriptions to avoid duplicates)
   useEffect(() => {
     if (!isConnected) return;
     const unsubscribeMessages = subscribe<MessageResponse>("/user/queue/messages", (message) => {
@@ -249,6 +247,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     });
     const unsubscribeTyping = subscribe<TypingResponse>("/user/queue/typing", (data) => {
       if (activeConversationRef.current?.id === data.conversationId) {
+        if (user && data.username === user.username) return;
         setTypingUsers(prev => {
           if (data.isTyping) {
             if (prev.includes(data.username)) return prev;
@@ -278,81 +277,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    const unsubscribePresence = subscribe<PresenceResponse>("/user/queue/presence", (payload) => {
+      setOnlineStatusMap(prev => ({
+        ...prev,
+        [payload.userId]: payload.status
+      }));
+    });
+
     return () => {
       if (unsubscribeMessages) unsubscribeMessages();
       if (unsubscribeTyping) unsubscribeTyping();
       if (unsubscribeSeen) unsubscribeSeen();
+      if (unsubscribePresence) unsubscribePresence();
     };
   }, [isConnected, subscribe, fetchConversations, user, toast]);
-  useEffect(() => {
-    if (!isConnected || !activeConversation) return;
 
-    const roomId = activeConversation.id;
-    const unsubscribeRoomMessages = subscribe<MessageResponse>(`/topic/chat.${roomId}`, (message) => {
-      setMessages(prev => {
-        if (prev.some(m => m.id === message.id)) return prev;
-        return [message, ...prev];
-      });
-      setConversations(prev => {
-        const index = prev.findIndex(c => c.id === message.conversationId);
-        if (index === -1) {
-          fetchConversations();
-          return prev;
-        }
-
-        const updated = [...prev];
-        const conv = { ...updated[index] };
-        
-        conv.lastMessage = {
-          messageId: message.id,
-          senderId: message.senderId,
-          content: message.content,
-          type: message.type,
-          createdAt: message.createdAt
-        };
-        conv.updatedAt = message.createdAt;
-        updated.splice(index, 1);
-        return [conv, ...updated];
-      });
-      if (user && message.senderId !== user.id && isConnected) {
-        send("/app/chat.seen", { conversationId: roomId });
-      }
-    });
-    const unsubscribeRoomTyping = subscribe<TypingResponse>(`/topic/chat.${roomId}/typing`, (data) => {
-      if (user && data.username === user.username) return;
-
-      setTypingUsers(prev => {
-        if (data.isTyping) {
-          if (prev.includes(data.username)) return prev;
-          return [...prev, data.username];
-        } else {
-          return prev.filter(name => name !== data.username);
-        }
-      });
-    });
-    const unsubscribeRoomSeen = subscribe<{ conversationId: string; userId: string; readAt: string }>(`/topic/chat.${roomId}/seen`, (payload) => {
-      try {
-        setMessages(prev => prev.map(msg => {
-          const alreadyRead = msg.readBy.some(receipt => receipt.userId === payload.userId);
-          if (!alreadyRead && msg.senderId !== payload.userId) {
-            return {
-              ...msg,
-              readBy: [...msg.readBy, { userId: payload.userId, readAt: payload.readAt }]
-            };
-          }
-          return msg;
-        }));
-      } catch (e) {
-        console.error("Lỗi đọc payload seen receipt", e);
-      }
-    });
-
-    return () => {
-      if (unsubscribeRoomMessages) unsubscribeRoomMessages();
-      if (unsubscribeRoomTyping) unsubscribeRoomTyping();
-      if (unsubscribeRoomSeen) unsubscribeRoomSeen();
-    };
-  }, [isConnected, activeConversation, subscribe, user]);
+  // Presence heartbeat ping
   useEffect(() => {
     if (!isConnected || !isAuthenticated) return;
     send("/app/chat.ping", {});

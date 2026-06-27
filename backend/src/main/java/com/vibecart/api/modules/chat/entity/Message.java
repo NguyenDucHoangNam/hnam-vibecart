@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import java.time.Instant;
 import java.util.List;
 @Document(collection = "messages")
-@CompoundIndex(name = "conv_created_idx", def = "{'conversationId': 1, 'createdAt': -1}")
+@CompoundIndex(name = "conv_created_idx", def = "{'conversation_id': 1, 'created_at': -1}")
 @Getter
 @Setter
 @Builder
@@ -21,7 +21,6 @@ public class Message {
     @Id
     private String id;
 
-    @Indexed
     @Field("conversation_id")
     private String conversationId;
 
@@ -60,9 +59,6 @@ public class Message {
 
         @Field("mime_type")
         private String mimeType;
-
-        @Field("card_id")
-        private String cardId;
     }
     @Getter
     @Setter

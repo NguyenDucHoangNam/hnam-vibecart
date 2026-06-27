@@ -4,13 +4,13 @@ export interface LastMessageResponse {
   messageId: string;
   senderId: string;
   content: string;
-  type: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "PRODUCT" | "ORDER";
+  type: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
   createdAt: string;
 }
 
 export interface ConversationResponse {
   id: string;
-  type: "DIRECT" | "GROUP";
+  type: "DIRECT";
   name?: string;
   avatarUrl?: string;
   memberIds: string[];
@@ -32,7 +32,6 @@ export interface AttachmentMetadataResponse {
   fileName: string;
   fileSize: number;
   mimeType: string;
-  cardId?: string;
 }
 
 export interface ReadReceiptResponse {
@@ -45,7 +44,7 @@ export interface MessageResponse {
   conversationId: string;
   senderId: string;
   content: string;
-  type: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT" | "PRODUCT" | "ORDER";
+  type: "TEXT" | "IMAGE" | "VIDEO" | "DOCUMENT";
   attachmentMetadata?: AttachmentMetadataResponse;
   readBy: ReadReceiptResponse[];
   createdAt: string;
@@ -64,12 +63,8 @@ export interface PresenceResponse {
 }
 
 export interface ConversationRequest {
-  type: "DIRECT" | "GROUP";
-  name?: string;
+  type: "DIRECT";
   memberIds: string[];
 }
 
 export interface ChatRoom extends ConversationResponse {}
-export interface Message extends MessageResponse {
-  senderName: string;
-}
