@@ -1,6 +1,5 @@
 package com.vibecart.api.modules.search.dto.response;
 
-import com.vibecart.api.modules.ecommerce.document.ProductDocument;
 import lombok.*;
 import java.util.List;
 
@@ -9,7 +8,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SearchResultResponse {
-    private List<ProductDocument> content;
+    private List<ProductSearchItemResponse> content;
     private String suggestion;
     private int page;
     private int size;

@@ -6,7 +6,6 @@ import com.vibecart.api.modules.search.dto.response.SearchHistoryResponse;
 import com.vibecart.api.modules.search.dto.response.SearchResultResponse;
 import com.vibecart.api.modules.search.dto.response.UserSearchResultResponse;
 
-import java.math.BigDecimal;
 import java.util.List;
 public interface SearchService {
     SearchResultResponse search(ProductSearchRequest request, String userId);

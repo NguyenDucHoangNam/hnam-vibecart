@@ -1,5 +1,8 @@
 package com.vibecart.api.modules.search.dto.request;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,15 +12,22 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSearchRequest {
+    @Size(max = 200)
     private String query;
+    @Size(max = 200)
     private String q;
     private String categoryId;
     private String category;
+    @Min(0)
     private BigDecimal minPrice;
+    @Min(0)
     private BigDecimal maxPrice;
     private String sortBy;
     private String sort;
+    @Min(0)
     private Integer page = 0;
+    @Min(1)
+    @Max(50)
     private Integer size = 12;
 
     public String getActiveQuery() {
@@ -34,11 +44,11 @@ public class ProductSearchRequest {
             activeSort = switch (activeSort) {
                 case "priceAsc" -> "price_asc";
                 case "priceDesc" -> "price_desc";
-                case "createdAt" -> "newest";
-                case "name" -> "relevance";
+                case "createdAt", "newest" -> "newest";
                 default -> activeSort;
             };
         }
         return activeSort != null ? activeSort : "relevance";
     }
 }
+

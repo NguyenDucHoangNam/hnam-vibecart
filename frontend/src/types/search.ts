@@ -1,7 +1,6 @@
 export interface ProductDocument {
   id: string;
   name: string;
-  description: string;
   categoryId: string;
   categoryName: string;
   creatorId: string;
@@ -12,7 +11,6 @@ export interface ProductDocument {
   maxOriginalPrice?: number;
   status: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface SearchResultResponse {

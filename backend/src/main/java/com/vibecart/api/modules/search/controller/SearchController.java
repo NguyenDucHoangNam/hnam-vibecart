@@ -8,33 +8,39 @@ import com.vibecart.api.modules.search.dto.response.SearchResultResponse;
 import com.vibecart.api.modules.search.dto.response.UserSearchResultResponse;
 import com.vibecart.api.modules.search.service.SearchService;
 import com.vibecart.api.common.util.SecurityUtils;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/search")
+@Validated
 public class SearchController {
 
     private static final Logger log = LoggerFactory.getLogger(SearchController.class);
 
     private final SearchService searchService;
+
     public SearchController(SearchService searchService) {
         this.searchService = searchService;
     }
+
     @GetMapping
-    public ResponseEntity<ApiResponse<SearchResultResponse>> search(ProductSearchRequest request) {
+    public ResponseEntity<ApiResponse<SearchResultResponse>> search(@Valid ProductSearchRequest request) {
         log.info("REST request to search products. Query='{}'", request.getActiveQuery());
 
-        String userId = null;
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            userId = SecurityUtils.getCurrentUserId();
-        }
+        String userId = getOptionalUserId();
         SearchResultResponse result = searchService.search(request, userId);
 
         ApiResponse<SearchResultResponse> response = ApiResponse.<SearchResultResponse>builder()
@@ -45,8 +51,10 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/autocomplete")
-    public ResponseEntity<ApiResponse<List<String>>> autocomplete(@RequestParam String prefix) {
+    public ResponseEntity<ApiResponse<List<String>>> autocomplete(
+            @RequestParam @Size(min = 1, max = 100) String prefix) {
         log.info("REST request for autocomplete prefix: '{}'", prefix);
         List<String> suggestions = searchService.autocomplete(prefix);
 
@@ -58,20 +66,16 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<UserSearchResultResponse>> searchUsers(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @RequestParam(required = false, defaultValue = "20") int size) {
+            @RequestParam(required = false) @Size(max = 200) String q,
+            @RequestParam(required = false, defaultValue = "0") @Min(0) int page,
+            @RequestParam(required = false, defaultValue = "20") @Min(1) @Max(50) int size) {
 
         log.info("REST request to search users. Query='{}'", q);
 
-        String currentUserId = null;
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            currentUserId = SecurityUtils.getCurrentUserId();
-        }
-
+        String currentUserId = getOptionalUserId();
         UserSearchResultResponse result = searchService.searchUsers(q, page, size, currentUserId);
 
         ApiResponse<UserSearchResultResponse> response = ApiResponse.<UserSearchResultResponse>builder()
@@ -82,8 +86,10 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/users/autocomplete")
-    public ResponseEntity<ApiResponse<List<String>>> autocompleteUsers(@RequestParam String prefix) {
+    public ResponseEntity<ApiResponse<List<String>>> autocompleteUsers(
+            @RequestParam @Size(min = 1, max = 100) String prefix) {
         log.info("REST request for user autocomplete prefix: '{}'", prefix);
         List<String> suggestions = searchService.autocompleteUsers(prefix);
 
@@ -95,6 +101,7 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/trending")
     public ResponseEntity<ApiResponse<List<String>>> getTrendingKeywords() {
         log.info("REST request to fetch weekly trending searches");
@@ -108,6 +115,7 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<SearchHistoryResponse>>> getPersonalHistory() {
@@ -124,6 +132,7 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @DeleteMapping("/history")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteHistoryKeyword(@RequestParam String keyword) {
@@ -139,6 +148,7 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @DeleteMapping("/history/clear")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> clearHistory() {
@@ -154,9 +164,10 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @PostMapping("/history/merge")
     @PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> mergeHistory(@RequestBody SearchMergeRequest request) {
+    public ResponseEntity<ApiResponse<Void>> mergeHistory(@Valid @RequestBody SearchMergeRequest request) {
         String userId = SecurityUtils.getCurrentUserId();
         log.info("REST request to merge history from localStorage for user {}", userId);
 
@@ -169,6 +180,7 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
     @PostMapping("/sync")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> reindexAll() {
@@ -183,4 +195,13 @@ public class SearchController {
 
         return ResponseEntity.ok(response);
     }
+
+    private String getOptionalUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            return SecurityUtils.getCurrentUserId();
+        }
+        return null;
+    }
 }
+
