@@ -7,27 +7,34 @@ import com.vibecart.api.modules.notification.dto.request.UpdatePreferencesReques
 import com.vibecart.api.modules.notification.dto.response.NotificationResponse;
 import com.vibecart.api.modules.notification.dto.response.PreferencesResponse;
 import com.vibecart.api.modules.notification.service.NotificationService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 @Slf4j
+@Validated
+@PreAuthorize("hasAnyRole('USER', 'CREATOR', 'ADMIN')")
 public class NotificationController {
 
     private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<NotificationResponse>>> getNotifications(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size,
             @RequestParam(defaultValue = "ALL") String readStatus) {
 
-        String username = SecurityUtils.getCurrentUsername();
-        PageResponse<NotificationResponse> result = notificationService.getNotifications(username, page, size, readStatus);
+        String userId = SecurityUtils.getCurrentUserId();
+        PageResponse<NotificationResponse> result = notificationService.getNotifications(userId, page, size, readStatus);
 
         return ResponseEntity.ok(
                 ApiResponse.<PageResponse<NotificationResponse>>builder()
@@ -39,8 +46,8 @@ public class NotificationController {
 
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount() {
-        String username = SecurityUtils.getCurrentUsername();
-        long count = notificationService.getUnreadCount(username);
+        String userId = SecurityUtils.getCurrentUserId();
+        long count = notificationService.getUnreadCount(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<Long>builder()
@@ -51,8 +58,8 @@ public class NotificationController {
 
     @PutMapping("/{id}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable String id) {
-        String username = SecurityUtils.getCurrentUsername();
-        notificationService.markAsRead(id, username);
+        String userId = SecurityUtils.getCurrentUserId();
+        notificationService.markAsRead(id, userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
@@ -63,8 +70,8 @@ public class NotificationController {
 
     @PutMapping("/read-all")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead() {
-        String username = SecurityUtils.getCurrentUsername();
-        notificationService.markAllAsRead(username);
+        String userId = SecurityUtils.getCurrentUserId();
+        notificationService.markAllAsRead(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
@@ -75,8 +82,8 @@ public class NotificationController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable String id) {
-        String username = SecurityUtils.getCurrentUsername();
-        notificationService.deleteNotification(id, username);
+        String userId = SecurityUtils.getCurrentUserId();
+        notificationService.deleteNotification(id, userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
@@ -87,8 +94,8 @@ public class NotificationController {
 
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> deleteAllNotifications() {
-        String username = SecurityUtils.getCurrentUsername();
-        notificationService.deleteAllNotifications(username);
+        String userId = SecurityUtils.getCurrentUserId();
+        notificationService.deleteAllNotifications(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<Void>builder()
@@ -99,8 +106,8 @@ public class NotificationController {
 
     @GetMapping("/preferences")
     public ResponseEntity<ApiResponse<PreferencesResponse>> getPreferences() {
-        String username = SecurityUtils.getCurrentUsername();
-        PreferencesResponse result = notificationService.getPreferences(username);
+        String userId = SecurityUtils.getCurrentUserId();
+        PreferencesResponse result = notificationService.getPreferences(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.<PreferencesResponse>builder()
@@ -111,9 +118,9 @@ public class NotificationController {
 
     @PutMapping("/preferences")
     public ResponseEntity<ApiResponse<PreferencesResponse>> updatePreferences(
-            @RequestBody UpdatePreferencesRequest request) {
-        String username = SecurityUtils.getCurrentUsername();
-        PreferencesResponse result = notificationService.updatePreferences(username, request);
+            @Valid @RequestBody UpdatePreferencesRequest request) {
+        String userId = SecurityUtils.getCurrentUserId();
+        PreferencesResponse result = notificationService.updatePreferences(userId, request);
 
         return ResponseEntity.ok(
                 ApiResponse.<PreferencesResponse>builder()

@@ -1,5 +1,7 @@
 package com.vibecart.api.modules.notification.dto.request;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.util.Map;
@@ -9,6 +11,8 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdatePreferencesRequest {
+    @NotNull
+    @Size(min = 1, max = 20)
     private Map<String, ChannelPreferenceDto> preferences;
 
     @Data
@@ -21,3 +25,4 @@ public class UpdatePreferencesRequest {
         private boolean push;
     }
 }
+

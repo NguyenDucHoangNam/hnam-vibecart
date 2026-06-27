@@ -3,14 +3,13 @@ package com.vibecart.api.modules.notification.service.impl;
 import com.vibecart.api.common.dto.PageResponse;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
-import com.vibecart.api.modules.iam.entity.User;
-import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.notification.dto.event.InAppNotificationEvent;
 import com.vibecart.api.modules.notification.dto.request.UpdatePreferencesRequest;
 import com.vibecart.api.modules.notification.dto.response.NotificationResponse;
 import com.vibecart.api.modules.notification.dto.response.PreferencesResponse;
 import com.vibecart.api.modules.notification.entity.Notification;
 import com.vibecart.api.modules.notification.entity.NotificationPreference;
+import com.vibecart.api.modules.notification.entity.NotificationType;
 import com.vibecart.api.modules.notification.mapper.NotificationMapper;
 import com.vibecart.api.modules.notification.repository.NotificationPreferenceRepository;
 import com.vibecart.api.modules.notification.repository.NotificationRepository;
@@ -30,9 +29,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -46,15 +47,13 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationMapper notificationMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final StringRedisTemplate redisTemplate;
-    private final UserRepository userRepository;
     private final MongoTemplate mongoTemplate;
 
     private static final String UNREAD_COUNT_KEY_PREFIX = "notification:unread:";
 
     @Override
-    public PageResponse<NotificationResponse> getNotifications(String username, int page, int size, String readStatus) {
-        String userId = getUserIdByUsername(username);
-        Pageable pageable = PageRequest.of(page, size);
+    public PageResponse<NotificationResponse> getNotifications(String userId, int page, int size, String readStatus) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
 
         Page<Notification> notificationPage;
         if ("UNREAD".equalsIgnoreCase(readStatus)) {
@@ -78,24 +77,29 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public long getUnreadCount(String username) {
-        String userId = getUserIdByUsername(username);
+    public long getUnreadCount(String userId) {
         String key = UNREAD_COUNT_KEY_PREFIX + userId;
 
-        String cached = redisTemplate.opsForValue().get(key);
-        if (cached != null) {
-            return Long.parseLong(cached);
+        try {
+            String cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) {
+                return Long.parseLong(cached);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to read unread count from Redis for user {}", userId, e);
         }
 
         long count = notificationRepository.countByRecipientIdAndIsReadFalse(userId);
-        redisTemplate.opsForValue().set(key, String.valueOf(count), 1, TimeUnit.DAYS);
+        try {
+            redisTemplate.opsForValue().set(key, String.valueOf(count), 1, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("Failed to cache unread count in Redis for user {}", userId, e);
+        }
         return count;
     }
 
     @Override
-    public void markAsRead(String notificationId, String username) {
-        String userId = getUserIdByUsername(username);
-
+    public void markAsRead(String notificationId, String userId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
@@ -111,21 +115,16 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void markAllAsRead(String username) {
-        String userId = getUserIdByUsername(username);
-
+    public void markAllAsRead(String userId) {
         Query query = new Query(Criteria.where("recipient_id").is(userId).and("is_read").is(false));
         Update update = new Update().set("is_read", true);
         mongoTemplate.updateMulti(query, update, Notification.class);
 
-        String key = UNREAD_COUNT_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(key, "0");
+        syncUnreadCountFromDb(userId);
     }
 
     @Override
-    public void deleteNotification(String notificationId, String username) {
-        String userId = getUserIdByUsername(username);
-
+    public void deleteNotification(String notificationId, String userId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
@@ -141,107 +140,44 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void deleteAllNotifications(String username) {
-        String userId = getUserIdByUsername(username);
+    public void deleteAllNotifications(String userId) {
         notificationRepository.deleteByRecipientId(userId);
-
-        String key = UNREAD_COUNT_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().set(key, "0");
+        syncUnreadCountFromDb(userId);
     }
 
     @Override
     public void processAndBroadcast(InAppNotificationEvent event) {
-        NotificationPreference preference = preferenceRepository.findByUserId(event.getRecipientId()).orElse(null);
-        if (preference != null) {
-            NotificationPreference.ChannelPreference channelPref = preference.getPreferences().get(event.getType());
-            if (channelPref != null && !channelPref.isInApp()) {
-                log.info("Notification disabled by user preference: type={}, recipient={}",
-                        event.getType(), event.getRecipientId());
-                return;
-            }
+        if (!validateEvent(event)) {
+            return;
         }
 
-        boolean isDuplicate = notificationRepository.existsByActorIdAndRecipientIdAndTypeAndCreatedAtAfter(
-                event.getActorId(),
-                event.getRecipientId(),
-                event.getType(),
-                Instant.now().minus(5, ChronoUnit.MINUTES)
-        );
+        if (isSelfNotification(event)) {
+            log.debug("Skipping self-notification: actor={}, recipient={}, type={}",
+                    event.getActorId(), event.getRecipientId(), event.getType());
+            return;
+        }
 
-        if (isDuplicate) {
+        NotificationType notificationType = parseNotificationType(event.getType());
+        if (notificationType == null) {
+            log.warn("Unknown notification type: {}. Skipping.", event.getType());
+            return;
+        }
+
+        NotificationPreference preference = preferenceRepository.findByUserId(event.getRecipientId()).orElse(null);
+        if (isNotificationDisabled(preference, event.getType())) {
+            log.info("Notification disabled by user preference: type={}, recipient={}",
+                    event.getType(), event.getRecipientId());
+            return;
+        }
+
+        if (isDuplicate(event)) {
             log.info("Skipping duplicate notification: actor={}, recipient={}, type={}",
                     event.getActorId(), event.getRecipientId(), event.getType());
             return;
         }
 
-        String groupKey = null;
-        if ("FOLLOW".equals(event.getType())) {
-            groupKey = "FOLLOW:" + event.getRecipientId();
-        } else if ("LIKE".equals(event.getType()) && event.getReferenceId() != null) {
-            groupKey = "LIKE:" + event.getReferenceId();
-        }
-
-        Notification notification = null;
-        if (groupKey != null) {
-            java.util.Optional<Notification> existingOpt = notificationRepository
-                    .findFirstByRecipientIdAndGroupKeyAndIsReadFalseAndCreatedAtAfterOrderByCreatedAtDesc(
-                            event.getRecipientId(), groupKey, Instant.now().minus(24, ChronoUnit.HOURS));
-
-            if (existingOpt.isPresent()) {
-                notification = existingOpt.get();
-
-                if (notification.getAggregatedActorIds() == null) {
-                    notification.setAggregatedActorIds(new java.util.ArrayList<>(List.of(notification.getActorId())));
-                }
-                if (notification.getAggregatedActorNames() == null) {
-                    notification.setAggregatedActorNames(new java.util.ArrayList<>(List.of(notification.getActorFullName())));
-                }
-
-                if (!notification.getAggregatedActorIds().contains(event.getActorId())) {
-                    notification.getAggregatedActorIds().add(event.getActorId());
-                    notification.getAggregatedActorNames().add(event.getActorFullName());
-                }
-
-                notification.setActorId(event.getActorId());
-                notification.setActorUsername(event.getActorUsername());
-                notification.setActorFullName(event.getActorFullName());
-                notification.setActorAvatarUrl(event.getActorAvatarUrl());
-                notification.setCreatedAt(Instant.now());
-
-                int count = notification.getAggregatedActorIds().size();
-                notification.setAggregatedCount(count);
-
-                String contentText = "";
-                if ("FOLLOW".equals(event.getType())) {
-                    if (count == 1) {
-                        contentText = event.getActorFullName() + " đã bắt đầu theo dõi bạn";
-                    } else if (count == 2) {
-                        contentText = notification.getAggregatedActorNames().get(0) + " và " + notification.getAggregatedActorNames().get(1) + " đã bắt đầu theo dõi bạn";
-                    } else {
-                        contentText = notification.getAggregatedActorNames().get(count - 1) + ", " + notification.getAggregatedActorNames().get(count - 2) + " và " + (count - 2) + " người khác đã bắt đầu theo dõi bạn";
-                    }
-                } else if ("LIKE".equals(event.getType())) {
-                    if (count == 1) {
-                        contentText = event.getActorFullName() + " đã thích bài viết của bạn";
-                    } else if (count == 2) {
-                        contentText = notification.getAggregatedActorNames().get(0) + " và " + notification.getAggregatedActorNames().get(1) + " đã thích bài viết của bạn";
-                    } else {
-                        contentText = notification.getAggregatedActorNames().get(count - 1) + ", " + notification.getAggregatedActorNames().get(count - 2) + " và " + (count - 2) + " người khác đã thích bài viết của bạn";
-                    }
-                }
-                notification.setContent(contentText);
-            }
-        }
-
-        boolean isNew = false;
-        if (notification == null) {
-            notification = notificationMapper.fromEvent(event);
-            notification.setGroupKey(groupKey);
-            notification.setAggregatedActorIds(new java.util.ArrayList<>(List.of(event.getActorId())));
-            notification.setAggregatedActorNames(new java.util.ArrayList<>(List.of(event.getActorFullName())));
-            notification.setAggregatedCount(1);
-            isNew = true;
-        }
+        Notification notification = buildOrAggregateNotification(event, notificationType);
+        boolean isNew = notification.getId() == null;
 
         notificationRepository.save(notification);
 
@@ -249,27 +185,11 @@ public class NotificationServiceImpl implements NotificationService {
             incrementUnreadCount(event.getRecipientId());
         }
 
-        NotificationResponse response = notificationMapper.toResponse(notification);
-
-        boolean sendSound = true;
-        if (preference != null) {
-            NotificationPreference.ChannelPreference channelPref = preference.getPreferences().get(event.getType());
-            if (channelPref != null) {
-                sendSound = channelPref.isSound();
-            }
-        }
-        response.setSendSound(sendSound);
-
-        messagingTemplate.convertAndSendToUser(
-                event.getRecipientUsername(), "/queue/notifications", response);
-
-        log.info("Notification processed: type={}, aggregatedCount={}, isNew={}, recipient={}",
-                event.getType(), notification.getAggregatedCount(), isNew, event.getRecipientUsername());
+        broadcastToUser(event, notification, preference);
     }
 
     @Override
-    public PreferencesResponse getPreferences(String username) {
-        String userId = getUserIdByUsername(username);
+    public PreferencesResponse getPreferences(String userId) {
         NotificationPreference preference = preferenceRepository.findByUserId(userId)
                 .orElseGet(() -> buildDefaultPreference(userId));
 
@@ -277,8 +197,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public PreferencesResponse updatePreferences(String username, UpdatePreferencesRequest request) {
-        String userId = getUserIdByUsername(username);
+    public PreferencesResponse updatePreferences(String userId, UpdatePreferencesRequest request) {
         NotificationPreference preference = preferenceRepository.findByUserId(userId)
                 .orElseGet(() -> buildDefaultPreference(userId));
 
@@ -297,14 +216,154 @@ public class NotificationServiceImpl implements NotificationService {
         return mapToPreferencesResponse(preference);
     }
 
+    private boolean validateEvent(InAppNotificationEvent event) {
+        if (event.getRecipientId() == null || event.getRecipientId().isBlank()) {
+            log.error("Notification event has null/blank recipientId. EventId={}, type={}",
+                    event.getEventId(), event.getType());
+            return false;
+        }
+        if (event.getActorId() == null || event.getActorId().isBlank()) {
+            log.error("Notification event has null/blank actorId. EventId={}", event.getEventId());
+            return false;
+        }
+        return true;
+    }
+
+    private boolean isSelfNotification(InAppNotificationEvent event) {
+        return event.getActorId().equals(event.getRecipientId());
+    }
+
+    private NotificationType parseNotificationType(String type) {
+        if (type == null) return null;
+        try {
+            return NotificationType.valueOf(type);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private boolean isNotificationDisabled(NotificationPreference preference, String type) {
+        if (preference == null) return false;
+        NotificationPreference.ChannelPreference channelPref = preference.getPreferences().get(type);
+        return channelPref != null && !channelPref.isInApp();
+    }
+
+    private boolean isDuplicate(InAppNotificationEvent event) {
+        return notificationRepository.existsByActorIdAndRecipientIdAndTypeAndCreatedAtAfter(
+                event.getActorId(),
+                event.getRecipientId(),
+                event.getType(),
+                Instant.now().minus(5, ChronoUnit.MINUTES)
+        );
+    }
+
+    private Notification buildOrAggregateNotification(InAppNotificationEvent event, NotificationType notificationType) {
+        String groupKey = resolveGroupKey(event, notificationType);
+
+        if (groupKey != null) {
+            Optional<Notification> existingOpt = notificationRepository
+                    .findFirstByRecipientIdAndGroupKeyAndIsReadFalseAndCreatedAtAfterOrderByCreatedAtDesc(
+                            event.getRecipientId(), groupKey, Instant.now().minus(24, ChronoUnit.HOURS));
+
+            if (existingOpt.isPresent()) {
+                return aggregateIntoExisting(existingOpt.get(), event, notificationType);
+            }
+        }
+
+        Notification notification = notificationMapper.fromEvent(event);
+        notification.setGroupKey(groupKey);
+        notification.setAggregatedActorIds(new ArrayList<>(List.of(event.getActorId())));
+        notification.setAggregatedActorNames(new ArrayList<>(List.of(event.getActorFullName())));
+        notification.setAggregatedCount(1);
+        return notification;
+    }
+
+    private String resolveGroupKey(InAppNotificationEvent event, NotificationType type) {
+        return switch (type) {
+            case FOLLOW -> "FOLLOW:" + event.getRecipientId();
+            case LIKE -> event.getReferenceId() != null ? "LIKE:" + event.getReferenceId() : null;
+            case COMMENT -> event.getReferenceId() != null ? "COMMENT:" + event.getReferenceId() : null;
+            default -> null;
+        };
+    }
+
+    private Notification aggregateIntoExisting(Notification notification, InAppNotificationEvent event, NotificationType type) {
+        if (notification.getAggregatedActorIds() == null) {
+            notification.setAggregatedActorIds(new ArrayList<>(List.of(notification.getActorId())));
+        }
+        if (notification.getAggregatedActorNames() == null) {
+            notification.setAggregatedActorNames(new ArrayList<>(List.of(notification.getActorFullName())));
+        }
+
+        if (!notification.getAggregatedActorIds().contains(event.getActorId())) {
+            notification.getAggregatedActorIds().add(event.getActorId());
+            notification.getAggregatedActorNames().add(event.getActorFullName());
+        }
+
+        notification.setActorId(event.getActorId());
+        notification.setActorUsername(event.getActorUsername());
+        notification.setActorFullName(event.getActorFullName());
+        notification.setActorAvatarUrl(event.getActorAvatarUrl());
+        notification.setCreatedAt(Instant.now());
+
+        int count = notification.getAggregatedActorIds().size();
+        notification.setAggregatedCount(count);
+        notification.setContent(generateContent(type, notification.getAggregatedActorNames(), count));
+
+        return notification;
+    }
+
+    private String generateContent(NotificationType type, List<String> actorNames, int count) {
+        if (actorNames == null || actorNames.isEmpty()) return "";
+
+        String action = switch (type) {
+            case FOLLOW -> "đã bắt đầu theo dõi bạn";
+            case LIKE -> "đã thích bài viết của bạn";
+            case COMMENT -> "đã bình luận bài viết của bạn";
+            case ORDER_PAID -> "đã đặt hàng sản phẩm của bạn";
+            case ORDER_DELIVERED -> "đã nhận đơn hàng thành công";
+            case PRODUCT_NEW -> "đã đăng sản phẩm mới";
+        };
+
+        if (count == 1) {
+            return actorNames.get(0) + " " + action;
+        } else if (count == 2) {
+            return actorNames.get(0) + " và " + actorNames.get(1) + " " + action;
+        } else {
+            return actorNames.get(count - 1) + ", " + actorNames.get(count - 2)
+                    + " và " + (count - 2) + " người khác " + action;
+        }
+    }
+
+    private void broadcastToUser(InAppNotificationEvent event, Notification notification,
+                                  NotificationPreference preference) {
+        NotificationResponse response = notificationMapper.toResponse(notification);
+
+        boolean sendSound = true;
+        if (preference != null) {
+            NotificationPreference.ChannelPreference channelPref = preference.getPreferences().get(event.getType());
+            if (channelPref != null) {
+                sendSound = channelPref.isSound();
+            }
+        }
+        response.setSendSound(sendSound);
+
+        messagingTemplate.convertAndSendToUser(
+                event.getRecipientUsername(), "/queue/notifications", response);
+
+        log.info("Notification processed: type={}, aggregatedCount={}, isNew={}, recipient={}",
+                event.getType(), notification.getAggregatedCount(),
+                notification.getId() == null, event.getRecipientUsername());
+    }
+
     private NotificationPreference buildDefaultPreference(String userId) {
         Map<String, NotificationPreference.ChannelPreference> defaults = new HashMap<>();
-        defaults.put("FOLLOW", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
-        defaults.put("LIKE", NotificationPreference.ChannelPreference.builder().inApp(true).sound(false).push(false).build());
-        defaults.put("COMMENT", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
-        defaults.put("ORDER_PAID", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
-        defaults.put("ORDER_DELIVERED", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
-        defaults.put("PRODUCT_NEW", NotificationPreference.ChannelPreference.builder().inApp(true).sound(true).push(true).build());
+        for (NotificationType type : NotificationType.values()) {
+            boolean isSoundDefault = type != NotificationType.LIKE;
+            boolean isPushDefault = type != NotificationType.LIKE;
+            defaults.put(type.name(), NotificationPreference.ChannelPreference.builder()
+                    .inApp(true).sound(isSoundDefault).push(isPushDefault).build());
+        }
 
         return NotificationPreference.builder()
                 .userId(userId)
@@ -328,21 +387,33 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private void incrementUnreadCount(String userId) {
-        String key = UNREAD_COUNT_KEY_PREFIX + userId;
-        redisTemplate.opsForValue().increment(key);
-    }
-
-    private void decrementUnreadCount(String userId) {
-        String key = UNREAD_COUNT_KEY_PREFIX + userId;
-        Long current = redisTemplate.opsForValue().decrement(key);
-        if (current != null && current < 0) {
-            redisTemplate.opsForValue().set(key, "0");
+        try {
+            String key = UNREAD_COUNT_KEY_PREFIX + userId;
+            redisTemplate.opsForValue().increment(key);
+        } catch (Exception e) {
+            log.warn("Failed to increment unread count in Redis for user {}", userId, e);
         }
     }
 
-    private String getUserIdByUsername(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-        return user.getId();
+    private void decrementUnreadCount(String userId) {
+        try {
+            String key = UNREAD_COUNT_KEY_PREFIX + userId;
+            Long current = redisTemplate.opsForValue().decrement(key);
+            if (current != null && current < 0) {
+                redisTemplate.opsForValue().set(key, "0");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to decrement unread count in Redis for user {}", userId, e);
+        }
+    }
+
+    private void syncUnreadCountFromDb(String userId) {
+        try {
+            long count = notificationRepository.countByRecipientIdAndIsReadFalse(userId);
+            String key = UNREAD_COUNT_KEY_PREFIX + userId;
+            redisTemplate.opsForValue().set(key, String.valueOf(count), 1, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("Failed to sync unread count from DB to Redis for user {}", userId, e);
+        }
     }
 }
