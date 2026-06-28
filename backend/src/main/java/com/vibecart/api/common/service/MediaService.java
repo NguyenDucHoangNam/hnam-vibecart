@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 public interface MediaService {
     MediaUploadResponse uploadFile(MultipartFile file, String folder, String username);
-    List<MediaUploadResponse> uploadFiles(List<MultipartFile> files, String folder, String username);
     PresignedUrlResponse generatePresignedUrl(String contentType, long fileSize, String folder, String username);
     void confirmUpload(String key, String username);
     void deleteFile(String key, String username, Collection<? extends GrantedAuthority> authorities);

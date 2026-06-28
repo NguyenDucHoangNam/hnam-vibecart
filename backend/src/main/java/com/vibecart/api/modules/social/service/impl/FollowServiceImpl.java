@@ -22,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.HashSet;
 import java.util.List;
@@ -62,7 +64,13 @@ public class FollowServiceImpl implements FollowService {
             followRepository.deleteById(followId);
             log.info("User {} unfollowed {}", currentUsername, targetUser.getUsername());
 
-            feedFanoutService.onUnfollow(currentUser.getId(), targetUserId);
+            String followerId = currentUser.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    feedFanoutService.onUnfollow(followerId, targetUserId);
+                }
+            });
 
             return false;
         } else {
@@ -74,7 +82,13 @@ public class FollowServiceImpl implements FollowService {
             followRepository.save(follow);
             log.info("User {} followed {}", currentUsername, targetUser.getUsername());
 
-            feedFanoutService.onFollow(currentUser.getId(), targetUserId);
+            String followerId = currentUser.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    feedFanoutService.onFollow(followerId, targetUserId);
+                }
+            });
 
             InAppNotificationEvent event = InAppNotificationEvent.builder()
                     .eventId(UUID.randomUUID().toString())

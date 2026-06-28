@@ -1,7 +1,8 @@
-package com.vibecart.api.modules.search.service;
+package com.vibecart.api.modules.search.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import com.vibecart.api.modules.ecommerce.document.ProductDocument;
 import com.vibecart.api.modules.ecommerce.entity.Product;
 import com.vibecart.api.modules.ecommerce.entity.ProductImage;
@@ -17,6 +18,7 @@ import com.vibecart.api.modules.search.dto.response.UserSearchResponse;
 import com.vibecart.api.modules.search.dto.response.UserSearchResultResponse;
 import com.vibecart.api.modules.search.entity.SearchHistory;
 import com.vibecart.api.modules.search.entity.SearchItem;
+import com.vibecart.api.modules.search.service.SearchService;
 import com.vibecart.api.modules.iam.document.UserDocument;
 import com.vibecart.api.modules.iam.repository.UserSearchRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
@@ -339,7 +341,7 @@ public class SearchServiceImpl implements SearchService {
 
         try {
             NativeQuery autocompleteQuery = NativeQuery.builder()
-                    .withQuery(q -> q.match(m -> m.field("name.suggest").query(prefix)))
+                    .withQuery(q -> q.match(m -> m.field("name.suggest").query(prefix).operator(Operator.And)))
                     .withPageable(PageRequest.of(0, 20))
                     .build();
 
@@ -439,7 +441,8 @@ public class SearchServiceImpl implements SearchService {
                 final int currentPage = pageNum;
                 List<ProductDocument> documents = transactionTemplate
                         .execute(status -> {
-                            Page<Product> page = productRepository.findAll(PageRequest.of(currentPage, REINDEX_BATCH_SIZE));
+                            Page<Product> page = productRepository
+                                    .findAll(PageRequest.of(currentPage, REINDEX_BATCH_SIZE));
                             if (page == null || !page.hasContent()) {
                                 return Collections.<ProductDocument>emptyList();
                             }
@@ -488,8 +491,10 @@ public class SearchServiceImpl implements SearchService {
                                         .id(product.getId())
                                         .name(product.getName())
                                         .description(product.getDescription())
-                                        .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
-                                        .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
+                                        .categoryId(
+                                                product.getCategory() != null ? product.getCategory().getId() : null)
+                                        .categoryName(
+                                                product.getCategory() != null ? product.getCategory().getName() : null)
                                         .creatorId(product.getCreatorId())
                                         .thumbnailUrl(thumbnailUrl)
                                         .minPrice(minPrice)
@@ -744,8 +749,9 @@ public class SearchServiceImpl implements SearchService {
         try {
             NativeQuery autocompleteQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(b -> b
-                            .should(s -> s.match(m -> m.field("username.suggest").query(prefix)))
-                            .should(s -> s.match(m -> m.field("fullName.suggest").query(prefix)))))
+                            .should(s -> s.match(m -> m.field("username.suggest").query(prefix).operator(Operator.And)))
+                            .should(s -> s
+                                    .match(m -> m.field("fullName.suggest").query(prefix).operator(Operator.And)))))
                     .withPageable(PageRequest.of(0, 20))
                     .build();
 

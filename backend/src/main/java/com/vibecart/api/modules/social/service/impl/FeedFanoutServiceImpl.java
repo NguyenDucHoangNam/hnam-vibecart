@@ -1,6 +1,7 @@
 package com.vibecart.api.modules.social.service.impl;
 
 import com.vibecart.api.modules.social.entity.Post;
+import com.vibecart.api.modules.social.enums.PostVisibility;
 import com.vibecart.api.modules.social.repository.FollowRepository;
 import com.vibecart.api.modules.social.repository.PostRepository;
 import com.vibecart.api.modules.social.service.FeedFanoutService;
@@ -30,17 +31,11 @@ public class FeedFanoutServiceImpl implements FeedFanoutService {
     private static final int BACKFILL_SIZE = 20;
     @Override
     @Async("feedFanoutExecutor")
-    public void fanoutNewPost(String creatorId, String postId) {
+    public void fanoutNewPost(String creatorId, String postId, PostVisibility visibility) {
         try {
-            Post post = postRepository.findById(postId).orElse(null);
-            if (post == null) {
-                log.warn("Post not found for fan-out: {}", postId);
-                return;
-            }
-
             pushToTimeline(creatorId, postId);
 
-            if (post.getVisibility() != com.vibecart.api.modules.social.enums.PostVisibility.PRIVATE) {
+            if (visibility != PostVisibility.PRIVATE) {
                 List<String> followerIds = followRepository.findAllFollowerIdsByFollowingId(creatorId);
                 log.info("Fan-out post {} from creator {} to {} followers", postId, creatorId, followerIds.size());
                 for (String followerId : followerIds) {

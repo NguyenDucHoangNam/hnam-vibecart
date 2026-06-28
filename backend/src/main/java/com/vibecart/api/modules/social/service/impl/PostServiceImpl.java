@@ -32,6 +32,8 @@ import com.vibecart.api.modules.social.repository.FollowRepository;
 import com.vibecart.api.modules.social.enums.PostVisibility;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.springframework.kafka.core.KafkaTemplate;
 import com.vibecart.api.modules.notification.dto.event.InAppNotificationEvent;
@@ -102,7 +104,15 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(post);
         log.info("Post created by {}: {}", username, savedPost.getId());
 
-        feedFanoutService.fanoutNewPost(creator.getId(), savedPost.getId());
+        String creatorId = creator.getId();
+        String postId = savedPost.getId();
+        PostVisibility postVisibility = savedPost.getVisibility();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                feedFanoutService.fanoutNewPost(creatorId, postId, postVisibility);
+            }
+        });
 
         return toSinglePostResponse(savedPost, username);
     }
@@ -248,7 +258,12 @@ public class PostServiceImpl implements PostService {
         postRepository.delete(post);
         log.info("Post deleted by {}: {}", username, postId);
 
-        feedFanoutService.removeDeletedPost(creatorId, postId);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                feedFanoutService.removeDeletedPost(creatorId, postId);
+            }
+        });
     }
 
 

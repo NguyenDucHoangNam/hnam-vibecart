@@ -96,6 +96,7 @@ export default function FeedPage() {
     } catch (err: any) {
       console.error("Lỗi khi tải bảng tin:", err);
       toast.error("Lỗi tải bảng tin", err?.message || "Không thể kết nối máy chủ");
+      setHasMore(false);
     } finally {
       setLoading(false);
       setLoadingMore(false);

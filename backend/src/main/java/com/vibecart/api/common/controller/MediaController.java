@@ -36,21 +36,6 @@ public class MediaController {
                                                 .result(response)
                                                 .build());
         }
-        @Deprecated(since = "2026-06-27", forRemoval = true)
-        @PostMapping(value = "/upload/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-        public ResponseEntity<ApiResponse<List<MediaUploadResponse>>> uploadFiles(
-                        @RequestParam("files") List<MultipartFile> files,
-                        @RequestParam(value = "folder", defaultValue = "general") String folder) {
-
-                List<MediaUploadResponse> results = mediaService.uploadFiles(files, folder, SecurityUtils.getCurrentUsername());
-
-                return ResponseEntity.status(HttpStatus.CREATED).body(
-                                ApiResponse.<List<MediaUploadResponse>>builder()
-                                                .code(1000)
-                                                .message("Tải lên " + files.size() + " file thành công")
-                                                .result(results)
-                                                .build());
-        }
         @PostMapping("/presigned-url")
         public ResponseEntity<ApiResponse<PresignedUrlResponse>> getPresignedUrl(
                         @RequestParam("fileName") String fileName,

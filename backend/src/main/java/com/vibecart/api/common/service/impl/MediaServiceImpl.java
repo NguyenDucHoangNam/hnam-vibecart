@@ -70,58 +70,6 @@ public class MediaServiceImpl implements MediaService {
         }
     }
     @Override
-    public List<MediaUploadResponse> uploadFiles(List<MultipartFile> files, String folder, String username) {
-        if (files.size() > 10) {
-            throw new AppException(ErrorCode.MAX_MEDIA_EXCEEDED);
-        }
-
-        for (MultipartFile file : files) {
-            validateFile(file);
-        }
-
-        List<MediaUploadResponse> results = new ArrayList<>();
-        List<String> uploadedKeys = new ArrayList<>();
-        List<MediaMetadata> metadataList = new ArrayList<>();
-
-        try {
-            for (MultipartFile file : files) {
-                String key = generateKey(folder, file.getContentType());
-                String url = storageService.uploadFile(
-                        key, file.getInputStream(), file.getSize(), file.getContentType());
-                uploadedKeys.add(key);
-
-                metadataList.add(MediaMetadata.builder()
-                        .s3Key(key)
-                        .uploadedBy(username)
-                        .fileSize(file.getSize())
-                        .contentType(file.getContentType())
-                        .status("VERIFIED")
-                        .build());
-
-                results.add(new MediaUploadResponse(
-                        url, key, file.getContentType(), file.getSize(), ZonedDateTime.now()));
-            }
-            mediaMetadataRepository.saveAll(metadataList);
-        } catch (Exception e) {
-            log.error(
-                    "Batch upload failed. Initiating fault-tolerant rollback to delete successfully uploaded files. Error: {}",
-                    e.getMessage());
-            for (String key : uploadedKeys) {
-                try {
-                    storageService.deleteFile(key);
-                    log.info("Rolled back: Deleted file '{}' from S3.", key);
-                } catch (Exception rollbackEx) {
-                    log.error("CRITICAL: Failed to rollback/delete zombie file '{}' on S3: {}", key,
-                            rollbackEx.getMessage());
-                }
-            }
-            throw new AppException(ErrorCode.FILE_UPLOAD_FAILED);
-        }
-
-        log.info("Batch upload by {}: {} files to folder {}", username, files.size(), folder);
-        return results;
-    }
-    @Override
     public PresignedUrlResponse generatePresignedUrl(String contentType, long fileSize, String folder,
             String username) {
         if (!isAllowedType(contentType)) {

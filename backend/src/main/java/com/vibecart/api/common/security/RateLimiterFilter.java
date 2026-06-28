@@ -17,18 +17,24 @@ import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.DefaultCorsProcessor;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 @Component
 @Slf4j
 public class RateLimiterFilter extends OncePerRequestFilter {
 
     private final RateLimiterProperties properties;
     private final ObjectMapper objectMapper;
+    private final CorsConfigurationSource corsConfigurationSource;
+    private final DefaultCorsProcessor corsProcessor = new DefaultCorsProcessor();
 
     private final ConcurrentHashMap<String, Bucket> globalBuckets = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Bucket> sensitiveBuckets = new ConcurrentHashMap<>();
@@ -36,10 +42,13 @@ public class RateLimiterFilter extends OncePerRequestFilter {
     private static final String GLOBAL_PREFIX = "global:";
     private static final String SENSITIVE_PREFIX = "sensitive:";
 
-    public RateLimiterFilter(RateLimiterProperties properties, ObjectMapper objectMapper) {
+    public RateLimiterFilter(RateLimiterProperties properties, ObjectMapper objectMapper,
+                             CorsConfigurationSource corsConfigurationSource) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -49,33 +58,38 @@ public class RateLimiterFilter extends OncePerRequestFilter {
             return;
         }
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String clientIp = extractClientIp(request);
         String requestUri = request.getRequestURI();
 
         Bucket globalBucket = globalBuckets.computeIfAbsent(
                 GLOBAL_PREFIX + clientIp,
-                key -> createBucket(properties.getGlobal())
-        );
+                key -> createBucket(properties.getGlobal()));
 
         ConsumptionProbe globalProbe = globalBucket.tryConsumeAndReturnRemaining(1);
         if (!globalProbe.isConsumed()) {
             long retryAfterSeconds = globalProbe.getNanosToWaitForRefill() / 1_000_000_000 + 1;
-            log.warn("Rate limit exceeded (GLOBAL) for IP: {} on URI: {}. Retry after {}s", clientIp, requestUri, retryAfterSeconds);
-            sendRateLimitResponse(response, retryAfterSeconds, globalProbe.getRemainingTokens());
+            log.warn("Rate limit exceeded (GLOBAL) for IP: {} on URI: {}. Retry after {}s", clientIp, requestUri,
+                    retryAfterSeconds);
+            sendRateLimitResponse(request, response, retryAfterSeconds, globalProbe.getRemainingTokens());
             return;
         }
 
         if (isSensitivePath(requestUri)) {
             Bucket sensitiveBucket = sensitiveBuckets.computeIfAbsent(
                     SENSITIVE_PREFIX + clientIp,
-                    key -> createBucket(properties.getSensitive())
-            );
+                    key -> createBucket(properties.getSensitive()));
 
             ConsumptionProbe sensitiveProbe = sensitiveBucket.tryConsumeAndReturnRemaining(1);
             if (!sensitiveProbe.isConsumed()) {
                 long retryAfterSeconds = sensitiveProbe.getNanosToWaitForRefill() / 1_000_000_000 + 1;
-                log.warn("Rate limit exceeded (SENSITIVE) for IP: {} on URI: {}. Retry after {}s", clientIp, requestUri, retryAfterSeconds);
-                sendRateLimitResponse(response, retryAfterSeconds, sensitiveProbe.getRemainingTokens());
+                log.warn("Rate limit exceeded (SENSITIVE) for IP: {} on URI: {}. Retry after {}s", clientIp, requestUri,
+                        retryAfterSeconds);
+                sendRateLimitResponse(request, response, retryAfterSeconds, sensitiveProbe.getRemainingTokens());
                 return;
             }
         }
@@ -84,6 +98,7 @@ public class RateLimiterFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+
     private String extractClientIp(HttpServletRequest request) {
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (StringUtils.hasText(xForwardedFor)) {
@@ -97,10 +112,12 @@ public class RateLimiterFilter extends OncePerRequestFilter {
 
         return request.getRemoteAddr();
     }
+
     private boolean isSensitivePath(String requestUri) {
         return properties.getSensitive().getPaths().stream()
                 .anyMatch(requestUri::startsWith);
     }
+
     private Bucket createBucket(RateLimiterProperties.BucketConfig config) {
         Bandwidth bandwidth = Bandwidth.builder()
                 .capacity(config.getCapacity())
@@ -110,10 +127,16 @@ public class RateLimiterFilter extends OncePerRequestFilter {
                 .addLimit(bandwidth)
                 .build();
     }
-    private void sendRateLimitResponse(HttpServletResponse response, long retryAfterSeconds, long remainingTokens)
+
+    private void sendRateLimitResponse(HttpServletRequest request, HttpServletResponse response, long retryAfterSeconds, long remainingTokens)
             throws IOException {
 
         ErrorCode errorCode = ErrorCode.RATE_LIMIT_EXCEEDED;
+
+        CorsConfiguration corsConfig = corsConfigurationSource.getCorsConfiguration(request);
+        if (corsConfig != null) {
+            corsProcessor.processRequest(corsConfig, request, response);
+        }
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
@@ -128,24 +151,23 @@ public class RateLimiterFilter extends OncePerRequestFilter {
 
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
     }
+
     @Scheduled(fixedRate = 600_000)
     public void cleanupExpiredBuckets() {
         long beforeGlobal = globalBuckets.size();
         long beforeSensitive = sensitiveBuckets.size();
 
-        globalBuckets.entrySet().removeIf(entry ->
-                entry.getValue().getAvailableTokens() >= properties.getGlobal().getCapacity()
-        );
-        sensitiveBuckets.entrySet().removeIf(entry ->
-                entry.getValue().getAvailableTokens() >= properties.getSensitive().getCapacity()
-        );
+        globalBuckets.entrySet()
+                .removeIf(entry -> entry.getValue().getAvailableTokens() >= properties.getGlobal().getCapacity());
+        sensitiveBuckets.entrySet()
+                .removeIf(entry -> entry.getValue().getAvailableTokens() >= properties.getSensitive().getCapacity());
 
         long removedGlobal = beforeGlobal - globalBuckets.size();
         long removedSensitive = beforeSensitive - sensitiveBuckets.size();
 
         if (removedGlobal > 0 || removedSensitive > 0) {
             log.info("Rate limiter cleanup: removed {} global buckets, {} sensitive buckets. " +
-                            "Remaining: {} global, {} sensitive",
+                    "Remaining: {} global, {} sensitive",
                     removedGlobal, removedSensitive, globalBuckets.size(), sensitiveBuckets.size());
         }
     }
