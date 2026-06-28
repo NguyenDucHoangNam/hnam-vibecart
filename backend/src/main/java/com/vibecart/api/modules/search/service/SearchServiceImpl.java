@@ -21,6 +21,7 @@ import com.vibecart.api.modules.iam.document.UserDocument;
 import com.vibecart.api.modules.iam.repository.UserSearchRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.social.service.FollowService;
+import com.vibecart.api.modules.social.repository.FollowRepository;
 import com.vibecart.api.modules.ecommerce.entity.Category;
 import com.vibecart.api.modules.ecommerce.repository.CategoryRepository;
 import co.elastic.clients.elasticsearch._types.FieldValue;
@@ -68,6 +69,7 @@ public class SearchServiceImpl implements SearchService {
     private final UserSearchRepository userSearchRepository;
     private final UserRepository userRepository;
     private final FollowService followService;
+    private final FollowRepository followRepository;
     private final CategoryRepository categoryRepository;
     private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
@@ -615,43 +617,52 @@ public class SearchServiceImpl implements SearchService {
 
         SearchHits<UserDocument> searchHits = elasticsearchOperations.search(searchQuery, UserDocument.class);
 
-        String currentUsername = null;
-        if (currentUserId != null && !currentUserId.isBlank()) {
-            var uOpt = userRepository.findById(currentUserId);
-            if (uOpt.isPresent()) {
-                currentUsername = uOpt.get().getUsername();
+        // Batch query: collect all user IDs from search results
+        List<UserDocument> userDocs = searchHits.getSearchHits().stream()
+                .map(SearchHit::getContent)
+                .toList();
+        List<String> userIds = userDocs.stream().map(UserDocument::getId).toList();
+
+        // Batch follower counts (1 SQL query instead of N)
+        Map<String, Long> followerCountMap = Collections.emptyMap();
+        if (!userIds.isEmpty()) {
+            try {
+                followerCountMap = followRepository.countFollowersByFollowingIds(userIds).stream()
+                        .collect(Collectors.toMap(
+                                row -> (String) row[0],
+                                row -> (Long) row[1]
+                        ));
+            } catch (Exception e) {
+                log.error("Failed to batch query follower counts", e);
             }
         }
 
-        final String resolvedUsername = currentUsername;
+        // Batch isFollowing check (1 SQL query instead of N)
+        Set<String> followingIds = Collections.emptySet();
+        if (currentUserId != null && !currentUserId.isBlank() && !userIds.isEmpty()) {
+            try {
+                followingIds = new java.util.HashSet<>(followRepository.findFollowingIdsIn(currentUserId, userIds));
+            } catch (Exception e) {
+                log.error("Failed to batch query following status", e);
+            }
+        }
 
-        List<UserSearchResponse> items = searchHits.getSearchHits().stream()
-                .map(SearchHit::getContent)
-                .map(doc -> {
-                    boolean isFollowing = false;
-                    long followerCount = 0;
-                    try {
-                        followerCount = followService.getFollowerCount(doc.getId());
-                        if (resolvedUsername != null) {
-                            isFollowing = followService.isFollowing(doc.getId(), resolvedUsername);
-                        }
-                    } catch (Exception e) {
-                        log.error("Failed to query follow relationships for user: {}", doc.getId(), e);
-                    }
+        final Map<String, Long> finalFollowerCountMap = followerCountMap;
+        final Set<String> finalFollowingIds = followingIds;
 
-                    return UserSearchResponse.builder()
-                            .id(doc.getId())
-                            .username(doc.getUsername())
-                            .fullName(doc.getFullName())
-                            .email(doc.getEmail())
-                            .avatarUrl(doc.getAvatarUrl())
-                            .roles(doc.getRoles())
-                            .status(doc.getStatus())
-                            .createdAt(doc.getCreatedAt())
-                            .isFollowing(isFollowing)
-                            .followerCount(followerCount)
-                            .build();
-                })
+        List<UserSearchResponse> items = userDocs.stream()
+                .map(doc -> UserSearchResponse.builder()
+                        .id(doc.getId())
+                        .username(doc.getUsername())
+                        .fullName(doc.getFullName())
+                        .email(doc.getEmail())
+                        .avatarUrl(doc.getAvatarUrl())
+                        .roles(doc.getRoles())
+                        .status(doc.getStatus())
+                        .createdAt(doc.getCreatedAt())
+                        .isFollowing(finalFollowingIds.contains(doc.getId()))
+                        .followerCount(finalFollowerCountMap.getOrDefault(doc.getId(), 0L))
+                        .build())
                 .toList();
 
         long totalElements = searchHits.getTotalHits();

@@ -12,6 +12,7 @@ public interface CommentMapper {
     @Mapping(target = "postId", source = "comment.post.id")
     @Mapping(target = "userId", source = "comment.user.id")
     @Mapping(target = "username", source = "comment.user.username")
+    @Mapping(target = "fullName", source = "comment.user.fullName")
     @Mapping(target = "userAvatarUrl", source = "comment.user.avatarUrl")
     @Mapping(target = "parentId", source = "comment.parent.id")
     @Mapping(target = "replies", source = "replies")

@@ -70,6 +70,10 @@ public class CommentServiceImpl implements CommentService {
             PostComment parent = commentRepository.findById(request.parentId())
                     .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
 
+            // Validate parent comment belongs to the same post
+            if (!parent.getPost().getId().equals(postId)) {
+                throw new AppException(ErrorCode.COMMENT_NOT_FOUND);
+            }
 
             int parentDepth = calculateDepth(parent);
             if (parentDepth >= MAX_NESTING_DEPTH) {

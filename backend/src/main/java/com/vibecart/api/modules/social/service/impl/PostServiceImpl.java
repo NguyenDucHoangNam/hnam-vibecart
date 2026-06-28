@@ -121,7 +121,9 @@ public class PostServiceImpl implements PostService {
                     User viewer = findUserByUsername(currentUsername);
                     viewerId = viewer.getId();
                     isFollower = followRepository.existsByIdFollowerIdAndIdFollowingId(viewerId, creatorId);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("Failed to resolve viewer for getPosts: {}", e.getMessage());
+                }
             }
             postPage = postRepository.findPostsForViewer(creatorId, viewerId, isFollower, pageable);
         } else {
@@ -150,6 +152,33 @@ public class PostServiceImpl implements PostService {
     public PostResponse getPost(String postId, String currentUsername) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+
+        // Visibility check: PRIVATE posts are only visible to the creator
+        if (post.getVisibility() == PostVisibility.PRIVATE) {
+            if (currentUsername == null || !post.getCreator().getUsername().equals(currentUsername)) {
+                throw new AppException(ErrorCode.POST_NOT_FOUND);
+            }
+        }
+
+        // FOLLOWERS posts require the viewer to be a follower or the creator
+        if (post.getVisibility() == PostVisibility.FOLLOWERS) {
+            boolean isOwner = currentUsername != null && post.getCreator().getUsername().equals(currentUsername);
+            if (!isOwner) {
+                boolean isFollower = false;
+                if (currentUsername != null) {
+                    try {
+                        User viewer = findUserByUsername(currentUsername);
+                        isFollower = followRepository.existsByIdFollowerIdAndIdFollowingId(viewer.getId(), post.getCreator().getId());
+                    } catch (Exception e) {
+                        log.warn("Failed to resolve viewer for getPost visibility check: {}", e.getMessage());
+                    }
+                }
+                if (!isFollower) {
+                    throw new AppException(ErrorCode.POST_NOT_FOUND);
+                }
+            }
+        }
+
         return toSinglePostResponse(post, currentUsername);
     }
 
@@ -282,9 +311,8 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public boolean toggleLike(String postId, String username) {
-        if (!postRepository.existsById(postId)) {
-            throw new AppException(ErrorCode.POST_NOT_FOUND);
-        }
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
 
         User user = findUserByUsername(username);
         PostLikeId likeId = PostLikeId.builder()
@@ -297,8 +325,6 @@ public class PostServiceImpl implements PostService {
             log.info("User {} unliked post {}", username, postId);
             return false;
         } else {
-            Post post = postRepository.findById(postId)
-                    .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
             PostLike like = PostLike.builder()
                     .id(likeId)
                     .post(post)

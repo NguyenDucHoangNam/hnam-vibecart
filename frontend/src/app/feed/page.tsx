@@ -28,7 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/context/ToastContext";
 import { postService, PageResponse } from "@/services/post.service";
-import { userService } from "@/services/user.service";
+import { userService, FollowResponse } from "@/services/user.service";
 import { productService } from "@/services/product.service";
 import { Post, Product } from "@/types";
 import { ROUTES } from "@/constants/routes";
@@ -63,9 +63,9 @@ export default function FeedPage() {
   const [allCreatorProducts, setAllCreatorProducts] = useState<Product[]>([]);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const productDropdownRef = useRef<HTMLDivElement>(null);
-  const [followedCreators, setFollowedCreators] = useState<any[]>([]);
+  const [followedCreators, setFollowedCreators] = useState<FollowResponse[]>([]);
   const [loadingFollowed, setLoadingFollowed] = useState(false);
-  const [activeUsers, setActiveUsers] = useState<any[]>([]);
+  const [activeUsers, setActiveUsers] = useState<FollowResponse[]>([]);
   const [loadingActive, setLoadingActive] = useState(false);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
   const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
@@ -251,6 +251,7 @@ export default function FeedPage() {
       }
       loadFollowData();
       loadActiveUsers();
+      setPage(0);
       loadFeed(0, false);
     } catch (err: any) {
       setFollowingMap(prev => ({ ...prev, [creatorId]: wasFollowing }));

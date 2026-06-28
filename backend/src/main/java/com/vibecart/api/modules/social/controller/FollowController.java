@@ -6,7 +6,6 @@ import com.vibecart.api.modules.social.dto.response.FollowResponse;
 import com.vibecart.api.modules.social.service.FollowService;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.iam.entity.User;
-import com.vibecart.api.modules.iam.entity.Role;
 import com.vibecart.api.modules.iam.dto.response.UserResponse;
 import com.vibecart.api.common.exception.AppException;
 import com.vibecart.api.common.exception.ErrorCode;
@@ -15,8 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Collections;
-import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
