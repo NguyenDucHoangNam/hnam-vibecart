@@ -21,7 +21,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.Set;
 @Service
 @RequiredArgsConstructor
@@ -43,15 +42,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserResponse> searchUsers(String search, String status, String role, Pageable pageable) {
-        String normalizedSearch = (search == null || search.trim().isEmpty()) ? null
-                : "%" + search.trim().toLowerCase() + "%";
-        String normalizedStatus = (status == null || status.trim().isEmpty() || "ALL".equalsIgnoreCase(status)) ? null
-                : status.trim();
-        String normalizedRole = (role == null || role.trim().isEmpty() || "ALL".equalsIgnoreCase(role)) ? null
-                : role.trim();
-
-        return userRepository.searchUsers(normalizedSearch, normalizedStatus, normalizedRole, pageable)
-                .map(userMapper::toUserResponse);
+        return searchService.adminSearchUsers(search, status, role, pageable);
     }
 
     @Override

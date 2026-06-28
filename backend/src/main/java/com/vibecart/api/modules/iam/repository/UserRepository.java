@@ -1,8 +1,6 @@
 package com.vibecart.api.modules.iam.repository;
 
 import com.vibecart.api.modules.iam.entity.User;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -39,19 +37,4 @@ public interface UserRepository extends JpaRepository<User, String> {
     @Modifying
     @Query(value = "DELETE FROM users WHERE username LIKE :pattern", nativeQuery = true)
     void hardDeleteByUsernameLike(@Param("pattern") String pattern);
-
-    @Query(
-        "SELECT u FROM User u LEFT JOIN u.role r " +
-        "WHERE (:search IS NULL OR LOWER(u.username) LIKE :search " +
-        "   OR LOWER(u.email) LIKE :search " +
-        "   OR LOWER(u.fullName) LIKE :search) " +
-        "AND (:status IS NULL OR u.status = :status) " +
-        "AND (:role IS NULL OR r.name = :role)"
-    )
-    Page<User> searchUsers(
-        @Param("search") String search,
-        @Param("status") String status,
-        @Param("role") String role,
-        Pageable pageable
-    );
 }

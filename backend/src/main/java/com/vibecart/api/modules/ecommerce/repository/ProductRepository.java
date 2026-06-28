@@ -42,48 +42,5 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     Page<Product> findByStatus(String status, Pageable pageable);
 
     long countByCategoryId(String categoryId);
-
-    @Query("SELECT p FROM Product p " +
-           "LEFT JOIN p.category c " +
-           "WHERE (:query IS NULL OR :query = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-           "AND (:categoryId IS NULL OR :categoryId = '' OR c.id = :categoryId OR c.parent.id = :categoryId) " +
-           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE AND (CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) >= :minPrice)) " +
-           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE AND (CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) <= :maxPrice)) " +
-           "AND p.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE")
-    Page<Product> searchProducts(
-            @Param("query") String query,
-            @Param("categoryId") String categoryId,
-            @Param("minPrice") java.math.BigDecimal minPrice,
-            @Param("maxPrice") java.math.BigDecimal maxPrice,
-            Pageable pageable);
-
-    @Query("SELECT p FROM Product p " +
-           "LEFT JOIN p.category c " +
-           "WHERE (:query IS NULL OR :query = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-           "AND (:categoryId IS NULL OR :categoryId = '' OR c.id = :categoryId OR c.parent.id = :categoryId) " +
-           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE AND (CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) >= :minPrice)) " +
-           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE AND (CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) <= :maxPrice)) " +
-           "AND p.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE " +
-           "ORDER BY (SELECT MIN(CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE) ASC")
-    Page<Product> searchProductsOrderByPriceAsc(
-            @Param("query") String query,
-            @Param("categoryId") String categoryId,
-            @Param("minPrice") java.math.BigDecimal minPrice,
-            @Param("maxPrice") java.math.BigDecimal maxPrice,
-            Pageable pageable);
-
-    @Query("SELECT p FROM Product p " +
-           "LEFT JOIN p.category c " +
-           "WHERE (:query IS NULL OR :query = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.description) LIKE LOWER(CONCAT('%', :query, '%'))) " +
-           "AND (:categoryId IS NULL OR :categoryId = '' OR c.id = :categoryId OR c.parent.id = :categoryId) " +
-           "AND (:minPrice IS NULL OR EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE AND (CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) >= :minPrice)) " +
-           "AND (:maxPrice IS NULL OR EXISTS (SELECT 1 FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE AND (CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) <= :maxPrice)) " +
-           "AND p.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE " +
-           "ORDER BY (SELECT MAX(CASE WHEN (v.discountPrice > 0 AND v.discountPrice < v.price) THEN v.discountPrice ELSE v.price END) FROM ProductVariant v WHERE v.product = p AND v.status = com.vibecart.api.modules.ecommerce.enums.ProductStatus.ACTIVE) DESC")
-    Page<Product> searchProductsOrderByPriceDesc(
-            @Param("query") String query,
-            @Param("categoryId") String categoryId,
-            @Param("minPrice") java.math.BigDecimal minPrice,
-            @Param("maxPrice") java.math.BigDecimal maxPrice,
-            Pageable pageable);
 }
+

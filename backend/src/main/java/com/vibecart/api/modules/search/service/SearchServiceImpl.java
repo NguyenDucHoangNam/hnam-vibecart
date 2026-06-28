@@ -22,13 +22,16 @@ import com.vibecart.api.modules.iam.repository.UserSearchRepository;
 import com.vibecart.api.modules.iam.repository.UserRepository;
 import com.vibecart.api.modules.social.service.FollowService;
 import com.vibecart.api.modules.social.repository.FollowRepository;
+import com.vibecart.api.modules.iam.dto.response.UserResponse;
 import com.vibecart.api.modules.ecommerce.entity.Category;
 import com.vibecart.api.modules.ecommerce.repository.CategoryRepository;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -431,76 +434,84 @@ public class SearchServiceImpl implements SearchService {
         try {
             int pageNum = 0;
             long totalIndexed = 0;
-            Page<Product> productPage;
+            int batchSize;
             do {
                 final int currentPage = pageNum;
-                productPage = transactionTemplate.execute(status ->
-                        productRepository.findAll(PageRequest.of(currentPage, REINDEX_BATCH_SIZE))
-                );
-                if (productPage == null || !productPage.hasContent()) {
+                List<ProductDocument> documents = transactionTemplate
+                        .execute(status -> {
+                            Page<Product> page = productRepository.findAll(PageRequest.of(currentPage, REINDEX_BATCH_SIZE));
+                            if (page == null || !page.hasContent()) {
+                                return Collections.<ProductDocument>emptyList();
+                            }
+
+                            return page.getContent().stream().map(product -> {
+                                String thumbnailUrl = null;
+                                if (product.getImages() != null) {
+                                    thumbnailUrl = product.getImages().stream()
+                                            .filter(ProductImage::isThumbnail)
+                                            .map(ProductImage::getImageUrl)
+                                            .findFirst()
+                                            .orElse(product.getImages().isEmpty() ? null
+                                                    : product.getImages().get(0).getImageUrl());
+                                }
+
+                                BigDecimal minPrice = BigDecimal.ZERO;
+                                BigDecimal maxPrice = BigDecimal.ZERO;
+                                BigDecimal minOriginalPrice = BigDecimal.ZERO;
+                                BigDecimal maxOriginalPrice = BigDecimal.ZERO;
+                                if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                                    minPrice = product.getVariants().stream()
+                                            .map(v -> v.getDiscountPrice() != null
+                                                    && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                                            ? v.getDiscountPrice()
+                                                            : v.getPrice())
+                                            .min(BigDecimal::compareTo)
+                                            .orElse(BigDecimal.ZERO);
+                                    maxPrice = product.getVariants().stream()
+                                            .map(v -> v.getDiscountPrice() != null
+                                                    && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
+                                                            ? v.getDiscountPrice()
+                                                            : v.getPrice())
+                                            .max(BigDecimal::compareTo)
+                                            .orElse(BigDecimal.ZERO);
+                                    minOriginalPrice = product.getVariants().stream()
+                                            .map(v -> v.getPrice())
+                                            .min(BigDecimal::compareTo)
+                                            .orElse(BigDecimal.ZERO);
+                                    maxOriginalPrice = product.getVariants().stream()
+                                            .map(v -> v.getPrice())
+                                            .max(BigDecimal::compareTo)
+                                            .orElse(BigDecimal.ZERO);
+                                }
+
+                                return ProductDocument.builder()
+                                        .id(product.getId())
+                                        .name(product.getName())
+                                        .description(product.getDescription())
+                                        .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
+                                        .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
+                                        .creatorId(product.getCreatorId())
+                                        .thumbnailUrl(thumbnailUrl)
+                                        .minPrice(minPrice)
+                                        .maxPrice(maxPrice)
+                                        .minOriginalPrice(minOriginalPrice)
+                                        .maxOriginalPrice(maxOriginalPrice)
+                                        .status(product.getStatus().name())
+                                        .build();
+                            }).toList();
+                        });
+
+                if (documents == null || documents.isEmpty()) {
                     break;
                 }
 
-                List<ProductDocument> documents = productPage.getContent().stream().map(product -> {
-                    String thumbnailUrl = null;
-                    if (product.getImages() != null) {
-                        thumbnailUrl = product.getImages().stream()
-                                .filter(ProductImage::isThumbnail)
-                                .map(ProductImage::getImageUrl)
-                                .findFirst()
-                                .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
-                    }
-
-                    BigDecimal minPrice = BigDecimal.ZERO;
-                    BigDecimal maxPrice = BigDecimal.ZERO;
-                    BigDecimal minOriginalPrice = BigDecimal.ZERO;
-                    BigDecimal maxOriginalPrice = BigDecimal.ZERO;
-                    if (product.getVariants() != null && !product.getVariants().isEmpty()) {
-                        minPrice = product.getVariants().stream()
-                                .map(v -> v.getDiscountPrice() != null
-                                        && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                                ? v.getDiscountPrice()
-                                                : v.getPrice())
-                                .min(BigDecimal::compareTo)
-                                .orElse(BigDecimal.ZERO);
-                        maxPrice = product.getVariants().stream()
-                                .map(v -> v.getDiscountPrice() != null
-                                        && v.getDiscountPrice().compareTo(BigDecimal.ZERO) > 0
-                                                ? v.getDiscountPrice()
-                                                : v.getPrice())
-                                .max(BigDecimal::compareTo)
-                                .orElse(BigDecimal.ZERO);
-                        minOriginalPrice = product.getVariants().stream()
-                                .map(v -> v.getPrice())
-                                .min(BigDecimal::compareTo)
-                                .orElse(BigDecimal.ZERO);
-                        maxOriginalPrice = product.getVariants().stream()
-                                .map(v -> v.getPrice())
-                                .max(BigDecimal::compareTo)
-                                .orElse(BigDecimal.ZERO);
-                    }
-
-                    return ProductDocument.builder()
-                            .id(product.getId())
-                            .name(product.getName())
-                            .description(product.getDescription())
-                            .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
-                            .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
-                            .creatorId(product.getCreatorId())
-                            .thumbnailUrl(thumbnailUrl)
-                            .minPrice(minPrice)
-                            .maxPrice(maxPrice)
-                            .minOriginalPrice(minOriginalPrice)
-                            .maxOriginalPrice(maxOriginalPrice)
-                            .status(product.getStatus().name())
-                            .build();
-                }).toList();
-
                 productSearchRepository.saveAll(documents);
-                totalIndexed += documents.size();
-                log.info("Reindexed product batch {}: {} documents (total: {})", pageNum, documents.size(), totalIndexed);
+                batchSize = documents.size();
+                totalIndexed += batchSize;
+                log.info("Reindexed product batch {}: {} documents (total: {})", pageNum, batchSize,
+                        totalIndexed);
                 pageNum++;
-            } while (productPage.hasNext());
+            } while (batchSize == REINDEX_BATCH_SIZE);
 
             log.info("Successfully reindexed {} product documents in Elasticsearch", totalIndexed);
 
@@ -518,9 +529,8 @@ public class SearchServiceImpl implements SearchService {
         Page<com.vibecart.api.modules.iam.entity.User> userPage;
         do {
             final int currentPage = pageNum;
-            userPage = transactionTemplate.execute(status ->
-                    userRepository.findAll(PageRequest.of(currentPage, REINDEX_BATCH_SIZE))
-            );
+            userPage = transactionTemplate
+                    .execute(status -> userRepository.findAll(PageRequest.of(currentPage, REINDEX_BATCH_SIZE)));
             if (userPage == null || !userPage.hasContent()) {
                 break;
             }
@@ -579,7 +589,8 @@ public class SearchServiceImpl implements SearchService {
         if (dailyKeys.size() == 1) {
             redisTemplate.opsForZSet().unionAndStore(dailyKeys.get(0), Collections.emptyList(), weeklyKey);
         } else {
-            redisTemplate.opsForZSet().unionAndStore(dailyKeys.get(0), dailyKeys.subList(1, dailyKeys.size()), weeklyKey);
+            redisTemplate.opsForZSet().unionAndStore(dailyKeys.get(0), dailyKeys.subList(1, dailyKeys.size()),
+                    weeklyKey);
         }
         redisTemplate.expire(weeklyKey, Duration.ofDays(8));
         log.info("Weekly search trends synchronized in ZSET: {}", weeklyKey);
@@ -587,7 +598,8 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public UserSearchResultResponse searchUsers(String query, int page, int size, String currentUserId) {
-        log.info("Searching users with query='{}', page={}, size={}, currentUserId={}", query, page, size, currentUserId);
+        log.info("Searching users with query='{}', page={}, size={}, currentUserId={}", query, page, size,
+                currentUserId);
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
 
@@ -630,8 +642,7 @@ public class SearchServiceImpl implements SearchService {
                 followerCountMap = followRepository.countFollowersByFollowingIds(userIds).stream()
                         .collect(Collectors.toMap(
                                 row -> (String) row[0],
-                                row -> (Long) row[1]
-                        ));
+                                row -> (Long) row[1]));
             } catch (Exception e) {
                 log.error("Failed to batch query follower counts", e);
             }
@@ -826,5 +837,61 @@ public class SearchServiceImpl implements SearchService {
         } catch (Exception e) {
             log.error("Failed to run automatic index synchronization on startup", e);
         }
+    }
+
+    @Override
+    public Page<UserResponse> adminSearchUsers(
+            String search, String status, String role, Pageable pageable) {
+        log.info("Admin ES search: search='{}', status='{}', role='{}', page={}, size={}",
+                search, status, role, pageable.getPageNumber(), pageable.getPageSize());
+
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+
+        // Text search on username, fullName, email with fuzzy matching
+        if (search != null && !search.isBlank()) {
+            boolQueryBuilder.must(m -> m
+                    .multiMatch(mm -> mm
+                            .query(search.trim())
+                            .fields("username^3", "fullName^2", "email")
+                            .fuzziness("AUTO")
+                            .prefixLength(1)
+                            .maxExpansions(50)));
+        } else {
+            boolQueryBuilder.must(m -> m.matchAll(ma -> ma));
+        }
+
+        // Filter by status (exact match)
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+            boolQueryBuilder.filter(f -> f.term(t -> t.field("status").value(status.trim())));
+        }
+
+        // Filter by role (exact match)
+        if (role != null && !role.isBlank() && !"ALL".equalsIgnoreCase(role)) {
+            boolQueryBuilder.filter(f -> f.term(t -> t.field("roles").value(role.trim())));
+        }
+
+        NativeQuery searchQuery = NativeQuery.builder()
+                .withQuery(q -> q.bool(boolQueryBuilder.build()))
+                .withPageable(pageable)
+                .build();
+
+        SearchHits<UserDocument> searchHits = elasticsearchOperations.search(searchQuery, UserDocument.class);
+
+        List<UserResponse> items = searchHits.getSearchHits().stream()
+                .map(SearchHit::getContent)
+                .map(doc -> UserResponse.builder()
+                        .id(doc.getId())
+                        .username(doc.getUsername())
+                        .email(doc.getEmail())
+                        .fullName(doc.getFullName())
+                        .avatarUrl(doc.getAvatarUrl())
+                        .status(doc.getStatus())
+                        .roles(doc.getRoles())
+                        .createdAt(doc.getCreatedAt())
+                        .build())
+                .toList();
+
+        long totalHits = searchHits.getTotalHits();
+        return new PageImpl<>(items, pageable, totalHits);
     }
 }
