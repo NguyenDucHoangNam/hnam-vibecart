@@ -50,11 +50,17 @@ public class SearchSyncConsumer {
         prices[2] = prices[0];
         prices[3] = prices[1];
 
+        final java.time.ZonedDateTime[] createdAtHolder = new java.time.ZonedDateTime[1];
+        createdAtHolder[0] = event.getTimestamp();
+
         try {
             transactionTemplate.executeWithoutResult(status -> {
                 var productOpt = productRepository.findById(event.getProductId());
                 if (productOpt.isPresent()) {
                     var product = productOpt.get();
+                    if (product.getCreatedAt() != null) {
+                        createdAtHolder[0] = product.getCreatedAt();
+                    }
                     if (product.getVariants() != null && !product.getVariants().isEmpty()) {
 
                         var activeVariants = product.getVariants().stream()
@@ -109,6 +115,7 @@ public class SearchSyncConsumer {
                 .minOriginalPrice(minOriginalPrice)
                 .maxOriginalPrice(maxOriginalPrice)
                 .status(event.getStatus())
+                .createdAt(createdAtHolder[0])
                 .updatedAt(event.getTimestamp())
                 .build();
 
